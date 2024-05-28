@@ -1,0 +1,7 @@
+Ensayos no incluidos en el analisis
+
+  - P0_1 deslizo
+  - P0_1-1 es la misma probeta que la anterior
+  - P90_4
+  - P45_1 tiene muchos hits, parece que deslizo
+  - P0_90W_2 deslizo

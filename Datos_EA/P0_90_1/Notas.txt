@@ -1,0 +1,1 @@
+Se ha tocado la probeta antes de parar la medición. Los hits más cercanos a 280 hay que eliminarlos
