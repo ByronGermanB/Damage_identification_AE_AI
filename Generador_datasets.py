@@ -5,7 +5,6 @@ Created on Mon Dec 11 12:48:58 2023
 @author: bbarmac
 """
 
-#%%
 # =============================================================================
 # Importamos las librerias necesarias
 # =============================================================================
@@ -17,7 +16,6 @@ from mis_funciones.analisis_AE import Features, unir_df
 # Funciones para cargar datod de MTS
 from mis_funciones.force_mts import force_data
 
-#%%
 # =============================================================================
 # Datos iniciales
 # =============================================================================
@@ -70,7 +68,6 @@ N_samp = 1024   # Numero de muestras (datos) en cada segmento
 N_seg = 1  # Numero de segmentos (si se cambia se debe cambiar los nombres de las columnas)
 desfase = 200 # El desfase va de [0 a pretrigger*sampling rate] [0-250]
 
-#%%
 # =============================================================================
 # Generacion de objetos
 # =============================================================================
@@ -109,7 +106,6 @@ P90_A2 = Features(path_P90_A2, lower_freq, upper_freq, sampling_rate, N_samp, N_
 P90_A3 = Features(path_P90_A3, lower_freq, upper_freq, sampling_rate, N_samp, N_seg, desfase, desfase_carga=-0.25912817)
 P90_A4 = Features(path_P90_A4, lower_freq, upper_freq, sampling_rate, N_samp, N_seg, desfase, desfase_carga=-0.61885705)
 
-#%%
 # =============================================================================
 # Extraccion de features
 # =============================================================================
@@ -117,7 +113,6 @@ P90_A4 = Features(path_P90_A4, lower_freq, upper_freq, sampling_rate, N_samp, N_
 umbral = 36
 counts = 5
 
-#%%
 # =============================================================================
 # # Extraccion de features - Sin rotura
 # =============================================================================
@@ -152,7 +147,6 @@ PQ_2_df = PQ_2.feature_extr(umbral, counts, clase='[Q]', test_id='PQ_2',  max_tr
 PQ_3_df = PQ_3.feature_extr(umbral, counts, clase='[Q]', test_id='PQ_3',  max_trai=166)
 PQ_4_df = PQ_4.feature_extr(umbral, counts, clase='[Q]', test_id='PQ_4',  max_trai=318)
 
-#%%
 # =============================================================================
 # # Extraccion de features - Con rotura
 # =============================================================================
@@ -188,7 +182,6 @@ PQ_3_df = PQ_3.feature_extr(umbral, counts, clase='[Q]', test_id='PQ_3')
 PQ_4_df = PQ_4.feature_extr(umbral, counts, clase='[Q]', test_id='PQ_4', max_trai=431)
 
 
-#%%
 # =============================================================================
 # Union de dataframes - Data set de ensayos validos 
 # =============================================================================
@@ -209,7 +202,6 @@ df_total = unir_df(df_0_90, P0_90_1_df, P0_90_2_df, P0_90_3_df, P0_90_4_df,
 df_total.to_csv(os.path.join(dataset_path, file_name), index=False)
 print(f'Archivo guardado como: {file_name}')
 
-#%%
 # =============================================================================
 # Dataset de datos de fuerza
 # =============================================================================

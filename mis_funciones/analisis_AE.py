@@ -22,14 +22,12 @@ import string
 
 # Librerias para el tratamiento de senales
 from scipy.fft import fft, fftfreq
-from scipy.signal import hamming
+from scipy.signal.windows import hamming
 
 # Tratamiento de datos y normalizacion
-# from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.preprocessing import MinMaxScaler
-# from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 # Entrenamiento del modelo
@@ -355,7 +353,7 @@ class Features:
         name_figure : str
             Nombre de la clase que aparece en titulo de la figura 
             
-            e.g. Segementation: {name_figure} - Transient: {trai}
+            e.g. Segmentation: {name_figure} - Transient: {trai}
         figure_path : str
             Directorio para guardar la figura.          
         guardar : boolean, optional
@@ -400,7 +398,7 @@ class Features:
 
         # Varias gráficas en una figura
         fig,axs = plt.subplots(2, self.N_seg,figsize=(15, 7.5))
-        plt.suptitle(f'Segementation: {name_figure} - Transient: {trai}', fontsize=14)
+        plt.suptitle(f'Segmentation: {name_figure} - Transient: {trai}', fontsize=14)
         plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
 
             
@@ -461,11 +459,11 @@ class Features:
         name_figure : str
             Nombre de la clase que aparece en titulo de la figura 
             
-            e.g. Segementation: {name_figure} - Transient: {trai}
+            e.g. Segmentation: {name_figure} - Transient: {trai}
         figure_path : str
             Directorio para guardar la figura. 
         title : str, optional
-            Titulo de la figura, si se deja en default sera Segementation: {name_figure} - Transient: {trai}. The default is None    
+            Titulo de la figura, si se deja en default sera Segmentation: {name_figure} - Transient: {trai}. The default is None    
         width : int or float, optional
             Ancho de la figura en milimetros. The default is 90    
         height : int or float, optional
@@ -514,7 +512,7 @@ class Features:
         figsize_inches = (width / 25.4, height/ 25.4)
         fig,axs = plt.subplots(2, self.N_seg, figsize=figsize_inches, dpi=300, tight_layout=True)
         if title is None:
-            plt.suptitle(f'Segementation: {name_figure} - Transient: {trai}', fontsize=10)
+            plt.suptitle(f'Segmentation: {name_figure} - Transient: {trai}', fontsize=10)
         else:
             plt.suptitle(title, fontsize=10)
         plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
@@ -627,7 +625,8 @@ def train_test_set(data, normalization=None, columns_to_transform=None, split=Tr
         
     # Opciones de nomralizacion
     if normalization == 'log':
-        log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
+        log_transformer = FunctionTransformer(np.log)
+        # log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
         X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Aplicamos el logaritmo a los features
         
     if normalization == 'std':
@@ -639,7 +638,8 @@ def train_test_set(data, normalization=None, columns_to_transform=None, split=Tr
         X[columns_to_transform] = min_max.fit_transform(X[columns_to_transform]) # Aplicamos la estandarizacion a los features
     
     if normalization == 'log-std':
-        log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
+        # log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
+        log_transformer = FunctionTransformer(np.log)
         X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Aplicamos el logaritmo a los features
         standardize = StandardScaler()
         X = standardize.fit_transform(X) # Aplicamos la estandarizacion a los features
