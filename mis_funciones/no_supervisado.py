@@ -176,6 +176,7 @@ def tsne(X, figure_path, width=90, height=60, selected_features=None, guardar=Fa
     Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en formato pdf.
     
     '''   
+    print("Running t-SNE...")
     # Seleccion de features (si se utilizo backward elimination)
     if selected_features is not None:
         X = X[selected_features]

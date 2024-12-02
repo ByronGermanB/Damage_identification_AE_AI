@@ -13,7 +13,7 @@ figure_path = os.path.join(base_dir, 'Figuras')
 os.makedirs(figure_path, exist_ok=True)
 
 # Creación de directorio para guardar las imágenes
-images_set = 'train_2'
+images_set = 'train_3'
 images_dir = os.path.join(base_dir, 'datasets', 'images', images_set)
 os.makedirs(images_dir, exist_ok=True)
 
