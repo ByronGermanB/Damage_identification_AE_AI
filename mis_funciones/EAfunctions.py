@@ -49,10 +49,6 @@ def abreAE(path, filename):
     directorio = os.path.dirname(path  + '\\' +  filename + '\\' + pridb_filename)
     
     pridb_file = os.path.join(directorio, pridb_filename)
-     # Debugging statements
-    print(f"pridb_file: {pridb_file}")
-    print(f"Directory exists: {os.path.exists(directorio)}")
-    print(f"pridb_file exists: {os.path.exists(pridb_file)}")
     vae_pridb = vae.io.PriDatabase(pridb_file)
     
     tradb_file = os.path.join(directorio, tradb_filename)
