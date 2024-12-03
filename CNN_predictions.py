@@ -79,7 +79,7 @@ test_data = test_datagen.flow_from_directory(
 # Predicciones con modelo
 # =============================================================================
 # Load the saved model
-model_name = 'CNN_model_2'
+model_name = 'CNN_model_3'
 model_path = os.path.join(models_dir, model_name + '.keras')
 model = load_model(model_path)
 

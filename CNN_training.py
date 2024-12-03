@@ -20,7 +20,7 @@ from sklearn.utils.class_weight import compute_class_weight
 base_dir = os.path.dirname(os.path.abspath(__file__))
 EA_path = os.path.join(base_dir, 'Datos_EA')
 figure_path = os.path.join(base_dir, 'Figuras')
-images_set = 'train_2'
+images_set = 'train_3'
 images_dir = os.path.join(base_dir, 'datasets', 'images', images_set)
 dbscan_labels_path = os.path.join(base_dir, 'Results', 'labels_dbscan.csv')
 
@@ -47,8 +47,9 @@ dbscan_labels = pd.read_csv(dbscan_labels_path)
 
 # Define test IDs and repeat counts for each label set
 label_sets = {
-    'T0': (['P0_2', 'P0_3', 'P0_4', 'P0_5', 'P0_6'], 1),
-    'T90': (['P90_1', 'P90_2', 'P90_3'], 3)
+    'T0': (['P0_2', 'P0_3', 'P0_4', 'P0_5', 'P0_6'], 3),
+    'T90': (['P90_1', 'P90_2', 'P90_3'], 3),
+    'T090' : (['P0_90_1', 'P0_90_2', 'P0_90_3', 'P0_90_4'], 3),
 }
 
 # Initialize an empty list to store all labels
@@ -70,7 +71,7 @@ num_classes = len(classes)
 # Bucle de entrenamiento de varios modelos 
 # =============================================================================
 # Reinicio del nombre de los modelos prediccitivos
-prueba = 2
+model_number = 3
 # Definición de las variables de almacenamiento de los datos del modelo
 cm_test_prec_list = []
 accuracy_arr = []
@@ -200,7 +201,7 @@ val_loss = history.history['val_loss']
 # =============================================================================
 # Graficado de la evolución temporal del modelo
 # =============================================================================
-model_name = 'relu_model_' + str(prueba) + '_' + str(round(precision, 2)).replace('.', '-')
+model_name = 'relu_model_' + str(model_number) + '_' + str(round(precision, 2)).replace('.', '-')
 if plot:
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True, figsize = (12, 8), dpi = 130)
     fig.tight_layout()
@@ -273,7 +274,7 @@ print('Mejor modelo: %i' % max_acc_pos, '\nPrecisión final = %.2f' % precision,
 # =============================================================================
 model_path = os.path.join(base_dir, 'models')
 os.makedirs(model_path, exist_ok=True)
-model_name = f'CNN_model_{prueba}.keras'
+model_name = f'CNN_model_{model_number}.keras'
 model_path_name = os.path.join(model_path, model_name)
 best_model.save(model_path_name)
 
