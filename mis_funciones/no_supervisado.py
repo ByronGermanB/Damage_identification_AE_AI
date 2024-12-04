@@ -33,8 +33,10 @@ from sklearn.metrics import davies_bouldin_score
 from matplotlib.ticker import FixedLocator, FixedFormatter
 
 # Set font to Times New Roman and size to 8
-matplotlib.rcParams['font.family'] = 'serif'
-matplotlib.rcParams['font.serif'] = 'Times New Roman'
+matplotlib.rcParams['font.family'] = 'Times New Roman'
+
+# matplotlib.rcParams['font.family'] = 'serif'
+# matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
 matplotlib.rcParams['figure.dpi'] = 300
 

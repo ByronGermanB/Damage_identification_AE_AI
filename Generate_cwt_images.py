@@ -165,10 +165,10 @@ cwt_imageQ, trais_Q = eaf.calcCWT(vae_Tarr = vae_TQ, vae_pridb = vae_pridbQ, t_t
 # =============================================================================
 # Save images
 # =============================================================================
-eaf.save_image_pred(cwt_image0, dims, 'T0', images_dir)
-eaf.save_image_pred(cwt_image90, dims, 'T90', images_dir)
-eaf.save_image_pred(cwt_image090, dims, 'T090', images_dir)
-eaf.save_image_pred(cwt_image090W, dims, 'T090W', images_dir)
-eaf.save_image_pred(cwt_image45, dims, 'T45', images_dir)
-eaf.save_image_pred(cwt_imageQ, dims, 'TQ', images_dir)
+eaf.save_image_pred(cwt_image0, dims, '1_T0', images_dir)
+eaf.save_image_pred(cwt_image90, dims, '2_T90', images_dir)
+eaf.save_image_pred(cwt_image090, dims, '3_T090', images_dir)
+eaf.save_image_pred(cwt_image090W, dims, '4_T090W', images_dir)
+eaf.save_image_pred(cwt_image45, dims, '5_T45', images_dir)
+eaf.save_image_pred(cwt_imageQ, dims, '6_TQ', images_dir)
 

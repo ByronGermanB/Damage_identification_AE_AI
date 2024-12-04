@@ -119,7 +119,7 @@ title = f't-SNE Clustering Comparison - {model_name}'
 
 # Loop through the function calls and store the plots in an array
 for i, ax in enumerate(axes.flat, start=1):
-    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)
+    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)
 plt.show()
 # =============================================================================
 # Grafica Feat vs Feat
@@ -137,7 +137,7 @@ title = f'Feature vs. feature scatter plot - {model_name}'
 
 for i, ax in enumerate(axes.flat, start=1):
     plot_cluster_feat(labels_cnn[labels_cnn == i-1], data[labels_cnn == i-1], 'p_power_3', 'w_peak_freq', figure_dir, 
-                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=False, ax=ax, i=i, n_col=n_col, n_row=n_row)
+                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True, ax=ax, i=i, n_col=n_col, n_row=n_row)
 
 plt.show()
 
@@ -166,6 +166,7 @@ for i, ax in enumerate(axes.flat, start=1):
                     plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
                     ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)    
 plt.show()
+
 # =============================================================================
 # Graficas de fuerza vs hits 
 # =============================================================================
@@ -187,7 +188,7 @@ for i, ax in enumerate(axes.flat, start=1):
     # Call the plot_dbi function and pass the current subplot axis
     plot_stress_hits(hits, force, test_id_prueba[i-1], figure_dir, 
                     plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
-                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True)
+                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False)
 plt.show()
 
 

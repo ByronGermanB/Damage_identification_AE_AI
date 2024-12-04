@@ -20,9 +20,10 @@ import matplotlib.pyplot as plt
 import matplotlib
 import string
 from matplotlib.ticker import MultipleLocator
+matplotlib.rcParams['font.family'] = 'Times New Roman'
 
-matplotlib.rcParams['font.family'] = 'serif'
-matplotlib.rcParams['font.serif'] = 'Times New Roman'
+# matplotlib.rcParams['font.family'] = 'serif'
+# matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
 matplotlib.rcParams['figure.dpi'] = 300
 
