@@ -94,7 +94,7 @@ labels_cnn = labels_cnn.flatten()
 labels_cnn_df = data.copy()
 labels_cnn_df['CNN label'] = labels_cnn
 # Save the new data DataFrame with predictions
-labels_cnn_df.to_csv(os.path.join(results_dir, 'labels_cnn.csv'), index=False)
+labels_cnn_df.to_csv(os.path.join(results_dir, f'labels_{model_name}.csv'), index=False)
 
 # =============================================================================
 # Grafica de t-SNE       
@@ -119,14 +119,14 @@ title = f't-SNE Clustering Comparison - {model_name}'
 
 # Loop through the function calls and store the plots in an array
 for i, ax in enumerate(axes.flat, start=1):
-    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)
+    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)
 plt.show()
 # =============================================================================
 # Grafica Feat vs Feat
 # =============================================================================
 plot_cluster_feat(labels_cnn, data, 'p_power_3', 'w_peak_freq', figure_dir, 
                   width=90, height=60, title=f'Feature vs. feature scatter plot - {model_name}',
-                  x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True)
+                  x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=False)
 
 # =============================================================================
 # Grafica Feat vs Feat separtared by cluster (0 and 1)
@@ -137,7 +137,7 @@ title = f'Feature vs. feature scatter plot - {model_name}'
 
 for i, ax in enumerate(axes.flat, start=1):
     plot_cluster_feat(labels_cnn[labels_cnn == i-1], data[labels_cnn == i-1], 'p_power_3', 'w_peak_freq', figure_dir, 
-                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True, ax=ax, i=i, n_col=n_col, n_row=n_row)
+                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=False, ax=ax, i=i, n_col=n_col, n_row=n_row)
 
 plt.show()
 
@@ -145,37 +145,38 @@ plt.show()
 # Graficas de fuerza vs hits - Clustering
 # =============================================================================
 test_id_prueba = ['P0_2', 'P90_3', 'P0_90_3', 'P0_90W_1', 'P45_4', 'PQ_3']
-hits_limit, stress_limit = limit_finder(labels_cnn, hits, force, test_id_prueba)
+limits = limit_finder(labels_cnn, hits, force, test_id_prueba)
 
 # Define the number of rows and columns for the subplot grid
 n_row, n_col = (2, 3)
 
 # Image size in mm
-width, height = (180, 110)
+width, height = (180, 115)
 figsize_inches = (width / 25.4, height / 25.4)
 
 # Create a new figure and set the size
 fig, axes = plt.subplots(n_row, n_col, figsize=figsize_inches, dpi=300, tight_layout=True)
 title = f'Stress and Cumulative hits vs Time - Clustering {model_name}'
+plt.suptitle(title, fontsize=10)
 
 # Loop through the function calls and store the plots in an array
 for i, ax in enumerate(axes.flat, start=1):
     # Call the plot_dbi function and pass the current subplot axis
     plot_stress_hits_cluster(labels_cnn, hits, force, test_id_prueba[i-1], figure_dir, 
-                    plot_type='line', hits_limit=hits_limit, stress_limit=stress_limit, y_label_right='\u03C3 [MPa]', 
+                    plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
                     ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)    
 plt.show()
 # =============================================================================
 # Graficas de fuerza vs hits 
 # =============================================================================
 test_id_prueba = ['P0_2', 'P90_3', 'P0_90_3', 'P0_90W_1', 'P45_4', 'PQ_3']
-hits_limit, stress_limit = limit_finder_no_label(hits, force, test_id_prueba)
+limits = limit_finder_no_label(hits, force, test_id_prueba)
 
 # Define the number of rows and columns for the subplot grid
 n_row, n_col = (2, 3)
 
 # Image size in mm
-width, height = (180, 110)
+width, height = (180, 115)
 figsize_inches = (width / 25.4, height / 25.4)
 # Create a new figure and set the size
 fig, axes = plt.subplots(n_row, n_col, figsize=figsize_inches, dpi=300, tight_layout=True)
@@ -185,8 +186,8 @@ plt.suptitle('Stress and Cumulative hits vs Time', fontsize=10)
 for i, ax in enumerate(axes.flat, start=1):
     # Call the plot_dbi function and pass the current subplot axis
     plot_stress_hits(hits, force, test_id_prueba[i-1], figure_dir, 
-                    plot_type='line', hits_limit=hits_limit, stress_limit=stress_limit, y_label_right='\u03C3 [MPa]', 
-                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False)
+                    plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
+                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True)
 plt.show()
 
 

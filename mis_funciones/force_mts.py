@@ -85,8 +85,7 @@ def force_data(path, section=[22, 2.4]):
 def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_type='scatter', 
                     title='Stress and Cumulative hits vs Time - Clustering', x='time', y='Cumulative_Label', 
                     x_label='Time [s]', y_label='Cumulative hits', y_label_right='Stress [MPa]',
-                    subtitle=None, hits_limit=None, stress_limit=None,
-                    width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
     '''
     Parameters
     ----------
@@ -147,6 +146,12 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
         Axis containing the plot.
         Grafica y (guarda) un diagrama de los hits acumulados y esfuerzo en formato pdf.
     '''
+    # Extract the limits
+    if limits is None:
+        time_limit, hits_limit, stress_limit = [None, None, None]
+    else:
+        time_limit, hits_limit, stress_limit = limits
+
     # Create a DataFrame with the labels
     labels_df = pd.Series(labels, name='Labels')
     labels_df.index = hits.index
@@ -199,7 +204,11 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
         #             markers=markers, palette=sns.color_palette(), markersize=4, markeredgewidth=0.0, ax=ax)
         
         sns.lineplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, palette = palette, linewidth=2, ax=ax)
-        
+    
+    #Set the x-axis limit
+    if time_limit is not None:
+        ax.set_xlim(left=0, right=time_limit * 1.05)
+
     # Set y-axis label only for the first plot of each row
     if (i-1) % n_col == 0:
         ax.set_ylabel(y_label)
@@ -266,8 +275,7 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
 def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter', 
                     title='Stress and Cumulative hits vs Time', x='time', y='Cumulative_Label', 
                     x_label='Time [s]', y_label='Cumulative hits', y_label_right='Stress [MPa]',
-                    subtitle=None, hits_limit=None, stress_limit=None,
-                    width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
     '''
     Parameters
     ----------
@@ -326,6 +334,12 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
         Axis containing the plot.
         Grafica y (guarda) un diagrama de los hits acumulados y esfuerzo en formato pdf.
     '''
+    # Extract the limits
+    if limits is None:
+        time_limit, hits_limit, stress_limit = [None, None, None]
+    else:
+        time_limit, hits_limit, stress_limit = limits
+
     # Condition to filter rows based on the string column
     condition = (hits['test_id'] == test_id)
     condition_force = (force['test_id'] == test_id)
@@ -378,7 +392,11 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
         #             markers=markers, palette=sns.color_palette(), markersize=4, markeredgewidth=0.0, ax=ax)
         
         sns.lineplot(x=x, y=y, label='hits', data=filtered_hits, linewidth=2, ax=ax)
-    
+
+    #Set the x-axis limit
+    if time_limit is not None:
+        ax.set_xlim(left=0, right=time_limit * 1.05)
+
     # Set y-axis label only for the first plot of each row
     if (i-1) % n_col == 0:
         ax.set_ylabel(y_label)
@@ -488,10 +506,11 @@ def limit_finder(labels, hits, force, test_ids):
     filtered_force = force[condition_force]
     
     # Maximum values of the df
+    max_value_time = filtered_hits['time'].max()
     max_value_hits = filtered_hits['Cumulative_Label'].max()
     max_value_stress = filtered_force['Stress [MPa]'].max()
     
-    return max_value_hits, max_value_stress
+    return [max_value_time, max_value_hits, max_value_stress]
 
 def limit_finder_no_label(hits, force, test_ids):
     '''
@@ -528,10 +547,11 @@ def limit_finder_no_label(hits, force, test_ids):
     filtered_force = force[condition_force]
        
     # Maximum values of the df
+    max_value_time = filtered_hits['time'].max()
     max_value_hits = filtered_hits['Cumulative_Label'].max()
     max_value_stress = filtered_force['Stress [MPa]'].max()
     
-    return max_value_hits, max_value_stress
+    return [max_value_time, max_value_hits, max_value_stress]
     
 def reorder_hits(hits, y, y_pred):
     '''
