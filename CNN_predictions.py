@@ -20,11 +20,10 @@ from tensorflow.keras.models import load_model # type: ignore
 from mis_funciones.analisis_AE import train_test_set
 
 # Funciones para Modelo DBSCAN
-from mis_funciones.no_supervisado import  tsne
+from mis_funciones.no_supervisado import  tsne, tsne_3d
 
 # Funciones para graficar
-from mis_funciones.no_supervisado import plot_cluster_feat
-from mis_funciones.no_supervisado import plot_cluster_tsne
+from mis_funciones.no_supervisado import plot_cluster_feat, plot_cluster_tsne, plot_cluster_tsne_3d
 from mis_funciones.force_mts import plot_stress_hits, limit_finder, plot_stress_hits_cluster, limit_finder_no_label
 
 # =============================================================================
@@ -55,6 +54,7 @@ X_original, X, y, hits = train_test_set(data, normalization='log-std', columns_t
 test_ids = hits['test_id'].unique()
 
 # T-SNE
+# X_reduced = tsne_3d(X, figure_dir)
 X_reduced = tsne(X, figure_dir)
 
 # =============================================================================
@@ -79,7 +79,7 @@ test_data = test_datagen.flow_from_directory(
 # Predicciones con modelo
 # =============================================================================
 # Load the saved model
-model_name = 'CNN_model_3'
+model_name = 'CNN_model_2'
 model_path = os.path.join(models_dir, model_name + '.keras')
 model = load_model(model_path)
 
@@ -119,7 +119,7 @@ title = f't-SNE Clustering Comparison - {model_name}'
 
 # Loop through the function calls and store the plots in an array
 for i, ax in enumerate(axes.flat, start=1):
-    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)
+    plot_cluster_tsne(labels[i-1], X_reduced, figure_dir, subtitle=subtitle[i-1], ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)
 plt.show()
 # =============================================================================
 # Grafica Feat vs Feat
@@ -137,7 +137,7 @@ title = f'Feature vs. feature scatter plot - {model_name}'
 
 for i, ax in enumerate(axes.flat, start=1):
     plot_cluster_feat(labels_cnn[labels_cnn == i-1], data[labels_cnn == i-1], 'p_power_3', 'w_peak_freq', figure_dir, 
-                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True, ax=ax, i=i, n_col=n_col, n_row=n_row)
+                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=False, ax=ax, i=i, n_col=n_col, n_row=n_row)
 
 plt.show()
 
@@ -164,7 +164,7 @@ for i, ax in enumerate(axes.flat, start=1):
     # Call the plot_dbi function and pass the current subplot axis
     plot_stress_hits_cluster(labels_cnn, hits, force, test_id_prueba[i-1], figure_dir, 
                     plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
-                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=True, title=title)    
+                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)    
 plt.show()
 
 # =============================================================================

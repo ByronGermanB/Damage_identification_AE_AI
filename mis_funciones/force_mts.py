@@ -20,12 +20,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 import string
 from matplotlib.ticker import MultipleLocator
-matplotlib.rcParams['font.family'] = 'Times New Roman'
 
-# matplotlib.rcParams['font.family'] = 'serif'
-# matplotlib.rcParams['font.serif'] = 'Times New Roman'
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
-matplotlib.rcParams['figure.dpi'] = 300
+matplotlib.rcParams['figure.dpi'] = 150
 
 #%%
 
@@ -184,7 +183,7 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f'Stress and Cumulative hits vs Time - {test_id}')
         ax.set_xlabel(x_label)
     
@@ -355,7 +354,7 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f'Stress and Cumulative hits vs Time - {test_id}')
         ax.set_xlabel(x_label)
     

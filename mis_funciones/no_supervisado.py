@@ -33,12 +33,11 @@ from sklearn.metrics import davies_bouldin_score
 from matplotlib.ticker import FixedLocator, FixedFormatter
 
 # Set font to Times New Roman and size to 8
-matplotlib.rcParams['font.family'] = 'Times New Roman'
 
-# matplotlib.rcParams['font.family'] = 'serif'
-# matplotlib.rcParams['font.serif'] = 'Times New Roman'
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
-matplotlib.rcParams['figure.dpi'] = 300
+matplotlib.rcParams['figure.dpi'] = 150
 
 #%%
 # =============================================================================
@@ -191,7 +190,7 @@ def tsne(X, figure_path, width=90, height=60, selected_features=None, guardar=Fa
 
     # Create a scatter plot with Seaborn
     figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
+    plt.figure(figsize=figsize_inches, tight_layout=True)
     sns.scatterplot(x='t-SNE_1', y='t-SNE_2', data=tsne_df, palette='viridis')
     plt.title('t-SNE Visualization')
     plt.xlabel('t-SNE Dimension 1')
@@ -309,7 +308,7 @@ def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=6
     '''
     
     figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
+    plt.figure(figsize=figsize_inches, tight_layout=True)
     
     unique_labels = np.unique(labels)
     k = unique_labels.size
@@ -352,6 +351,64 @@ def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=6
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
     
     plt.show()
+
+def tsne_3d(X, figure_path, width=90, height=60, selected_features=None, guardar=False):
+    '''
+    Parameters
+    ----------
+    X : Dataframe, array
+        Set de features para entrenamiento.
+    figure_path : str
+        Directorio para guardar la figura.
+    width : int or float, optional
+        Ancho de la figura en milimetros. The default is 90    
+    height : int or float, optional
+        Alto de la figura en milimetros. The default is 60
+    selected_features : list, optional
+        Nombre de los features para entrenar el modelo. The default is None.
+    guardar : boolean, optional
+        "True" para guardar la imagen. The default is False.
+        
+        e.g. t-SNE 3D Visualization.pdf
+    Returns
+    -------
+    X_reduced : Array
+        Array de 3 columnas con la reduccion de dimensionalidad previa para entrenamiento de clustering.
+        
+    Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en formato pdf.
+    
+    '''   
+    print("Running t-SNE in 3D...")
+    # Seleccion de features (si se utilizo backward elimination)
+    if selected_features is not None:
+        X = X[selected_features]
+            
+    tsne = TSNE(n_components=3, init="random", learning_rate="auto", random_state=42)
+    X_reduced = tsne.fit_transform(X)
+        
+    # Create a DataFrame for easy use with Seaborn
+    tsne_df = pd.DataFrame(X_reduced, columns=[f't-SNE_{i+1}' for i in range(3)])
+
+    # Create a 3D scatter plot
+    figsize_inches = (width / 25.4, height / 25.4)
+    fig = plt.figure(figsize=figsize_inches, tight_layout=True)
+    ax = fig.add_subplot(111, projection='3d')
+    scatter = ax.scatter(tsne_df['t-SNE_1'], tsne_df['t-SNE_2'], tsne_df['t-SNE_3'], c=tsne_df.index, cmap='viridis')
+    ax.set_title('t-SNE 3D Visualization')
+    ax.set_xlabel('t-SNE Dimension 1')
+    ax.set_ylabel('t-SNE Dimension 2')
+    ax.set_zlabel('t-SNE Dimension 3')
+    fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
+    
+    # Guardar la imagen en figure_path
+    if guardar:
+        figure_filename = 't-SNE 3D Visualization.pdf'
+        figure_path_name = os.path.join(figure_path, figure_filename)
+        plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
+        
+    plt.show()
+    
+    return X_reduced
 
 def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtitle=None,
                       x_label = None, y_label = None, width=90, height=60, ax=None, 
@@ -418,7 +475,7 @@ def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtit
     
     # If there is just one plot and set the title
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         if title is None:
             ax.set_title(f'{feat_1} vs {feat_2} - Clustering')
         else:
@@ -526,7 +583,7 @@ def plot_cluster_time(labels, hits, test_id, figure_path, width=90, height=60, g
 
     # Plotting with Seaborn scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
+    plt.figure(figsize=figsize_inches, tight_layout=True)
     sns.scatterplot(x='time', y='Labels', hue='Labels', style='Labels', data=filtered_hits, markers=markers, palette=sns.color_palette(), s=100)
     plt.xlabel('Time [s]')
     plt.ylabel('Labels')
@@ -610,7 +667,7 @@ def plot_cluster_hits(labels, hits, test_id, figure_path, width=90, height=60, p
 
     # Plotting with Seaborn scatter plot or line plot based on plot_type
     figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
+    plt.figure(figsize=figsize_inches, tight_layout=True)
     if plot_type == 'scatter':
         sns.scatterplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, markers=markers, palette=sns.color_palette())
     elif plot_type == 'line':
@@ -694,7 +751,7 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(title)
         ax.set_xlabel(x_label)
     else:
@@ -735,6 +792,93 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
         figure_filename = f'{title}.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
+    
+    return ax
+    
+def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Clustering', subtitle='', 
+                            x_label='t-SNE Dimension 1', y_label='t-SNE Dimension 2', z_label='t-SNE Dimension 3',
+                            width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+    '''
+    Parameters
+    ----------
+    labels : array
+        Labels de los clusters obtenidos por k-means o dbscan.
+    X_reduced : array
+        Set de reduccion de dimensionalidad obtenido con t-sne y usado para entrenamiento de clustering.
+    figure_path : str
+        Directorio para guardar la figura.
+    title : str, optional
+        Titulo de la imagen para mostrar y guardar. The default is 't-SNE 3D Clustering'.
+    x_label : str, optional
+        Leyenda del eje x. The default is 't-SNE Dimension 1'.
+    y_label : str, optional
+        Leyenda del eje y. The default is 't-SNE Dimension 2'.
+    z_label : str, optional
+        Leyenda del eje z. The default is 't-SNE Dimension 3'.
+    subtitle : str, optional
+        Titulo para cada uno de los subplots. The default is ''.
+    width : int or float, optional
+        Ancho de la figura en milimetros. The default is 90  
+    height : int or float, optional
+        Alto de la figura en milimetros. The default is 60
+    guardar : boolean, optional
+        "True" para guardar la imagen. The default is False.
+        
+        e.g. t-SNE 3D - Clustering.pdf
+
+    Returns
+    -------
+    Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en 3D con marcadores de cluster en formato pdf.
+    '''    
+    # Create a DataFrame for easy use with Seaborn
+    tsne_df = pd.DataFrame(X_reduced, columns=[f't-SNE_{i+1}' for i in range(3)])    
+    tsne_df['Labels'] = labels
+    
+    # Mascaras para cambiar de marcadores 
+    valid_points = tsne_df[tsne_df['Labels'] != -1]
+    anomalies = tsne_df[tsne_df['Labels'] == -1]
+    
+    # Count the number of unique labels in the DataFrame
+    num_labels = valid_points['Labels'].nunique()
+
+    # Define custom markers for each class
+    markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
+    palette = sns.color_palette()
+    # Customize the markers list to match the number of unique labels
+    markers = markers[:num_labels]
+    palette = palette[:num_labels]
+    
+    # Create the plot
+    figsize_inches = (width / 25.4, height / 25.4)
+    if ax is None:
+        fig, ax = plt.figure(figsize=figsize_inches, tight_layout=True)
+        ax.set_title(title)
+        ax.set_xlabel(x_label)
+        ax = fig.add_subplot(111, projection='3d')
+    else:
+        ax.set_xlabel(x_label + '\n(' + string.ascii_lowercase[i-1] + ')')
+        # Title for each test id
+        ax.set_title(subtitle)
+    ax.set_ylabel(y_label)
+    ax.set_zlabel(z_label)
+    
+    # Use Seaborn scatter plot with hue and style parameters
+    scatter = ax.scatter(valid_points['t-SNE_1'], valid_points['t-SNE_2'], valid_points['t-SNE_3'], 
+                            c=valid_points['Labels'], cmap='viridis', marker='o')
+    
+    # Scatter points with label '-1' separately as red 'x'
+    ax.scatter(anomalies['t-SNE_1'], anomalies['t-SNE_2'], anomalies['t-SNE_3'], 
+                c='r', marker='x', label='Anomalies')
+    
+    fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
+    
+    # Guardar la imagen en figure_path
+    if guardar:
+        figure_filename = f'{title}.pdf'
+        figure_path_name = os.path.join(figure_path, figure_filename)
+        plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
+    
+    plt.show()
     
     return ax
     
@@ -794,7 +938,7 @@ def plot_dbi(dbi_kmeans, dbi_dbscan, figure_path, k_min=2, k_max=6, width=90, he
     # Plotting with Seaborn scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_xlabel('Number of Clusters')
         ax.set_title('Davies-Bouldin Index for Different Cluster Numbers')
     
