@@ -129,6 +129,19 @@ plot_cluster_feat(labels_cnn, data, 'p_power_3', 'w_peak_freq', figure_dir,
                   x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True)
 
 # =============================================================================
+# Grafica Feat vs Feat separtared by cluster (0 and 1)
+# =============================================================================
+# Create a new figure and set the size
+fig, axes = plt.subplots(n_row, n_col, figsize=figsize_inches, dpi=300, tight_layout=True)
+title = f'Feature vs. feature scatter plot - {model_name}'
+
+for i, ax in enumerate(axes.flat, start=1):
+    plot_cluster_feat(labels_cnn[labels_cnn == i-1], data[labels_cnn == i-1], 'p_power_3', 'w_peak_freq', figure_dir, 
+                      width=90, height=60, title=title, x_label='Partial power 3 [%]', y_label='Weighted peak frequency [kHz]', guardar=True, ax=ax, i=i, n_col=n_col, n_row=n_row)
+
+plt.show()
+
+# =============================================================================
 # Graficas de fuerza vs hits - Clustering
 # =============================================================================
 test_id_prueba = ['P0_2', 'P90_3', 'P0_90_3', 'P0_90W_1', 'P45_4', 'PQ_3']
