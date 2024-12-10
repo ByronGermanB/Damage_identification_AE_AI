@@ -4,13 +4,11 @@ Created on Mon Dec 11 10:54:49 2023
 
 @author: bbarmac
 """
-
-#%%
 # =============================================================================
-# Importamos las librerias necesarias
+# Import necessary libraries
 # =============================================================================
 
-# Librerias principales
+# Main libraries
 import os 
 import numpy as np
 import pandas as pd
@@ -19,27 +17,25 @@ import seaborn as sns
 import matplotlib
 import string
 
-# Librerias de algoritmos no supervisados
+# Unsupervised algorithm libraries
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 from sklearn.manifold import TSNE
 
-# Librerias de metricas
+# Metric libraries
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import silhouette_samples
 from sklearn.metrics import davies_bouldin_score
 
-# Libreria para grafica de silueta
+# Library for silhouette plot
 from matplotlib.ticker import FixedLocator, FixedFormatter
 
 # Set font to Times New Roman and size to 8
-
 matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
 matplotlib.rcParams['figure.dpi'] = 150
 
-#%%
 # =============================================================================
 # DBSCAN 
 # =============================================================================
@@ -48,21 +44,21 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
     '''
     Parameters
     ----------
-    X : Dataframe, array
-        Set de features para entrenamiento.
+    X : DataFrame, array
+        Feature set for training.
     target_clusters : int
-        Numero objetivo de clusters.
+        Target number of clusters.
     epsilon_values : array or list
-        Valores que puede tomar epsilon para clustering.
+        Values that epsilon can take for clustering.
     min_samples_values : array or list
-        valores que puede tomar el numero minimo de instancias para clusterin.
+        Values that min_samples can take for clustering.
 
     Returns
     -------
     best_models : list
-        Lista que contiene los modelos DBSCAN que cumplen la condicion de target clusters.
+        List containing the DBSCAN models that meet the target clusters condition.
     results : list
-        Lista que contiene los valores de epsilon, min_samples, numero de clusters, numero y porcentaje de anomalias de cada modelo DBSCAN.
+        List containing the values of epsilon, min_samples, number of clusters, number and percentage of anomalies for each DBSCAN model.
 
     '''
     best_models = []
@@ -100,7 +96,7 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                 best_models.append(dbscan_model)
                 
     # Print the results
-    for i, result in enumerate (results):
+    for i, result in enumerate(results):
         for key, value in result.items():
             print(f"{key}: {value}")
         print("-----")
@@ -111,31 +107,31 @@ def kmeans_per_k(X, k, selected_features=None):
     '''
     Parameters
     ----------
-    X : Dataframe, array
-        Set de features para entrenamiento.
+    X : DataFrame, array
+        Feature set for training.
     k : int
-        Numero maximo de clusters a evaluar.
+        Maximum number of clusters to evaluate.
     selected_features : list, optional
-        Nombre de los features para entrenar el modelo. The default is None.
+        Names of the features to train the model. The default is None.
 
     Returns
     -------
     kmeans_per_k : List
-        Lista que contiene los modelos de k-means entrenados desde 2 hasta k.
+        List containing the k-means models trained from 2 to k.
     silhouette_scores : List
-        Valores del silhouette score de cada modelo.
+        Silhouette score values for each model.
     dbi_scores : List
-        Valores del Davies-Bouldin score de cada modelo.
+        Davies-Bouldin score values for each model.
 
     '''
-    # Seleccion de features 
+    # Feature selection
     if selected_features is not None:
         X = X[selected_features]
     
     kmeans_per_k = [KMeans(n_clusters=i, random_state=42).fit(X)
                     for i in range(2, k+1)]
        
-    # Calculo de los scores para cada k
+    # Calculate scores for each k
     silhouette_scores = [silhouette_score(X, model.labels_)
                          for model in kmeans_per_k]
     
@@ -151,34 +147,34 @@ def kmeans_per_k(X, k, selected_features=None):
 
     return kmeans_per_k, silhouette_scores, dbi_scores
 
-def tsne(X, figure_path, width=90, height=60, selected_features=None, guardar=False):
+def tsne(X, figure_path, width=90, height=60, selected_features=None, save=False):
     '''
     Parameters
     ----------
-    X : Dataframe, array
-        Set de features para entrenamiento.
+    X : DataFrame, array
+        Feature set for training.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90    
+        Width of the figure in millimeters. The default is 90    
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     selected_features : list, optional
-        Nombre de los features para entrenar el modelo. The default is None.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Names of the features to train the model. The default is None.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. t-SNE Visualization.pdf
     Returns
     -------
     X_reduced : Array
-        Array de 2 columnas con la reduccion de dimensionalidad previa para entrenamiento de clustering.
+        Array with 2 columns containing the dimensionality reduction for clustering training.
         
-    Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en formato pdf.
+    Plots and (saves) a scatter plot of the data with dimensionality reduction in PDF format.
     
     '''   
     print("Running t-SNE...")
-    # Seleccion de features (si se utilizo backward elimination)
+    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X = X[selected_features]
             
@@ -198,8 +194,8 @@ def tsne(X, figure_path, width=90, height=60, selected_features=None, guardar=Fa
     plt.grid()
     plt.gca().set_axisbelow(True)  # Set grid lines behind the data points    
         
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = 't-SNE Visualization.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -208,25 +204,25 @@ def tsne(X, figure_path, width=90, height=60, selected_features=None, guardar=Fa
     
     return X_reduced
 
-def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, guardar=False):
+def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, save=False):
     '''
     Parameters
     ----------
-    X : Dataframe, array
-        Set de features para entrenamiento.
+    X : DataFrame, array
+        Feature set for training.
     kmeans_per_k : List
-        Lista de modelos k-means.
+        List of k-means models.
     silhouette_scores : List
-        Valores del silhouette score de cada modelo.
+        Silhouette score values for each model.
     figure_path : str
-        Directorio para guardar la figura.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Directory to save the figure.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Silhouette Analysis for K-Means Clustering.pdf
     Returns
     -------
-    Grafica y (guarda) los graficos de silhouette score en formato pdf.
+    Plots and (saves) the silhouette score graphs in PDF format.
 
     '''
     
@@ -248,7 +244,6 @@ def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, guardar=F
             coeffs = silhouette_coefficients[y_pred == i]
             coeffs.sort()
     
-            # color = plt.cm.Spectral(i / k)
             color = plt.cm.nipy_spectral(float(i) / k)
             plt.fill_betweenx(np.arange(pos, pos + len(coeffs)), 0, coeffs,
                               facecolor=color, edgecolor=color, alpha=0.7)
@@ -272,38 +267,38 @@ def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, guardar=F
         plt.grid(axis='x', linestyle='--', which='major', color='grey', alpha=0.5)
         plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = "Silhouette Analysis for K-Means Clustering.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
     
     plt.show()
 
-def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=60, guardar=False):
+def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=60, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
-    X : Dataframe, array
-        Set de features para entrenamiento.
+        Labels of the clusters obtained by k-means or dbscan.
+    X : DataFrame, array
+        Feature set for training.
     silhouette_score : List
-        Valores del silhouette score de cada modelo.
+        Silhouette score values for each model.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90
+        Width of the figure in millimeters. The default is 90
         
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Height of the figure in millimeters. The default is 60
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Silhouette Analysis for K-Means Clustering.pdf
     Returns
     -------
-    Grafica y (guarda) los graficos de silhouette score en formato pdf.
+    Plots and (saves) the silhouette score graphs in PDF format.
 
     '''
     
@@ -322,7 +317,6 @@ def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=6
         coeffs = silhouette_coefficients[labels == i]
         coeffs.sort()
 
-        # color = plt.cm.Spectral(i / k)
         color = plt.cm.nipy_spectral(float(i) / k)
         plt.fill_betweenx(np.arange(pos, pos + len(coeffs)), 0, coeffs,
                           facecolor=color, edgecolor=color, alpha=0.7)
@@ -344,42 +338,42 @@ def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=6
     plt.grid(axis='x', linestyle='--', which='major', color='grey', alpha=0.5)
     plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = "Silhouette Analysis.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
     
     plt.show()
 
-def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, guardar=False):
+def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, save=False):
     '''
     Parameters
     ----------
-    X : Dataframe, array
-        Set de features para entrenamiento.
+    X : DataFrame, array
+        Feature set for training.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90    
+        Width of the figure in millimeters. The default is 90    
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     selected_features : list, optional
-        Nombre de los features para entrenar el modelo. The default is None.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Names of the features to train the model. The default is None.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. t-SNE 3D Visualization.pdf
     Returns
     -------
     X_reduced : Array
-        Array de 3 columnas con la reduccion de dimensionalidad previa para entrenamiento de clustering.
+        Array with 3 columns containing the dimensionality reduction for clustering training.
         
-    Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en formato pdf.
+    Plots and (saves) a scatter plot of the data with dimensionality reduction in PDF format.
     
     '''   
     print("Running t-SNE in 3D...")
-    # Seleccion de features (si se utilizo backward elimination)
+    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X = X[selected_features]
             
@@ -400,8 +394,8 @@ def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, guard
     ax.set_zlabel('t-SNE Dimension 3')
     fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = 't-SNE 3D Visualization.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -412,47 +406,47 @@ def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, guard
 
 def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtitle=None,
                       x_label = None, y_label = None, width=90, height=60, ax=None, 
-                      i=1, n_col=1, n_row=1, guardar=False):
+                      i=1, n_col=1, n_row=1, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
-    X : Dataframe, array
-        Set de features para entrenamiento.
+        Labels of the clusters obtained by k-means or dbscan.
+    X : DataFrame, array
+        Feature set for training.
     feat_1 : str
-        Nombre del feature 1 para graficar.
+        Name of feature 1 to plot.
     feat_2 : str
-        Nombre del feature 2 para graficar.
+        Name of feature 2 to plot.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     title : str or list, optional
-        titulo de la figura, si se deja en default sera {feat_1} vs {feat_2} - Clustering. The default is None
+        Title of the figure. If left as default, it will be {feat_1} vs {feat_2} - Clustering. The default is None
     subtitle : str or list, optional
-        subtitulo de la figura, si se deja en default sera {feat_1} vs {feat_2} - Clustering. The default is None
+        Subtitle of the figure. If left as default, it will be {feat_1} vs {feat_2} - Clustering. The default is None
     x_label : str, optional
-        leyenda del eje x. The default is None
+        Label for the x-axis. The default is None
     y_label : str, optional
-        leyenda del eje y. The default is None
+        Label for the y-axis. The default is None
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     ax : axes, optional
-        axes subplot. The default is None.
+        Axes subplot. The default is None.
     i : int, optional
-        contador para graficar cada subplot. The default is 1.
+        Counter for plotting each subplot. The default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Number of rows. The default is 1.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Feat_vs_Feat_{feat_1}_{feat_2} - Clustering.pdf
     Returns
     -------
-    Grafica y (guarda) un diagrama de dispersion de dos features con etiquetas y marcadores en formato pdf.
+    Plots and (saves) a scatter plot of two features with labels and markers in PDF format.
 
     '''    
     labels = pd.Series(labels, name='Labels')
@@ -463,7 +457,7 @@ def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtit
     labels.index = X.index
     data = pd.concat([X, labels], axis=1)
     
-    # Mascaras para cambiar de marcadores 
+    # Masks to change markers 
     valid_points = data[data['Labels'] != -1]
     anomalies = data[data['Labels'] == -1]
     
@@ -513,7 +507,7 @@ def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtit
     else:
         ax.set_ylabel('')   
     
-    # Logaritmic scale if you choose energy
+    # Logarithmic scale if you choose energy
     if feat_1 == 'energy': 
         ax.set_xscale('log')
     
@@ -524,8 +518,8 @@ def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtit
     ax.grid()
     ax.set_axisbelow(True)  # Set grid lines behind the data points
 
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         if ax is None:
             figure_filename = f"Feat_vs_Feat_{feat_1}_{feat_2} - Clustering.pdf"
         
@@ -539,30 +533,30 @@ def plot_cluster_feat(labels, X, feat_1, feat_2, figure_path, title=None, subtit
     
     return ax    
 
-def plot_cluster_time(labels, hits, test_id, figure_path, width=90, height=60, guardar=False):
+def plot_cluster_time(labels, hits, test_id, figure_path, width=90, height=60, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
-    hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Labels of the clusters obtained by k-means or dbscan.
+    hits : DataFrame
+        DataFrame containing the features over time of the hits and their id.
     test_id : str
-        Id del ensayo que se vaya a graficar.
+        Id of the test to be plotted.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Height of the figure in millimeters. The default is 60
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Cluster vs Time - {test_id}.pdf
 
     Returns
     -------
-    Grafica y (guarda) un diagrama de dispersion de las etiquetas de clusters vs tiempo en formato pdf.
+    Plots and (saves) a scatter plot of cluster labels vs time in PDF format.
 
     '''
     # Create a DataFrame with the labels
@@ -595,8 +589,8 @@ def plot_cluster_time(labels, hits, test_id, figure_path, width=90, height=60, g
     # Set y-axis ticks to display only integer values
     plt.yticks(range(int(filtered_hits['Labels'].min()), int(filtered_hits['Labels'].max()) + 1))
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = f'Cluster vs Time - {test_id}.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -605,46 +599,46 @@ def plot_cluster_time(labels, hits, test_id, figure_path, width=90, height=60, g
     
 def plot_cluster_hits(labels, hits, test_id, figure_path, width=90, height=60, plot_type='scatter', 
                       x='time', y='Cumulative_Label', x_label='Time [s]', y_label='Cumulative hits', 
-                      title='Cumulative hits vs Time', guardar=False):
+                      title='Cumulative hits vs Time', save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
-    hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Labels of the clusters obtained by k-means or dbscan.
+    hits : DataFrame
+        DataFrame containing the features over time of the hits and their id.
     test_id : str
-        Id del ensayo que se vaya a graficar.
+        Id of the test to be plotted.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     plot_type : str, optional
-        Tipo de gráfico a realizar ('scatter' o 'line'). The default is 'scatter'.
+        Type of plot to create ('scatter' or 'line'). The default is 'scatter'.
     x : str, optional
-        Caracteristica en el tiempo para el eje x. The default is 'time'.
+        Feature over time for the x-axis. The default is 'time'.
         
-        Otras opciones: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
+        Other options: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
     y : str, optional
-        Caracteristica en el tiempo para el eje y. The default is 'Cumulative_Label'.
+        Feature over time for the y-axis. The default is 'Cumulative_Label'.
         
-        Otras opciones: 'time', 'Cumulative', amplitude', 'energy'
+        Other options: 'time', 'Cumulative', 'amplitude', 'energy'
     x_label : str, optional
-        Nombre del eje x. The default is 'Time [s]'.
+        Label for the x-axis. The default is 'Time [s]'.
     y_label : str, optional
-        Nombre del eje y. The default is 'Cumulative hits'.
+        Label for the y-axis. The default is 'Cumulative hits'.
     title : str, optional
-        Titulo de la imagen para mostrar y guardar. The default is 'Cumulative hits vs Time'.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Title of the image to display and save. The default is 'Cumulative hits vs Time'.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Cluster vs Time {test_id}.pdf
 
     Returns
     -------
-    Grafica y (guarda) un diagrama de dispersion de las caracteristicas temporales con etiquetas y marcadores en formato pdf.
+    Plots and (saves) a scatter plot of temporal features with labels and markers in PDF format.
 
     '''
     
@@ -679,8 +673,8 @@ def plot_cluster_hits(labels, hits, test_id, figure_path, width=90, height=60, p
     plt.grid()
     plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = f'{title} - {test_id}.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -689,38 +683,38 @@ def plot_cluster_hits(labels, hits, test_id, figure_path, width=90, height=60, p
     
 def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', subtitle='', 
                       x_label='t-SNE Dimension 1', y_label='t-SNE Dimension 2',
-                      width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                      width=90, height=60, ax=None, i=1, n_col=1, n_row=1, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
+        Labels of the clusters obtained by k-means or dbscan.
     X_reduced : array
-        Set de reduccion de dimensionalidad obtenido con t-sne y usado para entrenamiento de clustering.
+        Dimensionality reduction set obtained with t-SNE and used for clustering training.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     title : str, optional
-        Titulo de la imagen para mostrar y guardar. The default is 't-SNE Clustering'.
+        Title of the image to display and save. The default is 't-SNE Clustering'.
     x_label : str, optional
-        Leyenda del eje x. The default is 't-SNE Dimension 1'.
+        Label for the x-axis. The default is 't-SNE Dimension 1'.
     y_label : str, optional
-        Leyenda del eje y. The default is 't-SNE Dimension 2'.
+        Label for the y-axis. The default is 't-SNE Dimension 2'.
     subtitle : str or list, optional
-        Titulo para cada uno de los subplots. The default is ''.
+        Subtitle for each of the subplots. The default is ''.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     ax : matplotlib axis object, optional
         Axis to plot on. If not provided, a new axis will be created.
     i : int, optional
         Index for subplot. Default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Number of rows. The default is 1.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. t-SNE - Clustering.pdf
 
@@ -728,13 +722,13 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
     -------
     ax : matplotlib axis object
         Axis containing the plot.
-        Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad con marcadores de cluster en formato pdf.
+        Plots and (saves) a scatter plot of the data with dimensionality reduction with cluster markers in PDF format.
     '''    
     # Create a DataFrame for easy use with Seaborn
     tsne_df = pd.DataFrame(X_reduced, columns=[f't-SNE_{i+1}' for i in range(2)])    
     tsne_df['Labels'] = labels
     
-    # Mascaras para cambiar de marcadores 
+    # Masks to change markers 
     valid_points = tsne_df[tsne_df['Labels'] != -1]
     anomalies = tsne_df[tsne_df['Labels'] == -1]
     
@@ -743,7 +737,7 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
 
     # Define custom markers for each class
     markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
-    palette = palette=sns.color_palette()
+    palette = sns.color_palette()
     # Customize the markers list to match the number of unique labels
     markers = markers[:num_labels]
     palette = palette[:num_labels]
@@ -759,19 +753,9 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
         # Title for each test id
         ax.set_title(subtitle)
         
-    # # Set x-axis label only for the bottom column 
-    # elif i > n_col*(n_row - 1):
-    #     ax.set_xlabel(x_label + '\n(' + string.ascii_lowercase[i-1] + ')')
-    #     # Title for each test id
-    #     ax.set_title(subtitle)
-    # else:
-    #     ax.set_xlabel('(' + string.ascii_lowercase[i-1] + ')')
-    #     # Title for each test id
-    #     ax.set_title(subtitle)
-
     # Use Seaborn scatter plot with hue and style parameters
     sns.scatterplot(x=valid_points['t-SNE_1'], y=valid_points['t-SNE_2'], hue='Labels', style='Labels',
-                    data=valid_points, palette = palette, markers=markers, ax=ax)
+                    data=valid_points, palette=palette, markers=markers, ax=ax)
     
     # Scatter points with label '-1' separately as red 'x'
     sns.scatterplot(x=anomalies['t-SNE_1'], y=anomalies['t-SNE_2'], hue='Labels', style='Labels', data=anomalies, 
@@ -787,8 +771,8 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
     ax.grid()
     ax.set_axisbelow(True)  # Set grid lines behind the data points    
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = f'{title}.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -797,44 +781,46 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
     
 def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Clustering', subtitle='', 
                             x_label='t-SNE Dimension 1', y_label='t-SNE Dimension 2', z_label='t-SNE Dimension 3',
-                            width=180, height=120, guardar=False):
+                            width=180, height=120, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
+        Labels of the clusters obtained by k-means or dbscan.
     X_reduced : array
-        Set de reduccion de dimensionalidad obtenido con t-sne y usado para entrenamiento de clustering.
+        Dimensionality reduction set obtained with t-SNE and used for clustering training.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     title : str, optional
-        Titulo de la imagen para mostrar y guardar. The default is 't-SNE 3D Clustering'.
+        Title of the image to display and save. The default is 't-SNE 3D Clustering'.
     x_label : str, optional
-        Leyenda del eje x. The default is 't-SNE Dimension 1'.
+        Label for the x-axis. The default is 't-SNE Dimension 1'.
     y_label : str, optional
-        Leyenda del eje y. The default is 't-SNE Dimension 2'.
+        Label for the y-axis. The default is 't-SNE Dimension 2'.
     z_label : str, optional
-        Leyenda del eje z. The default is 't-SNE Dimension 3'.
+        Label for the z-axis. The default is 't-SNE Dimension 3'.
     subtitle : str, optional
-        Titulo para cada uno de los subplots. The default is ''.
+        Subtitle for each of the subplots. The default is ''.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 180  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Height of the figure in millimeters. The default is 120
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. t-SNE 3D - Clustering.pdf
 
     Returns
     -------
-    Grafica y (guarda) un diagrama de dispersion de los datos con reduccion de dimensionalidad en 3D con marcadores de cluster en formato pdf.
+    ax : matplotlib axis object
+        Axis containing the plot.
+        Plots and (saves) a 3D scatter plot of the data with dimensionality reduction and cluster markers in PDF format.
     '''    
     # Create a DataFrame for easy use with Seaborn
     tsne_df = pd.DataFrame(X_reduced, columns=[f't-SNE_{i+1}' for i in range(3)])    
     tsne_df['Labels'] = labels
     
-    # Mascaras para cambiar de marcadores 
+    # Masks to change markers 
     valid_points = tsne_df[tsne_df['Labels'] != -1]
     anomalies = tsne_df[tsne_df['Labels'] == -1]
     
@@ -858,9 +844,6 @@ def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Cluster
     ax.set_ylabel(y_label)
     ax.set_zlabel(z_label)
     
-     # Define custom markers for each class
-    markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
-    
     # Plot valid points with different markers and colors
     for label, marker, color in zip(valid_points['Labels'].unique(), markers, palette):
         subset = valid_points[valid_points['Labels'] == label]
@@ -870,10 +853,8 @@ def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Cluster
     ax.scatter(anomalies['t-SNE_1'], anomalies['t-SNE_2'], anomalies['t-SNE_3'], 
                 c='r', marker='x', label='Anomalies')
     
-    # fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
-    
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = f'{title}.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
@@ -882,40 +863,40 @@ def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Cluster
     
     return ax
     
-def plot_dbi(dbi_kmeans, dbi_dbscan, figure_path, k_min=2, k_max=6, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+def plot_dbi(dbi_kmeans, dbi_dbscan, figure_path, k_min=2, k_max=6, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, save=False):
     '''
     Parameters
     ----------
     dbi_kmeans : array, list
-        dbi scores obtenidos por kmeans.
+        DBI scores obtained by k-means.
     dbi_dbscan : array, list
-        dbi scores obtenidos por dbscan.
+        DBI scores obtained by DBSCAN.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     k_min : int, optional
-        numero minimo de clusters. The default is 2.
+        Minimum number of clusters. The default is 2.
     k_max : int, optional
-        numero maximo de clusters. The default is 6.
+        Maximum number of clusters. The default is 6.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     ax : axes, optional
-        axes subplot. The default is None.
+        Axes subplot. The default is None.
     i : int, optional
-        contador para graficar cada subplot. The default is 1.
+        Counter for plotting each subplot. The default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
-    guardar : TYPE, optional
-        DESCRIPTION. The default is False.
+        Number of rows. The default is 1.
+    save : boolean, optional
+        "True" to save the image. The default is False.
 
     Returns
     -------
     ax : axes
-        Subplot de la figura.
-        Grafica y (guarda) un diagrama de los dbi scores para kmeans y dbscan en formato pdf.
+        Subplot of the figure.
+        Plots and (saves) a diagram of the DBI scores for k-means and DBSCAN in PDF format.
     '''    
     # Create a DataFrame with the labels  
     x = pd.Series(range(k_min, k_max + 1), name='k')
@@ -962,11 +943,10 @@ def plot_dbi(dbi_kmeans, dbi_dbscan, figure_path, k_min=2, k_max=6, width=90, he
     ax.grid()
     ax.set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         figure_filename = 'Davies-Bouldin Index.pdf'
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
         
     return ax
-  

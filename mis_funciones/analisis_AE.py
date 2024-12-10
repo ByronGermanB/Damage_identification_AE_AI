@@ -5,7 +5,6 @@ Created on Thu Nov 16 10:24:10 2023
 @author: bbarmac
 """
 
-#%%
 # =============================================================================
 # Importamos las librerias necesarias
 # =============================================================================
@@ -48,11 +47,11 @@ from sklearn.manifold import TSNE
 matplotlib.rcParams['font.family'] = 'serif'
 matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
-matplotlib.rcParams['figure.dpi'] = 300
+matplotlib.rcParams['figure.dpi'] = 150
 
-#%%
+
 # =============================================================================
-# Extraccion de features
+# Feature extraction
 # =============================================================================
 
 class Features:
@@ -61,35 +60,37 @@ class Features:
         Parameters
         ----------
         path : str
-            Directorio donde estan los archivos pri y tra.
+            Directory where the pri and tra files are located.
         lower_freq : int, float
-            Limite inferior de frecuencia en kHz.
+            Lower frequency limit in kHz.
         upper_freq : int, float
-            Limite superior de frecuencia en kHz.
+            Upper frequency limit in kHz.
         sampling_rate : int, float
-            Frecuencia de adquisicion de datos por segundo en MHz.
+            Data acquisition frequency per second in MHz.
         N_samp : int
-            Numero de muestras (datos) en cada segmento para analisis de Fourier (Preferiblemente potencia de 2).
+            Number of samples (data points) in each segment for Fourier analysis (preferably a power of 2).
         N_seg : int
-            Numero total de segmentos a analizar.
+            Total number of segments to analyze.
         desfase : int
-            Indice para tomar la senal desde el inicio o con un desfase positivo, depende del pretrigger.
+            Index to start the signal from the beginning or with a positive offset, depending on the pretrigger.
+        desfase_carga : int
+            Offset of the time taken in AE and in MTS.
 
         Returns
         -------
-        Objeto con inicializacion de valores para aplicar funciones de extraccion y graficas.
+        Object initialized with values to apply extraction and plotting functions.
 
         '''
         self.path = path
-        self.lower_freq = lower_freq    # Limite inferior de frecuencia en kHz
-        self.upper_freq = upper_freq    # Limite superior de frecuencia en kHz
-        self.sampling_rate = sampling_rate # Frecuencia de adquisicion de datos por segundo en MHz
-        self.N_samp = N_samp               # Numero de muestras (datos) en cada segmento
-        self.N_seg = N_seg                 # Numero de segmentos
-        self.desfase = desfase             # Depende del tiempo de pretrigger permite empezar desde el inicio de la senal o con un desfase positivo
-        self.desfase_carga = desfase_carga # Desfase del tiempo tomado en AE y en MTS
+        self.lower_freq = lower_freq    # Lower frequency limit in kHz
+        self.upper_freq = upper_freq    # Upper frequency limit in kHz
+        self.sampling_rate = sampling_rate # Data acquisition frequency per second in MHz
+        self.N_samp = N_samp               # Number of samples (data points) in each segment
+        self.N_seg = N_seg                 # Number of segments
+        self.desfase = desfase             # Depends on the pretrigger time, allows starting from the beginning of the signal or with a positive offset
+        self.desfase_carga = desfase_carga # Offset of the time taken in AE and in MTS
         
-        # Abrir archivos pri y tra
+        # Open pri and tra files
         files =  os.listdir(self.path)
         for item in files:
             if item.endswith(".tradb"):
@@ -98,20 +99,20 @@ class Features:
             elif item.endswith(".pridb"):
                 self.pridb_path = os.path.join(self.path, item)
         
-        # Calculo de valores 
-        self.res_freq = sampling_rate * 1000 / N_samp # Resolucion en frecuencia en kHz
-        self.time_samp = 1 / sampling_rate   # Tiempo de muestreo en us (microsegundos)
-        self.time_seg = self.time_samp * N_samp   # Tiempo de cada segmento en us
+        # Calculate values 
+        self.res_freq = sampling_rate * 1000 / N_samp # Frequency resolution in kHz
+        self.time_samp = 1 / sampling_rate   # Sampling time in µs (microseconds)
+        self.time_seg = self.time_samp * N_samp   # Time of each segment in µs
         
-        # Calculo de indices del rango de frecuencias
-        self.lower_freq_index = int(self.lower_freq // self.res_freq) # Indice de la frecuencia inferior
-        self.upper_freq_index = int(self.upper_freq // self.res_freq +1) # Indice de la frecuencia superior
-        self.N_feat_seg = 9  # Numero de features por segmento
+        # Calculate frequency range indices
+        self.lower_freq_index = int(self.lower_freq // self.res_freq) # Lower frequency index
+        self.upper_freq_index = int(self.upper_freq // self.res_freq +1) # Upper frequency index
+        self.N_feat_seg = 9  # Number of features per segment
         
-        # Valores para la FFT que solo se calculan una vez
-        self.window = hamming(self.N_samp)  # Creamos la ventana Hamming
-        self.freq_fft = (fftfreq(self.N_samp, self.time_samp*1e-6)/1000)[:self.N_samp//2]  # Valores positivos de frecuencias de la FFT en kHz
-        self.freq_fft_rango = self.freq_fft[self.lower_freq_index:self.upper_freq_index + 1]   # Secciona los valores de frecuencia
+        # Values for FFT that are calculated only once
+        self.window = hamming(self.N_samp)  # Create the Hamming window
+        self.freq_fft = (fftfreq(self.N_samp, self.time_samp*1e-6)/1000)[:self.N_samp//2]  # Positive frequency values of the FFT in kHz
+        self.freq_fft_rango = self.freq_fft[self.lower_freq_index:self.upper_freq_index + 1]   # Section the frequency values
                   
     def feature_extr(self, umbral, counts, clase, test_id, max_trai=None, min_trai=1):
         '''
@@ -119,87 +120,87 @@ class Features:
         Parameters
         ----------
         umbral : int
-            Valor umbral de amplitud para filtrado.
+            Threshold amplitude value for filtering.
         counts : int
-            Valor minimo de counts para filtrado.
+            Minimum counts value for filtering.
         clase : int or str
-            Clase a la que pertenece la senal.
+            Class to which the signal belongs.
         test_id : str
-            Codigo del ensayo para luego identificarlo
+            Test code for later identification.
         max_trai : int, optional
-            Indice del trai maximo a considerar, si se quiere excluir la rotura. The default is None.
+            Maximum trai index to consider, if you want to exclude the break. The default is None.
         min_trai : int, optional
-            Indice del trai minimo a considerar, si se quiere excluir algún dato de inicio erróneo. The default is 1.
+            Minimum trai index to consider, if you want to exclude some erroneous initial data. The default is 1.
         
         Returns
         -------
-        df_total : Dataframe 
-            Dataframe que contiene features de frecuencia + rise time, clases y numero de trai.
+        df_total : DataFrame 
+            DataFrame containing frequency features + rise time, classes, and trai number.
 
         '''
   
-        # Lectura de archivos 
+        # Read files 
         pridb = vae.io.PriDatabase(self.pridb_path)
         tradb = vae.io.TraDatabase(self.tradb_path)
-        df_hits = pridb.read_hits() # Leemos los hits que se han producido
+        df_hits = pridb.read_hits() # Read the hits that have occurred
 
-        # Filtrado de la senal (trai umbral y counts)
-        umbral_V = 10 ** (umbral/20 - 6)  # Umbral en Volvtios
+        # Signal filtering (trai threshold and counts)
+        umbral_V = 10 ** (umbral/20 - 6)  # Threshold in Volts
         no_saturacion = 10 ** (94/20 - 6)
                 
         if max_trai is not None:
-            df_hits_filtro = df_hits[(df_hits["channel"] >= 1) & (df_hits["amplitude"] >= umbral_V) & (df_hits["amplitude"] <= no_saturacion) & (df_hits["trai"] >= min_trai) & (df_hits["trai"] <= max_trai) & (df_hits["counts"] >= counts)]  # Seleccionamos solo los valores cumplen las condiciones
+            df_hits_filtro = df_hits[(df_hits["channel"] >= 1) & (df_hits["amplitude"] >= umbral_V) & (df_hits["amplitude"] <= no_saturacion) & (df_hits["trai"] >= min_trai) & (df_hits["trai"] <= max_trai) & (df_hits["counts"] >= counts)]  # Select only the values that meet the conditions
         else:
-            df_hits_filtro = df_hits[(df_hits["channel"] >= 1) & (df_hits["amplitude"] >= umbral_V) & (df_hits["amplitude"] <= no_saturacion) & (df_hits["trai"] >= min_trai) & (df_hits["counts"] >= counts)]  # Seleccionamos solo los valores cumplen las condiciones
+            df_hits_filtro = df_hits[(df_hits["channel"] >= 1) & (df_hits["amplitude"] >= umbral_V) & (df_hits["amplitude"] <= no_saturacion) & (df_hits["trai"] >= min_trai) & (df_hits["counts"] >= counts)]  # Select only the values that meet the conditions
         
-        trai = df_hits_filtro["trai"].to_numpy() # Extraemos la columna con los valores TRAI (indices de transitorio)
-        N_trai = trai.size  # Numero de transitorios totales
+        trai = df_hits_filtro["trai"].to_numpy() # Extract the column with the TRAI values (transient indices)
+        N_trai = trai.size  # Total number of transients
         
-        # Creaccion de matriz para almacenar features  
-        v_features_total = np.zeros((N_trai , self.N_seg * self.N_feat_seg))  # Array que almacenara los features en cada iteracion
+        # Create matrix to store features  
+        v_features_total = np.zeros((N_trai , self.N_seg * self.N_feat_seg))  # Array that will store the features in each iteration
         
-        x = np.arange(0, self.N_seg)  # Vector con factores para la segmentacion
+        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
 
-        # Ciclo for principal para cada transitorio
-        N_iter = 0 # Esto va a contar las iteraciones si por alguna razon los trai no siguen la secuencia de 1 en 1 (e.g uso de filtro)
+        # Main for loop for each transient
+        N_iter = 0 # This will count the iterations if for some reason the trai do not follow the sequence of 1 in 1 (e.g. use of filter)
         for trans in trai:
-            amp, tiempo = tradb.read_wave(trans, time_axis=False) # Leemos el transitorio i-esimo
+            amp, tiempo = tradb.read_wave(trans, time_axis=False) # Read the i-th transient
             
-            amp *= 1e3     # in mV   # El operador *= esta actualizando el valor de amplitud -- amplitud = amplitud * 1e3
-                                # La senal estaba en voltios y la representa en mV
-                                # Esta es la amplitud
-            # time = tiempo * 1e6  # for us  # Lo mismo la senal se almacena en segundos y se representa en us
-                           # Este es el tiempo
+            amp *= 1e3     # in mV   # The operator *= is updating the amplitude value -- amplitude = amplitude * 1e3
+                                # The signal was in volts and is represented in mV
+                                # This is the amplitude
+            # time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in seconds and represented in µs
+                           # This is the time
             
             
-            # Creacion de los segmentos
-            seg_total = np.zeros((self.N_seg, self.N_samp))  # Array que almacenara los valores de las amplitudes en cada segmento
+            # Create the segments
+            seg_total = np.zeros((self.N_seg, self.N_samp))  # Array that will store the amplitude values in each segment
         
-            # Ciclo for  para aplicar la transformada de Fourier
+            # For loop to apply the Fourier transform
             for i in x:
                 seg_total[i] = amp[int(i * self.N_samp / 2) + self.desfase : int((i/2 + 1) * self.N_samp) + self.desfase]
                 
-            # Aplicar ventanas Hamming a cada segmento
-            seg_t_window = seg_total * self.window  # Aplicamos la ventana a la matriz de segmentos
+            # Apply Hamming windows to each segment
+            seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
             
-            # Calcular FFT la matriz de segmento
-            amp_fft = fft(seg_t_window)   # Calcula la transformada de Fourier de la matriz de segmentos
-            amp_fft = np.abs(amp_fft)    # Calcula el modulo de la amplitud para no representar con su fase (Parte real e imaginaria) 
+            # Calculate FFT of the segment matrix
+            amp_fft = fft(seg_t_window)   # Calculate the Fourier transform of the segment matrix
+            amp_fft = np.abs(amp_fft)    # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part) 
             
-            # Escoger el rango de frecuencias de interes
-            amp_fft_rango = amp_fft[:,self.lower_freq_index:self.upper_freq_index + 1]   # Secciona los valores de amplitud en el rango de frecuencias establecido
+            # Select the range of interest frequencies
+            amp_fft_rango = amp_fft[:,self.lower_freq_index:self.upper_freq_index + 1]   # Section the amplitude values in the established frequency range
             
-            # Inicializacion de vectores de features en frecuencia para cada segmento
-            peak_freq = np.zeros(self.N_seg) # Almacena los peak freq de cada segmento
-            centroid_freq = np.zeros(self.N_seg) # Almacena el centroide de frecuencia de cada segmento
-            part_power_1 = np.zeros(self.N_seg) # Almacena la potencia parcial 1 total de cada segmento
-            part_power_2 = np.zeros(self.N_seg) # Almacena la potencia parcial 2 total de cada segmento
-            part_power_3 = np.zeros(self.N_seg) # Almacena la potencia parcial 3 total de cada segmento
-            part_power_4 = np.zeros(self.N_seg) # Almacena la potencia parcial 4 total de cada segmento
-            part_power_5 = np.zeros(self.N_seg) # Almacena la potencia parcial 5 total de cada segmento
-            part_power_6 = np.zeros(self.N_seg) # Almacena la potencia parcial 6 total de cada segmento
+            # Initialize frequency feature vectors for each segment
+            peak_freq = np.zeros(self.N_seg) # Store the peak frequencies of each segment
+            centroid_freq = np.zeros(self.N_seg) # Store the centroid frequencies of each segment
+            part_power_1 = np.zeros(self.N_seg) # Store the total partial power 1 of each segment
+            part_power_2 = np.zeros(self.N_seg) # Store the total partial power 2 of each segment
+            part_power_3 = np.zeros(self.N_seg) # Store the total partial power 3 of each segment
+            part_power_4 = np.zeros(self.N_seg) # Store the total partial power 4 of each segment
+            part_power_5 = np.zeros(self.N_seg) # Store the total partial power 5 of each segment
+            part_power_6 = np.zeros(self.N_seg) # Store the total partial power 6 of each segment
         
-            # Ciclo for para calculo de features
+            # For loop to calculate features
             for i in x:
                 # Peak frequency
                 peak_index = np.argmax(amp_fft_rango[i])
@@ -209,24 +210,24 @@ class Features:
                 centroid_freq[i] = np.sum(amp_fft_rango[i] * self.freq_fft_rango) / np.sum(amp_fft_rango[i])
                 
                 # Partial Power 1 - 6
-                denominador = np.sum((amp_fft_rango[i]) ** 2)
-                part_power_1[i] = np.sum((amp_fft_rango[i, 0:int(len(self.freq_fft_rango)*1/6)]) ** 2) * 100 / denominador
-                part_power_2[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*1/6):int(len(self.freq_fft_rango)*2/6)]) ** 2) *100 / denominador
-                part_power_3[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*2/6):int(len(self.freq_fft_rango)*3/6)]) ** 2) *100 / denominador
-                part_power_4[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*3/6):int(len(self.freq_fft_rango)*4/6)]) ** 2) *100 / denominador
-                part_power_5[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*4/6):int(len(self.freq_fft_rango)*5/6)]) ** 2) *100 / denominador
-                part_power_6[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*5/6):]) ** 2) *100 / denominador
+                denominator = np.sum((amp_fft_rango[i]) ** 2)
+                part_power_1[i] = np.sum((amp_fft_rango[i, 0:int(len(self.freq_fft_rango)*1/6)]) ** 2) * 100 / denominator
+                part_power_2[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*1/6):int(len(self.freq_fft_rango)*2/6)]) ** 2) *100 / denominator
+                part_power_3[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*2/6):int(len(self.freq_fft_rango)*3/6)]) ** 2) *100 / denominator
+                part_power_4[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*3/6):int(len(self.freq_fft_rango)*4/6)]) ** 2) *100 / denominator
+                part_power_5[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*4/6):int(len(self.freq_fft_rango)*5/6)]) ** 2) *100 / denominator
+                part_power_6[i] = np.sum((amp_fft_rango[i, int(len(self.freq_fft_rango)*5/6):]) ** 2) *100 / denominator
                 
             w_peak_freq = (peak_freq * centroid_freq) ** 0.5
             
-            # Vector de features
-            v_features = np.hstack((peak_freq, w_peak_freq, centroid_freq, part_power_1, part_power_2, part_power_3, part_power_4, part_power_5, part_power_6)) # Agrupamos los features
-            v_features = v_features.reshape(1, self.N_feat_seg * self.N_seg) # Reshape de la matriz de features a un vector de una sola fila
-            v_features_total[N_iter] = v_features # Encadenamos los valores a cada fila de la matriz para crear la matriz de features
+            # Feature vector
+            v_features = np.hstack((peak_freq, w_peak_freq, centroid_freq, part_power_1, part_power_2, part_power_3, part_power_4, part_power_5, part_power_6)) # Group the features
+            v_features = v_features.reshape(1, self.N_feat_seg * self.N_seg) # Reshape the feature matrix into a single row vector
+            v_features_total[N_iter] = v_features # Chain the values to each row of the matrix to create the feature matrix
 
-            N_iter +=  1  # Actualizamos el contador
+            N_iter +=  1  # Update the counter
 
-        # Nombre de los features
+        # Feature names
 
         if self.N_seg == 3:
             name_feature = ['peak_freq_1', 'peak_freq_2', 'peak_freq_3', 
@@ -237,7 +238,7 @@ class Features:
                             'p_power_3_1', 'p_power_3_2', 'p_power_3_3',
                             'p_power_4_1', 'p_power_4_2', 'p_power_4_3',
                             'p_power_5_1', 'p_power_5_2', 'p_power_5_3',
-                            'p_power_6_1', 'p_power_6_2', 'p_power_6_3']  # Array que almacenara los nombres de los features por segmento  
+                            'p_power_6_1', 'p_power_6_2', 'p_power_6_3']  # Array that will store the feature names per segment  
         
         elif self.N_seg == 1:
             name_feature = ['peak_freq', 
@@ -248,78 +249,78 @@ class Features:
                             'p_power_3',
                             'p_power_4',
                             'p_power_5',
-                            'p_power_6']  # Array que almacenara los nombres de los features por segmento  
+                            'p_power_6']  # Array that will store the feature names per segment  
 
-        # Dataframe de features
+        # Feature DataFrame
         df_features = pd.DataFrame(v_features_total,
                                   columns = name_feature)
         
-        # Dataframe de trais
+        # Trai DataFrame
         df_trai = pd.DataFrame(trai, columns = ['trai'])
 
-        # Dataframe de time  y rise time 
+        # Time and rise time DataFrame 
         df_time = df_hits_filtro[['rise_time', 'time', 'amplitude', 'energy', 'counts']].reset_index().drop(['set_id'], axis=1)
         df_time['amplitude'] = 20 * (np.log10(df_time['amplitude']) + 6)
         df_time['time'] = df_time['time'] - self.desfase_carga
         df_time['time_norm'] = df_time['time'] / max(df_time['time'])
         
-        # Dataframe de clases
+        # Class DataFrame
         df_clase = pd.DataFrame({'Clase' : [clase] * N_trai})
         
         
-        # DataFrame total
+        # Total DataFrame
         df_total = pd.concat([df_features, df_time, df_clase, df_trai], axis=1)   
         df_total['test_id'] = test_id
         
-        # La funcion regresa el DataFrame total
+        # The function returns the total DataFrame
         return (df_total)
         
-    def plot_signal(self, trai, name_figure, figure_path, time_graph = None, title = None, x_label = 'Time [µs]', 
-                    y_label = 'Amplitude [mV]' , width=90, height=60, guardar=False):
+    def plot_signal(self, trai, name_figure, figure_path, time_graph=None, title=None, x_label='Time [µs]', 
+                    y_label='Amplitude [mV]', width=90, height=60, guardar=False):
         '''        
         Parameters
         ----------
         trai : int
-            Numero de transitorio a graficar.
+            Transient number to plot.
         name_figure : str
-            Nombre de la clase que aparece en titulo de la figura.
+            Name of the class that appears in the figure title.
             
             e.g. Transient Wave Plot: {name_figure} - Transient: {trai}
         figure_path : str
-            Directorio para guardar la figura.
+            Directory to save the figure.
         time_graph : int or float, optional
-            Tiempo en us para hasta donde se quiere la grafica
+            Time in µs up to which the graph is desired.
         title : str, optional
-            titulo de la figura. The default is None
+            Title of the figure. The default is None.
         x_label : str, optional
-            leyenda del eje x. The default is 'Time [µs]'
+            Label for the x-axis. The default is 'Time [µs]'.
         y_label : str, optional
-            leyenda del eje y. The default is 'Amplitude [mV]'
+            Label for the y-axis. The default is 'Amplitude [mV]'.
         width : int or float, optional
-            Ancho de la figura en milimetros. The default is 90    
+            Width of the figure in millimeters. The default is 90.
         height : int or float, optional
-            Alto de la figura en milimetros. The default is 60    
+            Height of the figure in millimeters. The default is 60.
         guardar : boolean, optional
-            "True" para guardar la imagen. The default is False.
+            "True" to save the image. The default is False.
             
-            e.g. Transitorio_{name_figure}_{trai}.pdf
+            e.g. Transient_{name_figure}_{trai}.pdf
         Returns
         -------
-        Grafica y (guarda) la senal transitoria en formato pdf
+        Plots and (saves) the transient signal in pdf format.
 
         '''  
-        # Abrir archivos tradb
+        # Open tradb files
         tradb = vae.io.TraDatabase(self.tradb_path)
 
-        # Graficamos del transitorio
+        # Plot the transient
         amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # El operador *= esta actualizando el valor de amplitud -- amp = amp * 1e3
-                            # La senal estaba en voltios y la representa en mV
-                            # Esta es la amp
-        time = tiempo * 1e6  # for µs  # Lo mismo la senal se almacena en segundos y se representa en us
-                       # Este es el tiempo
+        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
+                            # The signal was in volts and is represented in mV
+                            # This is the amplitude
+        time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in seconds and represented in µs
+                       # This is the time
         
-        figsize_inches = (width / 25.4, height/ 25.4)
+        figsize_inches = (width / 25.4, height / 25.4)
         plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
         
         if time_graph is None:
@@ -336,9 +337,9 @@ class Features:
         else:
             plt.title(title)
         
-        # Guardar la imagen en figure_path
+        # Save the image in figure_path
         if guardar:
-            figure_filename = f"Transitorio_{name_figure}_{trai}.pdf"
+            figure_filename = f"Transient_{name_figure}_{trai}.pdf"
             figure_path_name = os.path.join(figure_path, figure_filename)
             plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
 
@@ -349,100 +350,95 @@ class Features:
         Parameters
         ----------
         trai : int
-            Numero de transitorio a graficar.
+            Transient number to plot.
         name_figure : str
-            Nombre de la clase que aparece en titulo de la figura 
+            Name of the class that appears in the figure title.
             
             e.g. Segmentation: {name_figure} - Transient: {trai}
         figure_path : str
-            Directorio para guardar la figura.          
+            Directory to save the figure.
         guardar : boolean, optional
-            "True" para guardar la imagen. The default is False.
+            "True" to save the image. The default is False.
             
             e.g. Segmentation_{name_figure}_{trai}.pdf
         Returns
         -------
-        Grafica y (guarda) la segmentacion y FFT en formato pdf.
+        Plots and (saves) the segmentation and FFT in pdf format.
 
         '''   
-        # Abrir archivos tradb
+        # Open tradb files
         tradb = vae.io.TraDatabase(self.tradb_path)
 
-        # Leemos la amplitud y el tiempo
+        # Read amplitude and time
         amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # El operador *= esta actualizando el valor de amplitud -- amp = amp * 1e3
-                            # La senal estaba en voltios y la representa en mV
-                            # Esta es la amp
-        time = tiempo * 1e6  # for µs  # Lo mismo la senal se almacena en segundos y se representa en us
-                       # Este es el tiempo       
+        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
+                            # The signal was in volts and is represented in mV
+                            # This is the amplitude
+        time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in seconds and represented in µs
+                       # This is the time       
+       
+        # Fourier transform calculation
+        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
         
-        # Calculo de la trasnformada de Fourier
-        x = np.arange(0, self.N_seg)  # Vector con factores para la segmentacion
-        
-        # Creacion de los segmentos
-        seg_total = np.zeros((self.N_seg, self.N_samp))  # Array que almacenara los valores de las amplitudes en cada segmento
+        # Create segments
+        seg_total = np.zeros((self.N_seg, self.N_samp))  # Array that will store the amplitude values in each segment
                 
         for i in x:
-            seg_total[i] = amp[int(i * self.N_samp / 2) + self.desfase : int((i/2 + 1) * self.N_samp) + self.desfase]
+            seg_total[i] = amp[int(i * self.N_samp / 2) + self.desfase : int((i / 2 + 1) * self.N_samp) + self.desfase]
             
-        # Aplicar ventanas Hamming a cada segmento
-        seg_t_window = seg_total * self.window  # Aplicamos la ventana a la matriz de segmentos
+        # Apply Hamming windows to each segment
+        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
         
-        # Calcular FFT la matriz de segmento
-        amp_fft = fft(seg_t_window)   # Calcula la transformada de Fourier de la matriz de segmentos
-        amp_fft = np.abs(amp_fft)    # Calcula el modulo de la amplitud para no representar con su fase (Parte real e imaginaria) 
+        # Calculate FFT of the segment matrix
+        amp_fft = fft(seg_t_window)   # Calculate the Fourier transform of the segment matrix
+        amp_fft = np.abs(amp_fft)    # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part) 
         
-        # Escoger el rango de frecuencias de interes
-        amp_fft_rango = amp_fft[:,self.lower_freq_index:self.upper_freq_index + 1]   # Secciona los valores de amplitud en el rango de frecuencias establecido
+        # Select the range of interest frequencies
+        amp_fft_rango = amp_fft[:, self.lower_freq_index:self.upper_freq_index + 1]   # Section the amplitude values in the established frequency range
               
-
-        # Varias gráficas en una figura
-        fig,axs = plt.subplots(2, self.N_seg,figsize=(15, 7.5))
+        # Multiple plots in one figure
+        fig, axs = plt.subplots(2, self.N_seg, figsize=(15, 7.5))
         plt.suptitle(f'Segmentation: {name_figure} - Transient: {trai}', fontsize=14)
         plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
 
-            
-        # Maximos y minimos para ejes
+        # Maximum and minimum for axes
         seg_t_window_max = np.amax(abs(seg_t_window))
         amp_fft_max = np.amax(amp_fft_rango)
             
         for j in x:
-            
             # Time domain
-            axs[0,j].grid(linewidth=0.3, color='.25')
-            axs[0,j].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
-            axs[0,j].plot(time[int(j * self.N_samp / 2) + self.desfase : int((j/2 + 1) * self.N_samp) + self.desfase], seg_t_window[j])
-            axs[0,j].set_xlabel("Time [µs]")
-            axs[0,0].set_ylabel("Amplitude [mV]")
-            axs[0,j].set_title(f"Segment: {j+1}")
+            axs[0, j].grid(linewidth=0.3, color='.25')
+            axs[0, j].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
+            axs[0, j].plot(time[int(j * self.N_samp / 2) + self.desfase : int((j / 2 + 1) * self.N_samp) + self.desfase], seg_t_window[j])
+            axs[0, j].set_xlabel("Time [µs]")
+            axs[0, 0].set_ylabel("Amplitude [mV]")
+            axs[0, j].set_title(f"Segment: {j + 1}")
             
             # FFT
-            axs[1,j].grid(linewidth=0.3, color='.25')
-            axs[1,j].set_ylim(0, amp_fft_max*1.1)
-            axs[1,j].plot(self.freq_fft_rango, amp_fft_rango[j][:self.N_samp//2])
+            axs[1, j].grid(linewidth=0.3, color='.25')
+            axs[1, j].set_ylim(0, amp_fft_max * 1.1)
+            axs[1, j].plot(self.freq_fft_rango, amp_fft_rango[j][:self.N_samp // 2])
             
             # Vertical line in the peak frequency
             peak_index = np.argmax(amp_fft_rango[j])
             peak_freq = self.freq_fft_rango[peak_index]
-            y_max = np.amax(amp_fft_rango[j]) *2 / (amp_fft_max*1.1)    
-            axs[1,j].axvline(x = peak_freq, ymax = y_max, color ='red', linestyle="--", label='f_peak')
+            y_max = np.amax(amp_fft_rango[j]) * 2 / (amp_fft_max * 1.1)    
+            axs[1, j].axvline(x=peak_freq, ymax=y_max, color='red', linestyle="--", label='f_peak')
                     
             # Vertical line in the Centroid frequency
             centroid_freq = np.sum(amp_fft_rango[j] * self.freq_fft_rango) / np.sum(amp_fft_rango[j])
             y_max_c = 0.8 * y_max    
-            axs[1,j].axvline(x = centroid_freq, ymax = y_max_c, color ='green', linestyle=":", label='f_centroid')
+            axs[1, j].axvline(x=centroid_freq, ymax=y_max_c, color='green', linestyle=":", label='f_centroid')
             
-            
-            axs[1,j].set_xlabel("Frequency [kHz]")
-            axs[1,0].set_ylabel("FFT-Magnitude [mV]")
-            axs[1,j].legend()
+            axs[1, j].set_xlabel("Frequency [kHz]")
+            axs[1, 0].set_ylabel("FFT-Magnitude [mV]")
+            axs[1, j].legend()
 
-        
         # Add a single border around all subplots
         fig.patch.set_edgecolor('black')
         fig.patch.set_linewidth(1)
 
-        # Guardar la imagen en figure_path
+        # Save the image in figure_path
         if guardar:
             figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
             figure_path_name = os.path.join(figure_path, figure_filename)
@@ -455,60 +451,60 @@ class Features:
         Parameters
         ----------
         trai : int
-            Numero de transitorio a graficar.
+            Transient number to plot.
         name_figure : str
-            Nombre de la clase que aparece en titulo de la figura 
+            Name of the class that appears in the figure title 
             
             e.g. Segmentation: {name_figure} - Transient: {trai}
         figure_path : str
-            Directorio para guardar la figura. 
+            Directory to save the figure. 
         title : str, optional
-            Titulo de la figura, si se deja en default sera Segmentation: {name_figure} - Transient: {trai}. The default is None    
+            Title of the figure, if left as default it will be Segmentation: {name_figure} - Transient: {trai}. The default is None    
         width : int or float, optional
-            Ancho de la figura en milimetros. The default is 90    
+            Width of the figure in millimeters. The default is 90    
         height : int or float, optional
-            Alto de la figura en milimetros. The default is 60
+            Height of the figure in millimeters. The default is 120
         guardar : boolean, optional
-            "True" para guardar la imagen. The default is False.
+            "True" to save the image. The default is False.
             
             e.g. Segmentation_{name_figure}_{trai}.pdf
         Returns
         -------
-        Grafica y (guarda) la segmentacion (con un solo segmento) y FFT en formato pdf.
+        Plots and (saves) the segmentation (with a single segment) and FFT in pdf format.
 
         '''   
-        # Abrir archivos tradb
+        # Open tradb files
         tradb = vae.io.TraDatabase(self.tradb_path)
 
-        # Leemos la amplitud y el tiempo
+        # Read amplitude and time
         amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # El operador *= esta actualizando el valor de amplitud -- amp = amp * 1e3
-                            # La senal estaba en voltios y la representa en mV
-                            # Esta es la amp
-        time = tiempo * 1e6  # for µs  # Lo mismo la senal se almacena en segundos y se representa en us
-                       # Este es el tiempo       
+        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
+                            # The signal was in volts and is represented in mV
+                            # This is the amplitude
+        time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in seconds and represented in µs
+                       # This is the time       
         
-        # Calculo de la trasnformada de Fourier
-        x = np.arange(0, self.N_seg)  # Vector con factores para la segmentacion
+        # Fourier transform calculation
+        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
         
-        # Creacion de los segmentos
-        seg_total = np.zeros((self.N_seg, self.N_samp))  # Array que almacenara los valores de las amplitudes en cada segmento
+        # Create segments
+        seg_total = np.zeros((self.N_seg, self.N_samp))  # Array that will store the amplitude values in each segment
                 
         for i in x:
             seg_total[i] = amp[int(i * self.N_samp / 2) + self.desfase : int((i/2 + 1) * self.N_samp) + self.desfase]
             
-        # Aplicar ventanas Hamming a cada segmento
-        seg_t_window = seg_total * self.window  # Aplicamos la ventana a la matriz de segmentos
+        # Apply Hamming windows to each segment
+        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
         
-        # Calcular FFT la matriz de segmento
-        amp_fft = fft(seg_t_window)   # Calcula la transformada de Fourier de la matriz de segmentos
-        amp_fft = np.abs(amp_fft)    # Calcula el modulo de la amplitud para no representar con su fase (Parte real e imaginaria) 
+        # Calculate FFT of the segment matrix
+        amp_fft = fft(seg_t_window)   # Calculate the Fourier transform of the segment matrix
+        amp_fft = np.abs(amp_fft)    # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part) 
         
-        # Escoger el rango de frecuencias de interes
-        amp_fft_rango = amp_fft[:,self.lower_freq_index:self.upper_freq_index + 1]   # Secciona los valores de amplitud en el rango de frecuencias establecido
+        # Select the range of interest frequencies
+        amp_fft_rango = amp_fft[:,self.lower_freq_index:self.upper_freq_index + 1]   # Section the amplitude values in the established frequency range
               
 
-        # Varias gráficas en una figura
+        # Multiple plots in one figure
         figsize_inches = (width / 25.4, height/ 25.4)
         fig,axs = plt.subplots(2, self.N_seg, figsize=figsize_inches, dpi=300, tight_layout=True)
         if title is None:
@@ -518,7 +514,7 @@ class Features:
         plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
 
             
-        # Maximos y minimos para ejes
+        # Maximum and minimum for axes
         seg_t_window_max = np.amax(abs(seg_t_window))
         amp_fft_max = np.amax(amp_fft_rango)
         
@@ -552,7 +548,7 @@ class Features:
         axs[1].set_ylabel("FFT-Magnitude [mV]")
         axs[1].legend()
 
-        # Guardar la imagen en figure_path
+        # Save the image in figure_path
         if guardar:
             figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
             figure_path_name = os.path.join(figure_path, figure_filename)
@@ -564,121 +560,118 @@ def unir_df(*dataframes) :
     '''
     Parameters
     ----------
-    *dataframes : Dataframe
-        Dataframes para concatenar.
+    *dataframes : DataFrame
+        DataFrames to concatenate.
 
     Returns
     -------
-    concatenated_df : Dataframe
-        Regresa un solo dataframe unido
+    concatenated_df : DataFrame
+        Returns a single concatenated DataFrame.
 
     ''' 
-    # Concatena dataframes verticalmente
+    # Concatenate DataFrames vertically
     concatenated_df = pd.concat(dataframes, axis=0, ignore_index=True)
-    return (concatenated_df)
+    return concatenated_df
 
 def train_test_set(data, normalization=None, columns_to_transform=None, split=True, test_size=0.2):
     '''
     Parameters
     ----------
-    data : Dataframe
-        Dataframe que contiene los features, clases y trais.
+    data : DataFrame
+        DataFrame containing features, classes, and trais.
     normalization : str, optional
-        Normalizacion para los features.
-        'log': logaritmica.
-        'std': estandar. 
-        'min_max': minimo y maximo. 
-        'log-std' Logaritmica en columns_to_transform y estandar en todo. The default is None.
+        Normalization for the features.
+        'log': logarithmic.
+        'std': standard. 
+        'min_max': min-max. 
+        'log-std': Logarithmic on columns_to_transform and standard on all. The default is None.
     columns_to_transform : list, optional
-        Lista de columnas para la transformacion. 
-        Si no se establece se transforma todo el dataframe. The default is None.
+        List of columns for transformation. 
+        If not set, the entire DataFrame is transformed. The default is None.
     split : boolean, optional
-        True: Para dividir en train y test set. The default is True.
+        True: To split into train and test sets. The default is True.
     test_size : float, optional
-        Porcentaje del test set. The default is 0.2.
+        Percentage of the test set. The default is 0.2.
 
     Returns
     -------
-    X_train : Dataframe
-        Features para entrenamiento.
-    X_test : Dataframe
-        Features para evaluacion.
+    X_train : DataFrame
+        Features for training.
+    X_test : DataFrame
+        Features for evaluation.
     y_train : Series
-        Clases para entrenamiento.
+        Classes for training.
     y_test : Series
-        Clases para evaluacion.
+        Classes for evaluation.
     
-    Si split=False solo se devuelve X_original, X_train, y_train, y hits(dataframe para grafica de hits acumulados)
+    If split=False, only X_original, X_train, y_train, and hits (DataFrame for cumulative hits plot) are returned.
     '''      
-    # Separamos los features de las clases
-    X = data.drop(["Clase", 'trai', 'time', 'test_id', 'amplitude', 'time_norm' , 'counts', 'rise_time', 'p_power_4', 'p_power_5', 'p_power_6'], axis=1) # Elimina la columna de clases y trais (eliminar, tambien counts y time_norm)
-    y = data["Clase"].copy() # Cremos una copia solo de la columna clase
+    # Separate features from classes
+    X = data.drop(["Clase", 'trai', 'time', 'test_id', 'amplitude', 'time_norm' , 'counts', 'rise_time', 'p_power_4', 'p_power_5', 'p_power_6'], axis=1) # Remove class and trais columns (also remove counts and time_norm)
+    y = data["Clase"].copy() # Create a copy of the class column
     
     X_original = X.copy()
        
     # Feature names
     feature_names = X.columns.tolist()
     
-    # Si no se ha definido las columnas a trasnformar se seleccionan todas
+    # If columns to transform are not defined, select all
     if columns_to_transform is None:
         columns_to_transform = feature_names
         
-    # Opciones de nomralizacion
+    # Normalization options
     if normalization == 'log':
         log_transformer = FunctionTransformer(np.log)
-        # log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
-        X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Aplicamos el logaritmo a los features
+        X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Apply logarithm to features
         
     if normalization == 'std':
         standardize = StandardScaler()
-        X[columns_to_transform] = standardize.fit_transform(X[columns_to_transform]) # Aplicamos la estandarizacion a los features
+        X[columns_to_transform] = standardize.fit_transform(X[columns_to_transform]) # Apply standardization to features
     
     if normalization == 'min_max':
         min_max = MinMaxScaler()
-        X[columns_to_transform] = min_max.fit_transform(X[columns_to_transform]) # Aplicamos la estandarizacion a los features
+        X[columns_to_transform] = min_max.fit_transform(X[columns_to_transform]) # Apply min-max scaling to features
     
     if normalization == 'log-std':
-        # log_transformer = FunctionTransformer(np.log, feature_names_out="one-to-one")
         log_transformer = FunctionTransformer(np.log)
-        X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Aplicamos el logaritmo a los features
+        X[columns_to_transform] = log_transformer.transform(X[columns_to_transform]) # Apply logarithm to features
         standardize = StandardScaler()
-        X = standardize.fit_transform(X) # Aplicamos la estandarizacion a los features
+        X = standardize.fit_transform(X) # Apply standardization to features
     
-    # El dataframe que devuele la funcion depende si se particiona o no
+    # The DataFrame returned by the function depends on whether it is split or not
     if split:
         # Split the dataset into training and testing sets
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify=data["Clase"], random_state=0, shuffle=True)  
         
-        # La funcion retorna 4 dataframes
+        # The function returns 4 DataFrames
         return X_train, X_test, y_train, y_test
         
     else:
         X_train = X
         y_train = y
         
-        # Dataframe para hits acumulados
+        # DataFrame for cumulative hits
         hits = data[['test_id', 'trai', 'Clase', 'time', 'amplitude', 'energy', 'time_norm' , 'counts']].copy()
         hits['Count'] = 1
-        # hits['Cumulative'] = hits['Count'].cumsum()
         
         return X_original, X_train, y_train, hits
    
-def backward_elimantion(X_train, y_train):
+def backward_elimination(X_train, y_train):
     '''
     Parameters
     ----------
-    X_train : dataframe
-        Set de features para entrenamiento.
-    y_train : dataframe
-        Set de features para evaluacion.
+    X_train : DataFrame
+        Feature set for training.
+    y_train : DataFrame
+        Feature set for evaluation.
 
     Returns
     -------
     selected_feature_names : list
-        Lista con los nombres de los features seleccionados.
+        List of selected feature names.
 
     '''
-    # Clasificador
+    # Classifier
     model = RandomForestClassifier(random_state=11)
     
     # Perform backward elimination with cross-validation
@@ -703,63 +696,63 @@ def forest_clf(X_train, X_test, y_train, y_test, selected_features=None):
     Parameters
     ----------
     X_train : dataframe, array
-        Set de features para entrenamiento.
+        Feature set for training.
     X_test : dataframe, array
-        Set de features para evaluacion.
+        Feature set for evaluation.
     y_train : series, array
-        Clases para entrenamiento.
+        Classes for training.
     y_test : series, array
-        Clases para evaluacion.
+        Classes for evaluation.
     selected_features : list, optional
-        Nombre de los features para entrenar el modelo. The default is None.
+        Names of the features to train the model. The default is None.
     
     Returns
     -------
     y_train_pred : array
-        Valores predicios para el set de entrenamiento.
+        Predicted values for the training set.
     y_test_pred : array
-        Valores predicios para el set de evaluacion.
+        Predicted values for the evaluation set.
     best_features : dataframe
-        Dataframe con los features ordenados por orden de importancia.
-    model : esemble._forest
-        Modelo de machine learning que se puede exportar para predicciones.
+        DataFrame with features sorted by importance.
+    model : ensemble._forest
+        Machine learning model that can be exported for predictions.
 
     '''
-    # Seleccion de features (si se utilizo backward elimination)
+    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X_train = X_train[selected_features]
         X_test = X_test[selected_features]
     
-    # Entrenar el modelo 
-    model = RandomForestClassifier(random_state=11)  # Nombre del modelo
-    model.fit(X_train, y_train)       # Entrenamiento del modelo
+    # Train the model
+    model = RandomForestClassifier(random_state=11)  # Model name
+    model.fit(X_train, y_train)  # Train the model
     
-    # Accuracy del modelo en el test_set
+    # Model accuracy on the test set
     baseline_accuracy = model.score(X_test, y_test) 
     
-    # F1 score del modelo en el test_set
+    # F1 score of the model on the test set
     y_test_pred = model.predict(X_test)
-    f1_score_test = f1_score(y_test, y_test_pred, average="macro") # Calcula el F1 score
-    print('','Precision y F1 score en el test set', sep='\n')
-    print(f"Baseline Accuracy: {baseline_accuracy:.1%}") # Imprime el accuracy del modelo en formato % con 1 decimal
+    f1_score_test = f1_score(y_test, y_test_pred, average="macro")  # Calculate the F1 score
+    print('', 'Precision and F1 score on the test set', sep='\n')
+    print(f"Baseline Accuracy: {baseline_accuracy:.1%}")  # Print the model accuracy in % format with 1 decimal
     print(f"F1 score - test = {f1_score_test:.1%}")
     
-    # Cross-validation que nos devuelve la precision del modelo (scores) y los valores predichos (predict)
-    y_train_pred = cross_val_predict(model, X_train, y_train, cv=5)  # Valores predichos en el training set con validacion cruzada
-    cross_accuracy = accuracy_score(y_train, y_train_pred)  # Calcula accuracy
-    cross_f1_score = f1_score(y_train, y_train_pred, average="macro")     # Calcula el F1 score
-    print('','Validacion cruzada para verificar overfitting', sep='\n')
+    # Cross-validation that returns the model accuracy (scores) and predicted values (predict)
+    y_train_pred = cross_val_predict(model, X_train, y_train, cv=5)  # Predicted values on the training set with cross-validation
+    cross_accuracy = accuracy_score(y_train, y_train_pred)  # Calculate accuracy
+    cross_f1_score = f1_score(y_train, y_train_pred, average="macro")  # Calculate the F1 score
+    print('', 'Cross-validation to check for overfitting', sep='\n')
     print(f"Cross-val Accuracy = {cross_accuracy:.1%}")
     print(f"Cross-val F1 score = {cross_f1_score:.1%}")
     
-    # Calculamos la importancia de cada features para la clasificacion 
+    # Calculate the importance of each feature for classification
     feature_importances = (model.feature_importances_ * 100).round(2)
     best_features = pd.DataFrame(
         sorted(zip(X_train.columns.tolist(), feature_importances), key=lambda x: x[1], reverse=True),
-        columns = ["Features", "Importances (%)"])    
+        columns=["Features", "Importances (%)"])    
     
     # Print the sorted DataFrame
-    print('','Importancia de Features', sep='\n')
+    print('', 'Feature Importance', sep='\n')
     print(best_features.head(5))
     
     return y_train_pred, y_test_pred, best_features, model
@@ -769,80 +762,80 @@ def forest_clf_hyper(X_train, X_test, y_train, y_test, selected_features=None):
     Parameters
     ----------
     X_train : dataframe, array
-        Set de features para entrenamiento.
+        Feature set for training.
     X_test : dataframe, array
-        Set de features para evaluacion.
+        Feature set for evaluation.
     y_train : series, array
-        Clases para entrenamiento.
+        Classes for training.
     y_test : series, array
-        Clases para evaluacion.
+        Classes for evaluation.
     selected_features : list, optional
-        Nombre de los features para entrenar el modelo. The default is None.
+        Names of the features to train the model. The default is None.
 
     Returns
     -------
     y_train_pred : array
-        Valores predicios para el set de entrenamiento.
+        Predicted values for the training set.
     y_test_pred : array
-        Valores predicios para el set de evaluacion.
+        Predicted values for the evaluation set.
     best_features : dataframe
-        Dataframe con los features ordenados por orden de importancia.
-    best_model : esemble._forest
-        Modelo de machine learning que se puede exportar para predicciones.
+        DataFrame with features sorted by importance.
+    best_model : ensemble._forest
+        Machine learning model that can be exported for predictions.
 
     '''
     param_grid = {'max_features': ['sqrt', 'log2'],  # Maximum number of features to consider at each split
-                'n_estimators': np.arange(100, 1000, 100),  # Number of trees in the forest
-                'max_depth': [None] + list(np.arange(5, 30, 5)),  # Maximum depth of each tree
-                'min_samples_split': np.arange(2, 11),  # Minimum number of samples required to split an internal node
-                'min_samples_leaf': np.arange(1, 5),  # Minimum number of samples required to be at a leaf node
-                }
+                  'n_estimators': np.arange(100, 1000, 100),  # Number of trees in the forest
+                  'max_depth': [None] + list(np.arange(5, 30, 5)),  # Maximum depth of each tree
+                  'min_samples_split': np.arange(2, 11),  # Minimum number of samples required to split an internal node
+                  'min_samples_leaf': np.arange(1, 5),  # Minimum number of samples required to be at a leaf node
+                  }
 
     # Define the scoring metric
     scorer = make_scorer(f1_score, average="macro")
     
-    model = RandomForestClassifier(random_state=42)  # Nombre del modelo
+    model = RandomForestClassifier(random_state=42)  # Model name
     
     # Perform randomized search
-    random_search = RandomizedSearchCV(model, param_distributions=param_grid, scoring=scorer, cv=5, n_iter=10, random_state=42) # Optimizador
-    random_search.fit(X_train, y_train) # Entrenamiento del optimizador    
-    best_params = random_search.best_params_  # Obtiene los parametros optimizados 
-    best_score = random_search.best_score_    # Obtiene el f1 score del entrenamiento del optimizador 
+    random_search = RandomizedSearchCV(model, param_distributions=param_grid, scoring=scorer, cv=5, n_iter=10, random_state=42)  # Optimizer
+    random_search.fit(X_train, y_train)  # Train the optimizer    
+    best_params = random_search.best_params_  # Get the optimized parameters 
+    best_score = random_search.best_score_  # Get the F1 score from the optimizer training 
     
-    print('','Ajuste de hiperparametros', sep='\n')
+    print('', 'Hyperparameter tuning', sep='\n')
     print(f"Best parameters: {best_params}")
     print(f"Optimized F1 score: {best_score:.1%}")
 
-    # Entrenando el modelo con el mejor estimador
-    best_model = random_search.best_estimator_     # Almacena el mejor estimador (mejor modelo)
-    best_model.fit(X_train, y_train)                 # Entrena la maquina con el mejor estimador
-    y_test_pred = best_model.predict(X_test)     # Predicciones realizadas con el modelo optimizado sobre el test set
+    # Train the model with the best estimator
+    best_model = random_search.best_estimator_  # Store the best estimator (best model)
+    best_model.fit(X_train, y_train)  # Train the machine with the best estimator
+    y_test_pred = best_model.predict(X_test)  # Predictions made with the optimized model on the test set
     
-    # Accuracy del modelo en el test_set
+    # Model accuracy on the test set
     baseline_accuracy = accuracy_score(y_test, y_test_pred)
     
-    # F1 score del modelo en el test_set
-    f1_score_test = f1_score(y_test, y_test_pred, average="macro") # Calcula el F1 score
-    print('','Precision y F1 score en el test set', sep='\n')
-    print(f"Baseline Accuracy: {baseline_accuracy:.1%}") # Imprime el accuracy del modelo en formato % con 1 decimal
+    # F1 score of the model on the test set
+    f1_score_test = f1_score(y_test, y_test_pred, average="macro")  # Calculate the F1 score
+    print('', 'Precision and F1 score on the test set', sep='\n')
+    print(f"Baseline Accuracy: {baseline_accuracy:.1%}")  # Print the model accuracy in % format with 1 decimal
     print(f"F1 score - test = {f1_score_test:.1%}")
 
-    # Cross-validation que nos devuelve la precision del modelo (scores) y los valores predichos (predict)
-    y_train_pred = cross_val_predict(best_model, X_train, y_train, cv=5)  # Valores predichos en el training set con validacion cruzada
-    cross_accuracy = accuracy_score(y_train, y_train_pred)  # Calcula accuracy
-    cross_f1_score = f1_score(y_train, y_train_pred, average="macro")     # Calcula el F1 score
-    print('','Validacion cruzada para verificar overfitting', sep='\n')
+    # Cross-validation that returns the model accuracy (scores) and predicted values (predict)
+    y_train_pred = cross_val_predict(best_model, X_train, y_train, cv=5)  # Predicted values on the training set with cross-validation
+    cross_accuracy = accuracy_score(y_train, y_train_pred)  # Calculate accuracy
+    cross_f1_score = f1_score(y_train, y_train_pred, average="macro")  # Calculate the F1 score
+    print('', 'Cross-validation to check for overfitting', sep='\n')
     print(f"Cross-val Accuracy = {cross_accuracy:.1%}")
     print(f"Cross-val F1 score = {cross_f1_score:.1%}")
 
-    # Calculamos la importancia de cada feature para la clasificacion 
+    # Calculate the importance of each feature for classification 
     feature_importances = (best_model.feature_importances_ * 100).round(2)
     best_features = pd.DataFrame(
         sorted(zip(X_train.columns.tolist(), feature_importances), key=lambda x: x[1], reverse=True),
-        columns = ["Features", "Importances (%)"])    
+        columns=["Features", "Importances (%)"])    
     
     # Print the sorted DataFrame
-    print('','Importancia de Features', sep='\n')
+    print('', 'Feature Importance', sep='\n')
     print(best_features.head(5))
 
     return y_train_pred, y_test_pred, best_features, best_model
@@ -852,29 +845,29 @@ def conf_matrix(y, y_pred, name_figure, figure_path, width=90, height=60, guarda
     Parameters
     ----------
     y : series or array
-        Clases reales del dataset.
+        True classes of the dataset.
     y_pred : series or array
-        Clases predichas por el modelo.
+        Predicted classes by the model.
     name_figure : str
-        Nombre de la clase que aparece en titulo de la figura.
+        Name of the class that appears in the figure title.
         
         e.g. Confusion matrix - {name_figure}
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        "True" to save the image. The default is False.
         
         e.g. Confusion matrix {name_figure}.pdf
     Returns
     -------
-    Grafica y (guarda) la matriz de confusion en formato pdf.
+    Plots and (saves) the confusion matrix in pdf format.
 
     '''
-    # Grafica la matriz de confusion    
+    # Plot the confusion matrix    
     figsize_inches = (width / 25.4, height / 25.4)
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=figsize_inches, dpi=300, tight_layout=True)
     plt.subplots_adjust(wspace=0.4)
@@ -887,49 +880,48 @@ def conf_matrix(y, y_pred, name_figure, figure_path, width=90, height=60, guarda
     axs[1].set_title("Normalized by row")
     plt.suptitle(f"Confusion matrix - {name_figure}", fontsize=14)
    
-    # Guardar la imagen en figure_path
+    # Save the image in figure_path
     if guardar:
         figure_filename = f"Confusion matrix {name_figure}.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
 
     plt.show()
-    
-def plot_tsne(X, y, figure_path, title = 't-SNE Scatter Plot', x_label='t-SNE Dimension 1', 
+
+def plot_tsne(X, y, figure_path, title='t-SNE Scatter Plot', x_label='t-SNE Dimension 1', 
               y_label='t-SNE Dimension 2', width=90, height=60, selected_features=None, guardar=False):
     '''
     Parameters
     ----------
-    X : dataframe, array
-        Conjunto de features.
-    y : series, array
-        Clases del dataset.
+    X : DataFrame, array
+        Feature set.
+    y : Series, array
+        Classes of the dataset.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     title : str, optional
-        titulo de la figura. The default is 't-SNE Scatter Plot'
+        Title of the figure. The default is 't-SNE Scatter Plot'.
     x_label : str, optional
-        leyenda del eje x. The default is 't-SNE Dimension 1'
+        Label for the x-axis. The default is 't-SNE Dimension 1'.
     y_label : str, optional
-        leyenda del eje y. The default is 't-SNE Dimension 2'
+        Label for the y-axis. The default is 't-SNE Dimension 2'.
     width : int or float, optional
-    width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90.
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60.
     selected_features : list, optional
-       Nombre de los features para entrenar el modelo. The default is None.
+        Names of the features to train the model. The default is None.
     guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        "True" to save the image. The default is False.
         
         e.g. t-SNE_{name_figure}.pdf
 
     Returns
     -------
-    Grafica y (guarda) la reduccion de dimensionalidad con etiqueta y marcadores de clase en formato pdf.
+    Plots and (saves) the dimensionality reduction with class labels and markers in pdf format.
 
     '''
-    # Seleccion de features (si se utilizo backward elimination)
+    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X = X[selected_features]
             
@@ -959,7 +951,7 @@ def plot_tsne(X, y, figure_path, title = 't-SNE Scatter Plot', x_label='t-SNE Di
     plt.grid()
     plt.gca().set_axisbelow(True)  # Set grid lines behind the data points    
     
-    # Guardar la imagen en figure_path
+    # Save the image in figure_path
     if guardar:
         figure_filename = f"{title}.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
@@ -971,31 +963,31 @@ def plot_histogram(X, y, figure_path, width=90, height=60, bins=30, feature_to_s
     '''
     Parameters
     ----------
-    X : dataframe, array
-        Conjunto de features.
-    y : series, array
-        Clases del dataset.
+    X : DataFrame, array
+        Feature set.
+    y : Series, array
+        Classes of the dataset.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90.
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60.
     bins : int, optional
-        Define el numero de barras (de igual ancho) del histograma. The default is 30.
+        Number of bins for the histogram. The default is 30.
     feature_to_save : str, optional
-        Feature para guardar su histograma. The default is ''.
+        Feature to save its histogram. The default is ''.
     guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        "True" to save the image. The default is False.
         
         e.g. Histogram_{feature_to_save}.pdf
 
     Returns
     -------
-    Grafica todas los histogramas de features y (guarda) solo 'feature_to_save' en formato pdf.
+    Plots all feature histograms and (saves) only 'feature_to_save' in pdf format.
 
     '''
-    # Directorio y nombre de archivo para guardar imagen
+    # Directory and filename to save the image
     figure_filename = f"Histogram_{feature_to_save}.pdf"
     figure_path_name = os.path.join(figure_path, figure_filename)
     
@@ -1008,77 +1000,71 @@ def plot_histogram(X, y, figure_path, width=90, height=60, bins=30, feature_to_s
         # Set the number of bins for the histogram
         bins = 30
         
-        # Compute the range for the bins
-        # min_val = X[feature].min()
-        # max_val = X[feature].max()
-        # bin_width = 0.5
-        # bins = np.arange(min_val, max_val + bin_width, bin_width)
-        
         # Plot the histogram for each class
         class_labels = y.unique()
         for class_label in class_labels:
             feat_to_plot = X[y == class_label][feature]
-            ax.hist(feat_to_plot, bins=bins, alpha=0.6, label=class_label, edgecolor = "black")
+            ax.hist(feat_to_plot, bins=bins, alpha=0.6, label=class_label, edgecolor="black")
     
         # Add labels and a title
         ax.set_xlabel('Feature Value')
         ax.set_ylabel('Frequency')
-        ax.set_title(f'Histogram - {feature} ')
+        ax.set_title(f'Histogram - {feature}')
     
         # Add a legend
         ax.legend()
         
-        # Guardar la imagen en figure_path
+        # Save the image in figure_path
         if guardar and (feature == feature_to_save):
             plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
         
         # Display the plot
         plt.show()
     
-def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title = None, subtitle=None,
-                      x_label = None, y_label = None, width=90, height=60, ax=None, 
+def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title=None, subtitle=None,
+                      x_label=None, y_label=None, width=90, height=60, ax=None, 
                       i=1, n_col=1, n_row=1, guardar=False):
     '''
     Parameters
     ----------
-    X : dataframe, array
-        Conjunto de features.
-    y : series, array
-        Clases del dataset.
+    X : DataFrame, array
+        Feature set.
+    y : Series, array
+        Classes of the dataset.
     feat_1 : str
-        Nombre del feature 1 para graficar.
+        Name of feature 1 to plot.
     feat_2 : str
-        Nombre del feature 2 para graficar.
+        Name of feature 2 to plot.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     title : str or list, optional
-        titulo de la figura, si se deja en default sera {feat_1} vs {feat_2}. The default is None
+        Title of the figure, if left as default it will be {feat_1} vs {feat_2}. The default is None.
     subtitle : str or list, optional
-        subtitulo de la figura, si se deja en default sera {feat_1} vs {feat_2}. The default is None
+        Subtitle of the figure, if left as default it will be {feat_1} vs {feat_2}. The default is None.
     x_label : str, optional
-        leyenda del eje x. The default is None
+        Label for the x-axis. The default is None.
     y_label : str, optional
-        leyenda del eje y. The default is None
+        Label for the y-axis. The default is None.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90.
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60.
     ax : axes, optional
-        axes subplot. The default is None.
+        Axes subplot. The default is None.
     i : int, optional
-        contador para graficar cada subplot. The default is 1.
+        Counter to plot each subplot. The default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
+        Number of rows. The default is 1.
     guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        "True" to save the image. The default is False.
         
         e.g. Feat_vs_Feat_{feat_1}_{feat_2}.pdf
 
     Returns
     -------
-    Grafica y (guarda) un diagrama de dispersion de dos features con etiquetas y marcadores en formato pdf.
+    Plots and (saves) a scatter plot of two features with labels and markers in pdf format.
 
     '''
     y = pd.Series(y, name='Labels')
@@ -1119,7 +1105,7 @@ def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title = None, subtitle=
             ax.set_title(f'{feat_1} vs {feat_2}')
     
     # Create the plot
-    sns.scatterplot(x=feat_1, y=feat_2, hue='Labels',style='Labels', data=datos, markers=markers, palette=sns.color_palette(), ax=ax)
+    sns.scatterplot(x=feat_1, y=feat_2, hue='Labels', style='Labels', data=datos, markers=markers, palette=sns.color_palette(), ax=ax)
     
     # Set y-axis label only for the first plot of each row
     if (i-1) % n_col == 0:
@@ -1130,7 +1116,7 @@ def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title = None, subtitle=
     else:
         ax.set_ylabel('')   
     
-    # Logaritmic scale if you choose energy
+    # Logarithmic scale if you choose energy
     if feat_1 == 'energy': 
         ax.set_xscale('log')
     
@@ -1141,7 +1127,7 @@ def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title = None, subtitle=
     ax.grid()
     ax.set_axisbelow(True)  # Set grid lines behind the data points
 
-    # Guardar la imagen en figure_path
+    # Save the image in figure_path
     if guardar:
         if ax is None:
             figure_filename = f"Feat_vs_Feat_{feat_1}_{feat_2}.pdf"
@@ -1151,4 +1137,3 @@ def plot_feat_vs_feat(X, y, feat_1, feat_2, figure_path, title = None, subtitle=
         plt.savefig(figure_path_name, format="pdf", bbox_inches='tight')
 
     return ax
-

@@ -5,9 +5,8 @@ Created on Tue Jan  9 11:09:45 2024
 @author: bbarmac
 """
 
-#%%
 # =============================================================================
-# Importamos las librerias necesarias
+# Import necessary libraries
 # =============================================================================
 # Dataframes
 import pandas as pd
@@ -26,47 +25,45 @@ matplotlib.rcParams['font.serif'] = 'Times New Roman'
 matplotlib.rcParams['font.size'] = 8
 matplotlib.rcParams['figure.dpi'] = 150
 
-#%%
 
 def force_data(path, section=[22, 2.4]):
     '''
-    
     Parameters
     ----------
     path : str
-        Directorio donde se encuentran almacenados los csv de fuerza mts.
+        Directory where the force mts csv files are stored.
     section : list or array
-        Medidas de ancho y espesor de la probeta en mm. The default is [22, 2.4]
+        Width and thickness measurements of the specimen in mm. The default is [22, 2.4]
 
     Returns
     -------
     force_df : Dataframe
-        Dataframe que contiene los datos de fuerza, desplazamiento, tiempo y test_id.
+        Dataframe containing force, displacement, time, and test_id data.
 
     '''
-    files =  os.listdir(path)
+    files = os.listdir(path)
     forces_list = []
     
     for item in files:
-        # Verificar si los archivos son .csv
+        # Check if the files are .csv
         if item.endswith(".csv"):
             
-            # Path de la carpeta unida con el archivo
+            # Path of the folder joined with the file
             force_filename_path = os.path.join(path, item)
             
-            # Carga del archivo csv
+            # Load the csv file
             force = pd.read_csv(force_filename_path, sep=';')
             
-            # Renombrar las columnas y eliminar la fila de unidades
+            # Rename the columns and remove the units row
             new_column_names = ['Crosshead [mm]', 'Load [kN]', 'Time [s]']
             force.columns = new_column_names
             force = force.iloc[1:]
             
-            # Add una columna de 0 donde incia el ensayo
+            # Add a row of 0 where the test starts
             new_row = pd.Series(0, index=force.columns)
             force = pd.concat([pd.DataFrame([new_row]), force], ignore_index=True)
             
-            # Change all the , for .
+            # Change all the , to .
             force = force.replace({',':'.'}, regex=True)
             force = force.apply(pd.to_numeric, errors='coerce')
             
@@ -74,7 +71,7 @@ def force_data(path, section=[22, 2.4]):
             area = np.prod(section)
             force['Stress [MPa]'] = force['Load [kN]'] * 1000 / area
 
-            # Add la columna de test id
+            # Add the test id column
             test_id = item.split('.')[0]
             force['test_id'] = test_id
             forces_list.append(force)
@@ -85,58 +82,56 @@ def force_data(path, section=[22, 2.4]):
 def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_type='scatter', 
                     title='Stress and Cumulative hits vs Time - Clustering', x='time', y='Cumulative_Label', 
                     x_label='Time [s]', y_label='Cumulative hits', y_label_right='Stress [MPa]',
-                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, save=False):
     '''
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
+        Labels of the clusters obtained by k-means or dbscan.
     hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Set containing the characteristics over time of the hits and their id.
     force : Dataframe
-        Set que contiene los datos de carga desplazamiento, tiempo y su id
+        Set containing load displacement, time data, and their id.
     test_id : str
-        Id del ensayo que se vaya a graficar.
+        Id of the test to be plotted.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     plot_type : str, optional
-        Tipo de gráfico a realizar ('scatter' o 'line'). The default is 'scatter'.
+        Type of plot to create ('scatter' or 'line'). The default is 'scatter'.
     title : str, optional
-        Titulo de la imagen para mostrar y guardar. The default is 'Cumulative hits vs Time'.
+        Title of the image to display and save. The default is 'Cumulative hits vs Time'.
     x : str, optional
-        Caracteristica en el tiempo para el eje x. The default is 'time'.
+        Time characteristic for the x-axis. The default is 'time'.
         
-        Otras opciones: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
+        Other options: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
     y : str, optional
-        Caracteristica en el tiempo para el eje y. The default is 'Cumulative_Label'.
+        Time characteristic for the y-axis. The default is 'Cumulative_Label'.
         
-        Otras opciones: 'time', 'Cumulative', amplitude', 'energy'
+        Other options: 'time', 'Cumulative', 'amplitude', 'energy'
     x_label : str, optional
-        Leyenda del eje x. The default is 'Time [s]'.
+        Label for the x-axis. The default is 'Time [s]'.
     y_label : str, optional
-        Leyenda del eje y. The default is 'Cumulative hits'.
-    y_label_rigth : str, optional
-        Leyenda del eje y en la derecha. The default is 'Stress [MPa]'.
+        Label for the y-axis. The default is 'Cumulative hits'.
+    y_label_right : str, optional
+        Label for the right y-axis. The default is 'Stress [MPa]'.
     subtitle : str or list, optional
-        Titulo para cada uno de los subplots, si se deja en default se plotea el test_id. The default is None.
-    hits_limit : int or float, optional
-         Limite superior para el eje y de hits. The default is None
-    stress_limit : int or float, optional
-         Limite superior para el eje y de fuerza. The default is None
+        Title for each subplot, if left as default the test_id is plotted. The default is None.
+    limits : list, optional
+        Upper limits for the axes [time_limit, hits_limit, stress_limit]. The default is None.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     ax : matplotlib axis object, optional
         Axis to plot on. If not provided, a new axis will be created.
     i : int, optional
         Index for subplot. Default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Number of rows. The default is 1.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Cluster vs Time {test_id}.pdf
     
@@ -144,7 +139,7 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
     -------
     ax : matplotlib axis object
         Axis containing the plot.
-        Grafica y (guarda) un diagrama de los hits acumulados y esfuerzo en formato pdf.
+        Plots and (saves) a diagram of cumulative hits and stress in pdf format.
     '''
     # Extract the limits
     if limits is None:
@@ -175,7 +170,7 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
 
     # Define custom markers for each class
     markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
-    palette = palette=sns.color_palette()
+    palette = sns.color_palette()
     # Customize the markers list to match the number of unique labels
     markers = markers[:num_labels]
     palette = palette[:num_labels]
@@ -198,14 +193,11 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
     # Create the scatter plot
     if plot_type == 'scatter':
         sns.scatterplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, 
-                    markers=markers, palette = palette, linewidth=0.2, s=20, ax=ax)
+                    markers=markers, palette=palette, linewidth=0.2, s=20, ax=ax)
     elif plot_type == 'line':
-        # sns.lineplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, 
-        #             markers=markers, palette=sns.color_palette(), markersize=4, markeredgewidth=0.0, ax=ax)
-        
-        sns.lineplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, palette = palette, linewidth=2, ax=ax)
+        sns.lineplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, palette=palette, linewidth=2, ax=ax)
     
-    #Set the x-axis limit
+    # Set the x-axis limit
     if time_limit is not None:
         ax.set_xlim(left=0, right=time_limit * 1.05)
 
@@ -261,8 +253,8 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
     ax.grid(True, linestyle='-', alpha=0.7)
     ax.set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         if ax is None:
             figure_filename = f'{title} - {test_id}.pdf'
         else:
@@ -275,56 +267,54 @@ def plot_stress_hits_cluster(labels, hits, force, test_id, figure_path, plot_typ
 def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter', 
                     title='Stress and Cumulative hits vs Time', x='time', y='Cumulative_Label', 
                     x_label='Time [s]', y_label='Cumulative hits', y_label_right='Stress [MPa]',
-                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                    subtitle=None, limits=None, width=90, height=60, ax=None, i=1, n_col=1, n_row=1, save=False):
     '''
     Parameters
     ----------
     hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Set containing the characteristics over time of the hits and their id.
     force : Dataframe
-        Set que contiene los datos de carga desplazamiento, tiempo y su id
+        Set containing load displacement, time data, and their id.
     test_id : str
-        Id del ensayo que se vaya a graficar.
+        Id of the test to be plotted.
     figure_path : str
-        Directorio para guardar la figura.
+        Directory to save the figure.
     plot_type : str, optional
-        Tipo de gráfico a realizar ('scatter' o 'line'). The default is 'scatter'.
+        Type of plot to create ('scatter' or 'line'). The default is 'scatter'.
     title : str, optional
-        Titulo de la imagen para mostrar y guardar. The default is 'Stress and Cumulative hits vs Time'.
+        Title of the image to display and save. The default is 'Stress and Cumulative hits vs Time'.
     x : str, optional
-        Caracteristica en el tiempo para el eje x. The default is 'time'.
+        Time characteristic for the x-axis. The default is 'time'.
         
-        Otras opciones: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
+        Other options: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
     y : str, optional
-        Caracteristica en el tiempo para el eje y. The default is 'Cumulative_Label'.
+        Time characteristic for the y-axis. The default is 'Cumulative_Label'.
         
-        Otras opciones: 'time', 'Cumulative', amplitude', 'energy'
+        Other options: 'time', 'Cumulative', 'amplitude', 'energy'
     x_label : str, optional
-        Leyenda del eje x. The default is 'Time [s]'.
+        Label for the x-axis. The default is 'Time [s]'.
     y_label : str, optional
-        Leyenda del eje y. The default is 'Cumulative hits'.
-    y_label_rigth : str, optional
-        Leyenda del eje y en la derecha. The default is 'Stress [MPa]'.
+        Label for the y-axis. The default is 'Cumulative hits'.
+    y_label_right : str, optional
+        Label for the right y-axis. The default is 'Stress [MPa]'.
     subtitle : str or list, optional
-        Titulo para cada uno de los subplots, si se deja en default se plotea el test_id. The default is None.
-    hits_limit : int or float, optional
-         Limite superior para el eje y de hits. The default is None
-    stress_limit : int or float, optional
-         Limite superior para el eje y de fuerza. The default is None
+        Title for each subplot, if left as default the test_id is plotted. The default is None.
+    limits : list, optional
+        Upper limits for the axes [time_limit, hits_limit, stress_limit]. The default is None.
     width : int or float, optional
-        Ancho de la figura en milimetros. The default is 90  
+        Width of the figure in millimeters. The default is 90  
     height : int or float, optional
-        Alto de la figura en milimetros. The default is 60
+        Height of the figure in millimeters. The default is 60
     ax : matplotlib axis object, optional
         Axis to plot on. If not provided, a new axis will be created.
     i : int, optional
         Index for subplot. Default is 1.
     n_col : int, optional
-        numero de columnas. The default is 1.
+        Number of columns. The default is 1.
     n_row : int, optional
-        numero de filas. The default is 1.
-    guardar : boolean, optional
-        "True" para guardar la imagen. The default is False.
+        Number of rows. The default is 1.
+    save : boolean, optional
+        "True" to save the image. The default is False.
         
         e.g. Cluster vs Time {test_id}.pdf
     
@@ -332,7 +322,7 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
     -------
     ax : matplotlib axis object
         Axis containing the plot.
-        Grafica y (guarda) un diagrama de los hits acumulados y esfuerzo en formato pdf.
+        Plots and (saves) a diagram of cumulative hits and stress in pdf format.
     '''
     # Extract the limits
     if limits is None:
@@ -366,34 +356,13 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
         else:
             ax.set_title(test_id)
     
-    # # Set x-axis label only for the bottom column 
-    # elif i > n_col*(n_row - 1):
-    #     ax.set_xlabel(x_label + '\n(' + string.ascii_lowercase[i-1] + ')')     
-    #     # Title for each test id
-    #     if subtitle is not None:
-    #         ax.set_title(subtitle)
-    #     else:
-    #         ax.set_title(test_id)
-        
-    # else:
-    #     ax.set_xlabel('(' + string.ascii_lowercase[i-1] + ')')
-    #     # Title for each test id
-    #     if subtitle is not None:
-    #         ax.set_title(subtitle)
-    #     else:
-    #         ax.set_title(test_id)
-    
-    
     # Create the scatter plot
     if plot_type == 'scatter':
         sns.scatterplot(x=x, y=y, data=filtered_hits, label='hits', linewidth=0.2, s=20, ax=ax)
     elif plot_type == 'line':
-        # sns.lineplot(x=x, y=y, hue='Labels', style='Labels', data=filtered_hits, 
-        #             markers=markers, palette=sns.color_palette(), markersize=4, markeredgewidth=0.0, ax=ax)
-        
         sns.lineplot(x=x, y=y, label='hits', data=filtered_hits, linewidth=2, ax=ax)
 
-    #Set the x-axis limit
+    # Set the x-axis limit
     if time_limit is not None:
         ax.set_xlim(left=0, right=time_limit * 1.05)
 
@@ -444,15 +413,13 @@ def plot_stress_hits(hits, force, test_id, figure_path, plot_type='scatter',
     else:
         ax.get_legend().remove()
         ax2.get_legend().remove()
-    
-    # ax2.yaxis.set_major_locator(MultipleLocator(10))
-    
+        
     # Plot the grid
     ax.grid(True, linestyle='-', alpha=0.7)
     ax.set_axisbelow(True)  # Set grid lines behind the data points
     
-    # Guardar la imagen en figure_path
-    if guardar:
+    # Save the image in figure_path
+    if save:
         if ax is None:
             figure_filename = f'{title} - {test_id}.pdf'
         else:
@@ -467,20 +434,20 @@ def limit_finder(labels, hits, force, test_ids):
     Parameters
     ----------
     labels : array
-        Labels de los clusters obtenidos por k-means o dbscan.
+        Labels of the clusters obtained by k-means or dbscan.
     hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Dataframe containing the characteristics over time of the hits and their id.
     force : Dataframe
-        Set que contiene los datos de carga desplazamiento, tiempo y su id
+        Dataframe containing load displacement, time data, and their id.
     test_ids : list
-        Id de los ensayos que se toman en cuenta para el calculo.
+        Ids of the tests considered for the calculation.
    
     Returns
     -------
     max_value_hits : float
-        valor maximo para hits.
-    max_value_stress : TYPE
-        valor maximo para esfuerzo.
+        Maximum value for hits.
+    max_value_stress : float
+        Maximum value for stress.
 
     '''
     # Create a DataFrame with the labels
@@ -517,18 +484,18 @@ def limit_finder_no_label(hits, force, test_ids):
     Parameters
     ----------
     hits : Dataframe
-        Set que contiene las caracteristicas en el tiempo de los hits y su id.
+        Dataframe containing the characteristics over time of the hits and their id.
     force : Dataframe
-        Set que contiene los datos de carga desplazamiento, tiempo y su id
+        Dataframe containing load displacement, time data, and their id.
     test_ids : list
-        Id de los ensayos que se toman en cuenta para el calculo.
+        Ids of the tests considered for the calculation.
    
     Returns
     -------
     max_value_hits : float
-        valor maximo para hits.
-    max_value_force : TYPE
-        valor maximo para esfuerzo.
+        Maximum value for hits.
+    max_value_stress : float
+        Maximum value for stress.
 
     '''
     # Condition to filter rows based on the string column
@@ -557,39 +524,39 @@ def reorder_hits(hits, y, y_pred):
     '''
     Parameters
     ----------
-    hits : dataframe
-        Dataframe para grafica de hits acumulados.
+    hits : Dataframe
+        Dataframe for plotting cumulative hits.
     y : series or array
-        Clases.
-    y_pred : TYPE
-        Predicciones.
+        Classes.
+    y_pred : series or array
+        Predictions.
 
     Returns
     -------
-    hits_ordered : dataframe
-        Hits ordenados por tiempo ascendente.
+    hits_ordered : Dataframe
+        Hits ordered by ascending time.
     y_pred_ordered : series
-        Predicciones ordenadas por tiempo ascendente.
+        Predictions ordered by ascending time.
 
     '''
     # Create a DataFrame with the predictions
-    y_pred_df = pd.Series(y_pred, name='Clase')
+    y_pred_df = pd.Series(y_pred, name='Class')
     
-    # Seleccionar solo los hits de training o test set
+    # Select only the hits from the training or test set
     hits = hits.loc[y.index]
     hits = hits.reset_index(drop=True)
     
-    # Eliminar columna clase
-    hits = hits.drop('Clase', axis=1)
+    # Remove the class column
+    hits = hits.drop('Class', axis=1)
     
-    # Unir dataframes de hits y predicciones
+    # Concatenate hits and predictions dataframes
     hits_and_pred = pd.concat([hits, y_pred_df], axis=1)   
     
-    # Ordenar dataframe en base a la columna tiempo
+    # Sort dataframe based on the time column
     hits_and_pred = hits_and_pred.sort_values(by='time', ascending=True)
     
-    # Separamos hits y predicciones
-    hits_ordered = hits_and_pred.drop('Clase', axis=1)
-    y_pred_ordered = hits_and_pred['Clase'].copy()
+    # Separate hits and predictions
+    hits_ordered = hits_and_pred.drop('Class', axis=1)
+    y_pred_ordered = hits_and_pred['Class'].copy()
     
     return hits_ordered, y_pred_ordered
