@@ -352,7 +352,7 @@ def plot_silhouette(labels, X, silhouette_score, figure_path, width=90, height=6
     
     plt.show()
 
-def tsne_3d(X, figure_path, width=90, height=60, selected_features=None, guardar=False):
+def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, guardar=False):
     '''
     Parameters
     ----------
@@ -797,7 +797,7 @@ def plot_cluster_tsne(labels, X_reduced, figure_path, title='t-SNE Clustering', 
     
 def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Clustering', subtitle='', 
                             x_label='t-SNE Dimension 1', y_label='t-SNE Dimension 2', z_label='t-SNE Dimension 3',
-                            width=90, height=60, ax=None, i=1, n_col=1, n_row=1, guardar=False):
+                            width=180, height=120, guardar=False):
     '''
     Parameters
     ----------
@@ -844,33 +844,33 @@ def plot_cluster_tsne_3d(labels, X_reduced, figure_path, title='t-SNE 3D Cluster
     # Define custom markers for each class
     markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
     palette = sns.color_palette()
+
     # Customize the markers list to match the number of unique labels
     markers = markers[:num_labels]
     palette = palette[:num_labels]
     
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
-    if ax is None:
-        fig, ax = plt.figure(figsize=figsize_inches, tight_layout=True)
-        ax.set_title(title)
-        ax.set_xlabel(x_label)
-        ax = fig.add_subplot(111, projection='3d')
-    else:
-        ax.set_xlabel(x_label + '\n(' + string.ascii_lowercase[i-1] + ')')
-        # Title for each test id
-        ax.set_title(subtitle)
+    fig = plt.figure(figsize=figsize_inches, tight_layout=True)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_title(title)
+    ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
     ax.set_zlabel(z_label)
     
-    # Use Seaborn scatter plot with hue and style parameters
-    scatter = ax.scatter(valid_points['t-SNE_1'], valid_points['t-SNE_2'], valid_points['t-SNE_3'], 
-                            c=valid_points['Labels'], cmap='viridis', marker='o')
+     # Define custom markers for each class
+    markers = ['o', 's', '^', 'v', 'D', 'p']  # Customize the markers as desired
     
+    # Plot valid points with different markers and colors
+    for label, marker, color in zip(valid_points['Labels'].unique(), markers, palette):
+        subset = valid_points[valid_points['Labels'] == label]
+        ax.scatter(subset['t-SNE_1'], subset['t-SNE_2'], subset['t-SNE_3'], label=f'Class {label}', marker=marker, color=color)
+        
     # Scatter points with label '-1' separately as red 'x'
     ax.scatter(anomalies['t-SNE_1'], anomalies['t-SNE_2'], anomalies['t-SNE_3'], 
                 c='r', marker='x', label='Anomalies')
     
-    fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
+    # fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
     
     # Guardar la imagen en figure_path
     if guardar:

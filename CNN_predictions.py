@@ -8,11 +8,11 @@ Created on Tue Mar 26 12:52:46 2024
 # Importamos las librerias necesarias
 # =============================================================================
 # Dataframes
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from joblib import load
-import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator # type: ignore
 from tensorflow.keras.models import load_model # type: ignore
 
@@ -54,7 +54,7 @@ X_original, X, y, hits = train_test_set(data, normalization='log-std', columns_t
 test_ids = hits['test_id'].unique()
 
 # T-SNE
-# X_reduced = tsne_3d(X, figure_dir)
+X_reduced = tsne_3d(X, figure_dir)
 X_reduced = tsne(X, figure_dir)
 
 # =============================================================================
@@ -105,6 +105,8 @@ labels_dbscan = labels_dbscan['DBSCAN label']
 
 labels = [labels_cnn, labels_dbscan]
 subtitle = ['CNN', 'DBSCAN']
+
+plot_cluster_tsne_3d(labels_dbscan, X_reduced, figure_dir, subtitle=subtitle, title=f't-SNE Clustering 3D- {model_name}', guardar=False)
 
 # Define the number of rows and columns for the subplot grid
 n_row, n_col = (2, 1)
@@ -162,9 +164,9 @@ plt.suptitle(title, fontsize=10)
 # Loop through the function calls and store the plots in an array
 for i, ax in enumerate(axes.flat, start=1):
     # Call the plot_dbi function and pass the current subplot axis
-    plot_stress_hits_cluster(labels_cnn, hits, force, test_id_prueba[i-1], figure_dir, 
-                    plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]', 
-                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)    
+    plot_stress_hits_cluster(labels_cnn, hits, force, test_id_prueba[i-1], figure_dir,
+                    plot_type='line', limits=limits, y_label_right='\u03C3 [MPa]',
+                    ax=ax, i=i, n_col=n_col, n_row=n_row, guardar=False, title=title)
 plt.show()
 
 # =============================================================================
