@@ -5,7 +5,7 @@ from scipy import signal
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
-import tensorflow as tf
+import tensorflow as tf # type: ignore
 from tensorflow.keras.models import Model, Sequential # type: ignore
 from tensorflow.keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten, Dropout, UpSampling2D # type: ignore
 import os
@@ -68,26 +68,26 @@ classes = np.unique(y_images)
 num_classes = len(classes)
 
 # =============================================================================
-# Bucle de entrenamiento de varios modelos 
+# Training loop for multiple models
 # =============================================================================
-# Reinicio del nombre de los modelos prediccitivos
+# Reset the model number
 model_number = 3
-# Definición de las variables de almacenamiento de los datos del modelo
+# Define variables to store model data
 cm_test_prec_list = []
 accuracy_arr = []
 model_arr = []
 history_arr = []
 cm_test_arr = []
 
-# Definición de la variable iterativa para el entrenamiento de los modelos
+# Define the iterative variable for model training
 random_state = 0
 rs_lim = 5
 
-# Una vez terminada la iteración, se comprueba qué modelo presenta una mayor precisión y se almacena para su posterior uso
+# Once the iteration is complete, check which model has the highest accuracy and store it for later use
 while random_state <= rs_lim:
-    print('\nInicio iteración: %i\n' % random_state)
+    print('\nStarting iteration: %i\n' % random_state)
     
-    # Split para Train, Validation y Test
+    # Split for Train, Validation, and Test
     x_train_val, x_test, y_train_val, y_test = train_test_split(x_images, y_images, test_size = 0.15, random_state = random_state, stratify = y_images)
     x_train, x_val, y_train, y_val = train_test_split(x_train_val, y_train_val, test_size = 0.2, random_state = random_state, stratify = y_train_val) 
     
@@ -95,13 +95,13 @@ while random_state <= rs_lim:
     y_train = np.array(y_train).flatten()
     y_val = np.array(y_val).flatten()
 
-    # Borrado de los parámetros del modelo previo
+    # Clear previous model parameters
     tf.keras.backend.clear_session()
     
-    # Obtención de las dimensiones de entrada del modelo CNN
+    # Get the input dimensions for the CNN model
     input_shape = x_train[0].shape
     
-    # Generación de la arquitectura del modelo CNN
+    # Generate the CNN model architecture
     input_layer = Input(shape = (input_shape[0], input_shape[1], 1))
     x = Conv2D(16, (3, 3), activation='relu', padding='same', kernel_initializer = 'he_normal')(input_layer)
     x = MaxPooling2D((2, 2))(x)
@@ -117,21 +117,21 @@ while random_state <= rs_lim:
     x = Dropout(0.15)(x)
     output_layer = Dense(1, activation='sigmoid')(x)
     
-    # Generación del modelo CNN
+    # Generate the CNN model
     model = Model(inputs = input_layer, outputs = output_layer)
     early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
-    # Muestreo de la configuración del modelo
+    # Display model configuration
     # model.summary()
     
-    # Compilación de modelo
+    # Compile the model
     model.compile(optimizer = 'adam',
                   loss = 'binary_crossentropy',     # 'binary_crossentropy', 'mse
                   metrics = ['accuracy'])
     
-    # Definición de parámetros de entrenamiento
-    epocas = 200
-    lote = 32
+    # Define training parameters
+    epochs = 200
+    batch_size = 32
     
     # Assuming y_train contains the class labels
     class_weights = compute_class_weight(class_weight='balanced', classes=classes, y=y_train)
@@ -139,21 +139,21 @@ while random_state <= rs_lim:
 
     # Train the model with class weights
     history = model.fit(x_train, y_train, 
-                        epochs=epocas, 
-                        batch_size=lote,
+                        epochs=epochs, 
+                        batch_size=batch_size,
                         verbose=1,
                         shuffle=True,
                         validation_data=(x_val, y_val),
                         callbacks=[early_stopping],
                         class_weight=class_weights)
 
-    # Predicción del modelo
+    # Model prediction
     y_pred = model.predict(x_test)
     
-    # Comprobación con matriz de confusión
+    # Check with confusion matrix
     y_predn = np.round(y_pred).astype(int)
     
-    # Obtención de la matriz de confusión para calcular la precisión del modelo
+    # Get the confusion matrix to calculate model accuracy
     cm_test = confusion_matrix(y_test, y_predn).astype(float)
     cm_test_prec = np.zeros((num_classes, num_classes))
     cm_test_sum = np.sum(cm_test, axis=1)
@@ -161,30 +161,30 @@ while random_state <= rs_lim:
         cm_test_prec[row] = 100 * cm_test[row] / cm_test_sum[row]
     
     precision = 100 * np.sum(np.diag(cm_test) / np.sum(cm_test, axis=1)) / len(cm_test)
-    print('Precisión en iteración = %.2f' % precision, '%')
+    print('Iteration accuracy = %.2f' % precision, '%')
     
-    # Almacenado del modelo entrenado para la posterior selección del mejor
+    # Store the trained model for later selection of the best one
     model_arr.append([model])
     history_arr.append([history])
     accuracy_arr.append([precision])
     cm_test_arr.append([cm_test])
     cm_test_prec_list.append([cm_test_prec])
-    print('\nFin iteración: %i\n' % random_state)
+    print('\nEnd of iteration: %i\n' % random_state)
     
-    # Aumento del contador de random_state para que entrene el modelo con un dataset diferente
+    # Increase the random_state counter to train the model with a different dataset
     random_state += 1
     
 # =============================================================================
-# Extracción del modelo de mayor precisión para su representación gráfica
+# Extract the highest accuracy model for graphical representation
 # =============================================================================
-# Conversión de list a array
+# Convert list to array
 np_model = np.array(model_arr)
 np_history = np.array(history_arr)
 np_acc = np.array(accuracy_arr)
 np_cm_test = np.array(cm_test_arr)
 np_cm_test_prec = np.array(cm_test_prec_list)
 
-# Obtención de los parámetros del modelo
+# Get model parameters
 max_acc = np_acc.max()
 max_acc_pos = np.argmax(np_acc)
 best_model = np_model[max_acc_pos][0]
@@ -192,21 +192,21 @@ history = np_history[max_acc_pos][0]
 cm_test = np_cm_test[max_acc_pos][0]
 cm_test_prec = np_cm_test_prec[max_acc_pos][0]
 
-# Obtención de la precisión y pérdida del modelo
+# Get model accuracy and loss
 accuracy = history.history['accuracy']
 val_accuracy = history.history['val_accuracy']
 loss = history.history['loss']
 val_loss = history.history['val_loss']
 
 # =============================================================================
-# Graficado de la evolución temporal del modelo
+# Plot the temporal evolution of the model
 # =============================================================================
 model_name = 'relu_model_' + str(model_number) + '_' + str(round(precision, 2)).replace('.', '-')
 if plot:
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex = True, figsize = (12, 8), dpi = 130)
     fig.tight_layout()
 
-    # Precisión
+    # Accuracy
     ax1.plot(accuracy)
     ax1.plot(val_accuracy)
     ax1.set_title("Evolution of the model's accuracy")
@@ -214,7 +214,7 @@ if plot:
     ax1.legend(['Training', 'Validation'], loc='lower right')
     ax1.grid()
             
-    # Pérdida
+    # Loss
     ax2.plot(loss)
     ax2.plot(val_loss)
     ax2.set_title("Evolution of the model's loss")
@@ -222,15 +222,15 @@ if plot:
     ax2.set_xlabel('Epoch')
     ax2.legend(['Training', 'Validation'], loc='upper right')
     ax2.grid()
-    ax2.set_xticks(np.arange(0, int(epocas + 1), 20))
-    # Guardado de la gráfica generada
+    ax2.set_xticks(np.arange(0, int(epochs + 1), 20))
+    # Save the generated plot
     #plt.savefig(r'C:\Users\ahercas1\Desktop\EA\Fab aditiva\Article\Images\Evolución-LossVsEpochs-AccVsEpochs_' + model_name + '.pdf', bbox_inches = 'tight')
     plt.show()
 
 # =============================================================================
-# Representación gráfica de las matrices de confusión 'cm1 = cantidad de datos' y 'cm2 = porcentaje' ambas comprendidas entre 0 y valor máximo 
+# Graphical representation of confusion matrices 'cm1 = data count' and 'cm2 = percentage' both ranging from 0 to max value
 # =============================================================================
-    # Configruación del plot
+    # Plot configuration
     vertical = 150 / 25.4
     horizontal = 60 / 25.4
     figsize = (vertical, horizontal)
@@ -239,38 +239,38 @@ if plot:
     plt.rcParams['font.size'] = 12
     plt.rcParams['figure.dpi'] = 300
 
-    # Inicio del graficado 
+    # Start plotting
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize = figsize, dpi = 300)
     fig.tight_layout()
     #plt.suptitle('Confusion Matrix')
 
-    # Graficado de las predicciones por unidad predicha
+    # Plot predictions by predicted unit
     heatmap = sns.heatmap(cm_test, annot=True, fmt='.0f', cmap='viridis', vmin=0, vmax=cm_test_sum.max(), linewidth=.5, ax=ax1)
 
-    # Arreglo de la colorbar
-    colorbar = heatmap.collections[0].colorbar  # Obtener la colorbar del heatmap
-    colorbar.set_ticks(np.arange(0, cm_test_sum.max(), 50))  # Definir los ticks deseados
+    # Adjust the colorbar
+    colorbar = heatmap.collections[0].colorbar  # Get the colorbar from the heatmap
+    colorbar.set_ticks(np.arange(0, cm_test_sum.max(), 50))  # Define the desired ticks
 
     ax1.set_xlabel('Predicted label')
     ax1.set_ylabel('True label')
 
-    # Graficado de las predicciones en porcentaje
+    # Plot predictions in percentage
     sns.heatmap(cm_test_prec, annot=True, fmt='.2f', cmap='viridis', vmin=0, vmax=100, linewidth=.5, ax=ax2)
     ax2.set_xlabel('Predicted label')
 
-    # Guardado de la gráfica generada
+    # Save the generated plot
     figure_path_name = os.path.join(figure_path, 'Confussion_matrix.pdf')
     plt.savefig(figure_path_name, bbox_inches = 'tight')
     plt.show()
 
 # =============================================================================
-# Obtención de la precisión del modelo para el set de test
+# Get model accuracy for the test set
 # =============================================================================
 precision = 100 * np.sum(np.diag(cm_test) / np.sum(cm_test, axis=1)) / len(cm_test)
-print('Mejor modelo: %i' % max_acc_pos, '\nPrecisión final = %.2f' % precision, '%')
+print('Best model: %i' % max_acc_pos, '\nFinal accuracy = %.2f' % precision, '%')
 
 # =============================================================================
-# Guardado del modelo de mayor precisión
+# Save the highest accuracy model
 # =============================================================================
 model_path = os.path.join(base_dir, 'models')
 os.makedirs(model_path, exist_ok=True)
@@ -278,4 +278,4 @@ model_name = f'CNN_model_{model_number}.keras'
 model_path_name = os.path.join(model_path, model_name)
 best_model.save(model_path_name)
 
-print('Modelo "%s"' % model_name, 'guardado')
+print('Model "%s"' % model_name, 'saved')

@@ -6,27 +6,27 @@ Created on Fri Jan 12 12:10:11 2024
 """
 
 # =============================================================================
-# Importamos las librerias necesarias
+# Import necessary libraries
 # =============================================================================
 # Dataframes
 import pandas as pd
 import os
 
-# Funciones para division de datas
+# Functions for dataset splitting
 from mis_funciones.analisis_AE import train_test_set
 
-# Funciones para visualizacion de resultados
+# Functions for result visualization
 from mis_funciones.analisis_AE import plot_feat_vs_feat
 from mis_funciones.force_mts import plot_force_hits
 
 # =============================================================================
-# Datos iniciales
+# Initial data
 # =============================================================================
-# Directorio actual
+# Current directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Directorio para guardar imagenes
-figure_path = os.path.join(script_dir, 'Figuras')
+# Directory to save images
+figure_path = os.path.join(script_dir, 'Figures')
 os.makedirs(figure_path, exist_ok=True)
 
 models_path = os.path.join(script_dir, 'models')
@@ -35,36 +35,35 @@ datasets_path = os.path.join(script_dir, 'datasets')
 dbscan_model_path = os.path.join(models_path, 'dbscan_model.joblib')
 kmeans_model_path = os.path.join(models_path, 'kmeans_model.joblib')
 
-
-# Importacion de datasets
+# Import datasets
 data = pd.read_csv(os.path.join(datasets_path, 'Dataset_total.csv'))
 force = pd.read_csv(os.path.join(datasets_path, 'Datos_MTS.csv'))
 
 # =============================================================================
-# Division dataset
+# Dataset splitting
 # =============================================================================
 X_original, X, y, hits = train_test_set(data, split=False)
 test_ids = hits['test_id'].unique()
 
 # =============================================================================
-# Visualizacion de datos - Segmento = 1
+# Data visualization - Segment = 1
 # =============================================================================
 plot_feat_vs_feat(data, y, 'w_peak_freq', 'centroid_freq', figure_path)
 plot_feat_vs_feat(data, y, 'time_norm', 'amplitude', figure_path)
-plot_feat_vs_feat(data, y, 'time_norm', 'energy', figure_path, guardar=True)
-plot_feat_vs_feat(data, y, 'w_peak_freq', 'energy', figure_path, guardar=True)
+plot_feat_vs_feat(data, y, 'time_norm', 'energy', figure_path, save=True)
+plot_feat_vs_feat(data, y, 'w_peak_freq', 'energy', figure_path, save=True)
 
-# Clase 0
-data_0 = data[data['Clase'] == '[0_A]']
+# Class 0
+data_0 = data[data['Class'] == '[0_A]']
 y_0 = y[y == '[0_A]']
 plot_feat_vs_feat(data_0, y_0, 'time_norm', 'w_peak_freq', figure_path)
 
-# Clase 90
-data_90 = data[data['Clase'] == '[90_A]']
+# Class 90
+data_90 = data[data['Class'] == '[90_A]']
 y_90 = y[y == '[90_A]']
 plot_feat_vs_feat(data_90, y_90, 'time_norm', 'w_peak_freq', figure_path)
 
-# Fuerza y hits
+# Force and hits
 for test_id in test_ids:
     plot_force_hits(y, hits, force, test_id, figure_path)
 
@@ -73,17 +72,17 @@ for test_id in test_ids:
     plot_feat_vs_feat(data[condition], y[condition], 'time_norm', 'w_peak_freq', figure_path)
 
 # =============================================================================
-# Visualizacion de datos - Segmento = 3
+# Data visualization - Segment = 3
 # =============================================================================
 plot_feat_vs_feat(data, y, 'w_peak_freq_1', 'centroid_freq_1', figure_path)
 plot_feat_vs_feat(data, y, 'time_norm', 'w_peak_freq_1', figure_path)
 
-# Clase 0
-data_0 = data[data['Clase'] == '[0_A]']
+# Class 0
+data_0 = data[data['Class'] == '[0_A]']
 y_0 = y[y == '[0_A]']
 plot_feat_vs_feat(data_0, y_0, 'time_norm', 'w_peak_freq_1', figure_path)
 
-# Clase 90
-data_90 = data[data['Clase'] == '[90_A]']
+# Class 90
+data_90 = data[data['Class'] == '[90_A]']
 y_90 = y[y == '[90_A]']
 plot_feat_vs_feat(data_90, y_90, 'time_norm', 'w_peak_freq_1', figure_path)
