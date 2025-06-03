@@ -19,7 +19,6 @@ import pandas as pd
 
 # Figures
 import seaborn as sns
-from matplotlib.ticker import MultipleLocator
 
 matplotlib.rcParams["font.family"] = "serif"
 matplotlib.rcParams["font.serif"] = "Times New Roman"
