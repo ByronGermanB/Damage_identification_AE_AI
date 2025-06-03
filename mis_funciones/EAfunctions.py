@@ -6,226 +6,267 @@ Created on Wed Nov 22 13:34:48 2023
 """
 
 import csv
+import os
+
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.random import randint
-import os 
 import pandas as pd
+import vallenae as vae
+from numpy.random import randint
 from scipy import ndimage, signal
 from skimage.transform import resize
-import vallenae as vae
-import matplotlib
-import matplotlib.image as mpimg
-matplotlib.rcParams['font.family'] = 'serif'
-matplotlib.rcParams['font.serif'] = 'Times New Roman'
-matplotlib.rcParams['font.size'] = 8
-matplotlib.rcParams['figure.dpi'] = 300
 
-# Carga archivos tanto .pridb como .tradb pero no los hits o las waves
+matplotlib.rcParams["font.family"] = "serif"
+matplotlib.rcParams["font.serif"] = "Times New Roman"
+matplotlib.rcParams["font.size"] = 8
+matplotlib.rcParams["figure.dpi"] = 300
+
+
+# Loads both .pridb and .tradb files but not hits or waves
 def abreAE(path, filename):
-    '''
+    """
     Description
     -----------
-    Carga los archivos .pridb y .tradb sin llegar a leer los datos internos de los archivos, por lo que devuelve el propio archivo.
-    
+    Loads .pridb and .tradb files without reading their internal data, so it returns the file itself.
+
     Parameters
     ----------
     path : str
-        Directorio de almacenamiento de los datos de Emisiones Acústicas.
+        Directory where the Acoustic Emission data is stored.
     filename : str
-        Nombre del archivo que se desea cargar.
+        Name of the file to load.
 
     Returns
     -------
     vae_pridb : PriDatabase
-        Archivo .pridb con el nombre 'filename'.
+        .pridb file with the name 'filename'.
     vae_tradb : TraDatabase
-        Archivo .tradb con el nombre 'filename'.
+        .tradb file with the name 'filename'.
 
-    '''
-    pridb_filename = str(filename + '.pridb')
-    tradb_filename = str(filename + '.tradb')
-    
-    directorio = os.path.dirname(path  + '\\' +  filename + '\\' + pridb_filename)
-    
+    """
+    pridb_filename = str(filename + ".pridb")
+    tradb_filename = str(filename + ".tradb")
+
+    directorio = os.path.dirname(path + "\\" + filename + "\\" + pridb_filename)
+
     pridb_file = os.path.join(directorio, pridb_filename)
     vae_pridb = vae.io.PriDatabase(pridb_file)
-    
+
     tradb_file = os.path.join(directorio, tradb_filename)
     vae_tradb = vae.io.TraDatabase(tradb_file)
-    
+
     return vae_pridb, vae_tradb
 
 
-# Carga el archivo .csv separado por , y lo convierte a array()
-def abreCSV(path, filename, val = int()):
-    '''
+# Loads a .csv file separated by , and converts it to array()
+def abreCSV(path, filename, val=int()):
+    """
     Description
     -----------
-    Carga un archivo .csv separado por ',' y lo convierte en array eliminando las iniciales hasta la número 'val'.
-    
+    Loads a .csv file separated by ',' and converts it to an array, removing the initial
+    rows up to number 'val'.
+
     Parameters
     ----------
     path : str
-        Directorio de almacenamiento del archivo tipo csv que desea cargarse.
+        Directory where the csv file to be loaded is stored.
     filename : str
-        Nombre dle archivo tipo csv que se desea cargar.
+        Name of the csv file to load.
     val : int, optional
-        Número de fila a partir de la cuál se vuelcan los datos. 
-        Esto se hace porque las primeras filas del archivo se emplean para almacenar información sobre el mismo en formato texto y no es relevante.
+        Row number from which the data is loaded.
+        This is done because the first rows of the file are used to store information
+          about the file in text format and are not relevant.
 
     Returns
     -------
     cont_array : float
-        Array multidimensional o matriz de los datos del csv cargado.
+        Multidimensional array or matrix of the loaded csv data.
 
-    '''
-    directorio = path + '\\' + filename
+    """
+    directorio = path + "\\" + filename
     with open(directorio, "r") as archivo_csv:
         lector_csv = csv.reader(archivo_csv)
         contenido = list(lector_csv)
     cont_array = np.array(contenido[val:]).astype(float)
     return cont_array
-    
 
-# Carga el archivo .csv separado por ; y lo convierte a array()
-def abreCSVdot(path, filename, val = int()):
-    '''
+
+# Loads a .csv file separated by ; and converts it to array()
+def abreCSVdot(path, filename, val=int()):
+    """
     Description
     -----------
-    Carga un archivo .csv separado por ';' y lo convierte en array eliminando las iniciales hasta la número 'val'.
+    Loads a .csv file separated by ';' and converts it to an array, removing the initial 
+    rows up to number 'val'.
 
     Parameters
     ----------
     path : str
-        Directorio de almacenamiento del archivo tipo csv que desea cargarse.
+        Directory where the csv file to be loaded is stored.
     filename : str
-        Nombre dle archivo tipo csv que se desea cargar.
+        Name of the csv file to load.
     val : int, optional
-        Número de fila a partir de la cuál se vuelcan los datos. 
-        Esto se hace porque las primeras filas del archivo se emplean para almacenar información sobre el mismo en formato texto y no es relevante.
+        Row number from which the data is loaded.
+        This is done because the first rows of the file are used to store information 
+        about the file in text format and are not relevant.
 
     Returns
     -------
     cont_array : array(float)
-        Array multidimensional o matriz de los datos del csv cargado.
+        Multidimensional array or matrix of the loaded csv data.
 
-    '''
-    directorio = path + '\\' + filename
+    """
+    directorio = path + "\\" + filename
     drops = np.arange(0, val, 1)
-    contenido = pd.read_csv(directorio, sep=';').drop(drops)
+    contenido = pd.read_csv(directorio, sep=";").drop(drops)
     cont_array = contenido.to_numpy().astype(float)
     return cont_array
 
 
-# Función de extracción del transitorio y aplicación de la transformada        
-def calcCWT(vae_Tarr, vae_pridb, t_trai, max_trais, t_trans, signal_function, n_bands, amp_lim, cnts_lim, STD_noise, num_noisySignals, figure_path, plot = False):
-    '''
+# Function to extract the transient and apply the transform
+def calcCWT(
+    vae_Tarr,
+    vae_pridb,
+    t_trai,
+    max_trais,
+    t_trans,
+    signal_function,
+    n_bands,
+    amp_lim,
+    cnts_lim,
+    STD_noise,
+    num_noisySignals,
+    figure_path,
+    plot=False,
+):
+    """
     Description
     -----------
-    Función principal para el procesado de los datos EA para el entrenamiento del modelo predictivo. 
-    Se cargan los datos pridb y tradb, pudiendo recortar la cantidad de datos a gusto, bien sea para eliminar el periodo de rotura de la probeta o cualquier otro evento que haya surgido en el ensayo.
-    Adicionalmente se filtran los datos en función del número de counts y la amplitud de cada hit.
-    También es posible recortar la longitud de los transitorios en caso de que sean de una duración excesiva.
-    Una vez cargado los archivos y preprocesados, se les aplica la Continuous Wavelet Transform (CWT) para obtener imágenes en 2D normalizadas, se aplican métodos de Data Augmentation y se permite recortar las dimensiones de las imágenes obtenidas. 
+    Main function for processing AE data for training the predictive model.
+    Loads pridb and tradb data, allowing you to trim the amount of data as desired, 
+    either to remove the specimen failure period or any other event that occurred during t
+    he test.
+    Additionally, data is filtered based on the number of counts and amplitude of each hit.
+    It is also possible to trim the length of the transients if they are excessively long.
+    Once the files are loaded and preprocessed, the Continuous Wavelet Transform (CWT) 
+    is applied to obtain normalized 2D images, Data Augmentation methods are applied, and 
+    the dimensions of the obtained images can be trimmed.
 
     Parameters
     ----------
     vae_Tarr : list(tradb)
-        Lista de los datos tradb cargados para el procesado.
-        Ejemplo: vae_Tarr = [vae_T01, vae_T02, vae_T03, vae_T04]
+        List of loaded tradb data for processing.
+        Example: vae_Tarr = [vae_T01, vae_T02, vae_T03, vae_T04]
     vae_pridb : list(DataFrames)
-        Lista de los datos pridb cargados para el procesado.
-        Ejemplo: vae_pridb = [pridb_01, pridb_02, pridb_03, pridb_04]
+        List of loaded pridb data for processing.
+        Example: vae_pridb = [pridb_01, pridb_02, pridb_03, pridb_04]
     t_trai : array(int)
-        Vector de los rangos temporales de los datos de cada ensayo que se desean procesar.
+        Vector of time ranges of the data from each test to be processed.
     t_trans : int
-        Instante de tiempo a partir del cual la señal temporal de los transitorios no aportan información relevante.
+        Time instant after which the transient signal does not provide relevant information.
     signal_function : function
-        Tipo de Mother Wavelet aplicada en la transformación por CWT.
+        Type of Mother Wavelet applied in the CWT.
     n_bands : int
-        Cantidad de bandas de frecuencia tenidas en cuenta para la aplicación de las CWT.
+        Number of frequency bands considered for the CWT.
     amp_lim : int
-        Valor de threshold a partir del cuál se consideran válidos los hits almacenados.
+        Threshold value above which stored hits are considered valid.
     cnts_lim : int
-        Cantidad de counts mínimos que debe tener un hit para ser considerado válido.
+        Minimum number of counts a hit must have to be considered valid.
     STD_noise : list(float)
-        Lista de los valores de desviación estándar para la aplicación de Data Augmentation.
+        List of standard deviation values for Data Augmentation.
     num_noisySignals : int
-        Cantidad de señales de ruido que se generan con cada desviación estándar para la aplicación de Data Augmentation.
+        Number of noise signals generated with each standard deviation for Data Augmentation.
 
     Returns
     -------
     cwt_image : array(float)
-        Matriz de datos (realmente es un array de imágenes) compuesta por las imágenes obtenidas tras la CWT.
+        Data matrix (actually an array of images) composed of the images obtained after the CWT.
     cwt_trai : list(int)
-        Lista de los array de transitorios almacenados tras el preprocesado de los datos.
+        List of arrays of transients stored after data preprocessing.
 
-    '''
-    # Parámetro empleado para la configuración de la calidad del visualizado de las gráficas
+    """
+    # Parameter used to configure the quality of the plot visualization
     dpi = 260
-    
-    # Definicón de las listas en las que se van a a almacenar las imágenes y los valores de transitorios
+
+    # Define lists to store images and transient values
     cwt_trai = []
     cwt_image = []
 
-    # Inicio del procesado de los datos para la aplicación de la CWT
+    # Start processing data for CWT application
     for vae, (vae_T, max_trai) in enumerate(zip(vae_Tarr, max_trais)):
-        # Carga de datos
+        # Load data
         df_T = vae_T.read()
-        
-                
-        # Definición de los límites temporales del ensayo
+
+        # Define the time limits of the test
         limite_inf = float(t_trai[vae][0])
         limite_sup = float(t_trai[vae][1])
-        
+
         trai_lims = limites(df_T, limite_inf, limite_sup)
         TRAI_arr = np.arange(trai_lims[0] + 1, trai_lims[1])
-        trai_lims[1] = max_trai 
-        #print(trai_lims, TRAI_arr)
+        trai_lims[1] = max_trai
 
-        # Selección aleatoria de los transitorios a mostrar de cada conjunto de datos 
-        trai_values = np.random.choice(TRAI_arr, 5) 
-        
-        # Recortado temporal de las señales de los transitorios al valor dado por 't_trans'
+        # Random selection of transients to display from each data set
+        trai_values = np.random.choice(TRAI_arr, 5)
+
+        # Temporally trim the transient signals to the value given by 't_trans'
         if t_trans:
-            vline = int(t_trans)                      # [us]
+            vline = int(t_trans)  # [us]
             for trai in trai_values:
-                # Carga de transitorios
+                # Load transients
                 tra_signal, tra_time = vae_T.read_wave(trai)
 
-                # Arreglo de unidades de los datos cargados
+                # Adjust units of the loaded data
                 time = tra_time * 1e6
                 signal_amp = tra_signal * 1e3
-                
+
                 if plot:
-                    # Visualizado de la señal temporal con el valor de recorte marcado con una recta vertical 
+                    # Visualize the time signal with the trim value marked by a vertical line
                     plt.figure(figsize=(10, 6), dpi=dpi)
                     plt.plot(time, signal_amp)
-                    plt.xlabel('Time [us]')
-                    plt.ylabel('Amplitude [mV]')
-                    plt.title('Trai nº %i' % trai)
-                    plt.axvline(x=vline, linestyle='--', linewidth=0.75, color='red', label='Corte')
+                    plt.xlabel("Time [us]")
+                    plt.ylabel("Amplitude [mV]")
+                    plt.title("Trai nº %i" % trai)
+                    plt.axvline(
+                        x=vline,
+                        linestyle="--",
+                        linewidth=0.75,
+                        color="red",
+                        label="Trim",
+                    )
                     plt.grid(True)
-                    plt.legend(loc='upper right')
+                    plt.legend(loc="upper right")
                     plt.show()
 
-        # Definición de los parámetros de la wavelet
-        widths = np.arange(0, n_bands, 0.5) + 1                       # Vector n_bands
-        
-        # Carga de datos .pridb para el filtrado de los transitorios válidos
+        # Define wavelet parameters
+        widths = np.arange(0, n_bands, 0.5) + 1  # n_bands vector
+
+        # Load .pridb data for filtering valid transients
         pridb = vae_pridb[vae].read_hits().reset_index(drop=True)
 
-        # Transformación de las unidades de la columna de la amplitud de la señal temporal
-        pridb['amplitude'] = 20 * np.log10(pridb['amplitude'] / 1e-6)
-        no_saturacion = 94
+        # Convert the amplitude column units of the time signal
+        pridb["amplitude"] = 20 * np.log10(pridb["amplitude"] / 1e-6)
+        no_saturation = 94
 
         if max_trai is not None:
-            df_hits_filtro = pridb[(pridb["channel"] >= 1) & (pridb["amplitude"] >= amp_lim) & (pridb["amplitude"] <= no_saturacion) & (pridb["trai"] <= max_trai) & (pridb["counts"] >= cnts_lim)]  # Seleccionamos solo los valores cumplen las condiciones
+            df_hits_filtro = pridb[
+                (pridb["channel"] >= 1)
+                & (pridb["amplitude"] >= amp_lim)
+                & (pridb["amplitude"] <= no_saturation)
+                & (pridb["trai"] <= max_trai)
+                & (pridb["counts"] >= cnts_lim)
+            ]  # Select only values that meet the conditions
         else:
-            df_hits_filtro = pridb[(pridb["channel"] >= 1) & (pridb["amplitude"] >= amp_lim) & (pridb["amplitude"] <= no_saturacion) & (pridb["counts"] >= cnts_lim)]  # Seleccionamos solo los valores cumplen las condiciones
+            df_hits_filtro = pridb[
+                (pridb["channel"] >= 1)
+                & (pridb["amplitude"] >= amp_lim)
+                & (pridb["amplitude"] <= no_saturation)
+                & (pridb["counts"] >= cnts_lim)
+            ]  # Select only values that meet the conditions
 
-        trais = df_hits_filtro["trai"].to_numpy() # Extraemos la columna con los valores TRAI (indices de transitorio)  
+        trais = (
+            df_hits_filtro["trai"].to_numpy()
+        )  # Extract the column with TRAI values (transient indices)
 
         # Find the index where the values start over
         if (np.diff(trais) < 0).any():
@@ -236,410 +277,425 @@ def calcCWT(vae_Tarr, vae_pridb, t_trai, max_trais, t_trans, signal_function, n_
         # Slice the array from that index to the end
         trais = trais[start_over_index:]
 
-        # Carga de los transitorios válidos y adecuado de los datos                        
+        # Load valid transients and adjust data
         signals = []
         for trai in trais:
-            # Carga de los transitorios válidos
-            tra_signal, tra_time = vae_T.read_wave(trai)   # [V], [seg]
-            
-            # Arreglo de los datos
-            time_arr = tra_time * 1e6                         # [us]
-            signal_arr = tra_signal * 1e3                     # [mV]
-            
-            # Almacenamiento de la señal arreglada
+            # Load valid transients
+            tra_signal, tra_time = vae_T.read_wave(trai)  # [V], [s]
+
+            # Adjust data
+            time_arr = tra_time * 1e6  # [us]
+            signal_arr = tra_signal * 1e3  # [mV]
+
+            # Store the adjusted signal
             time = time_arr[np.where(time_arr <= vline)]
-            signal_amp = signal_arr[:len(time)]
+            signal_amp = signal_arr[: len(time)]
             signals.append(signal_amp)
         signals = np.array(signals)
-        
-        # Aplicación del método de DataAugmentation en caso de que 'num_noisySignals =! 0'
+
+        # Apply Data Augmentation method if 'num_noisySignals != 0'
         if int(num_noisySignals) == 0:
             more_signals = signals
         else:
-            more_signals = moreSignals(STD_noise, signals, time, figure_path, num_noisySignals)
-        
-        # Aplicación de la CWT a las señales almacenadas {originales + aumentadas (en caso de que hubiera)}
+            more_signals = moreSignals(
+                STD_noise, signals, time, figure_path, num_noisySignals
+            )
+
+        # Apply CWT to the stored signals {original + augmented (if any)}
         for sig in more_signals:
-            # Cálculo de la transformada
+            # Compute the transform
             cwt_signal = signal.cwt(sig, signal_function, widths)
             cwt_signal_abs = np.abs(cwt_signal).astype(np.float32)
 
-            # Normalización de la señal
-            #images = normalize(cwt_signal_abs, [128, 128])
-            
-            # Almacenamiento de las imágenes obtenidas 
+            # Store the obtained images
             cwt_image.append(cwt_signal_abs)
-        
-        # Almacenamiento de los trais empleados en la carga de los transitorios
-        cwt_trai.append(trais)    
-    return cwt_image, cwt_trai      
+
+        # Store the trais used in loading the transients
+        cwt_trai.append(trais)
+    return cwt_image, cwt_trai
 
 
-# Similar a la función multiplot pero para conjuntos de matrices de pandas
+# Similar to the multiplot function but for sets of pandas DataFrames
 def df_multiplot(conjunto, legend, labels, axis):
-    '''
-    Description
-    -----------
-    Graficado de conjuntos de datos almacenados en una lista de DataFrames. 
-
-    Parameters
-    ----------
-    conjunto : list(DataFrames)
-        Lista compuesta por DataFrames de diferentes longitudes.
-    legend : list(str)
-        Leyenda que aparece en el gráfico para los datos proporcionados en el 'conjunto'.
-    labels : lista(str)
-        Lista de los títulos que desean ponerse en cada eje.
-        Ejemplo:
-            labels = ['Eje x', 'Eje y']
-    axis : list(int)
-        Lista de las columnas que van a graficarse de los vectores del 'conjunto'.
-        Ejemplo:
-            axis = [[0, 1], [2, 1]]
-            Del primer vector en el 'conjunto' se grafica la columna 0 como eje horizontal y la columna 1 como eje vertical.
-            Del segunto vector se grafica la columna 2 como eje horizontal y la columna 1 como eje vertical.
-
-    Returns
-    -------
-    Graficado de los datos proporcionados.
-
-    '''
+    """
+    Plots multiple datasets stored in a list of DataFrames.
+    conjunto : list of pandas.DataFrame
+        List containing DataFrames of different lengths to be plotted.
+    legend : list of str
+        List of legend labels corresponding to each DataFrame in 'conjunto'.
+    labels : list of str
+        List of axis titles to be set for the plot.
+        Example:
+            labels = ['X axis', 'Y axis']
+    axis : list of int
+        List specifying the columns to be plotted from each DataFrame in 'conjunto'.
+        Example:
+            For the first DataFrame in 'conjunto', column 0 is plotted on the x-axis and
+            column 1 on the y-axis.
+            For the second DataFrame, column 2 is plotted on the x-axis and column 1 on 
+            the y-axis.
+    None
+        Displays the plot of the provided data.
+    """
     plt.figure(figsize=(10, 6), dpi=260)
     for vector in conjunto:
         plt.plot(vector[axis[0]], vector[axis[1]])
     plt.grid(True)
-    plt.legend(legend, loc='best')
+    plt.legend(legend, loc="best")
     if labels:
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
     return plt.show()
 
 
-# Recorte y adecuado de los datos de EA en función del tiempo de ensayo 
+# Cropping and adjustment of AE data based on test time
 def HrecortePRIDB(df_data, time, recorte, vals_limite):
-    '''
+    """
     Description
     -----------
-    Eliminación de datos del pridb a partir de un instante de tiempo del ensayo, siendo estos datos no válidos para su procesado.
-    También se ajustan los tiempos de medida del 'linwave' y de la MTS.
+    Removes data from the pridb after a certain time instant of the test, as these data 
+    are not valid for processing.
+    Also adjusts the measurement times of 'linwave' and the MTS.
 
     Parameters
     ----------
     df_data : DataFrame
-        Matriz de datos del ensayo.
+        Data matrix of the test.
     time : int
-        Instante de tiempo por encima del cual se considera que las medidas del 'linwave' son válidas.
+        Time instant above which the 'linwave' measurements are considered valid.
     recorte : int
-        Desfase temporal entre el inicio de las medidas de 'linwave' y los datos de la MTS.
+        Time offset between the start of 'linwave' measurements and the MTS data.
     vals_limite : int
-        Rango de datos válido del df_data cargado.
+        Valid data range of the loaded df_data.
 
     Returns
     -------
     df_data_rec : DataFrame
-        Matriz de datos tras el proceso de recorte.
+        Data matrix after the cropping process.
     df_data : DataFrame
-        Misma matriz de datos que la introducida en la función pero con el tiempo de ensayo adecuado.
+        Same data matrix as introduced in the function but with the test time adjusted.
 
-    '''
+    """
     plt.figure(figsize=(10, 6), dpi=120)
-    plt.plot(df_data['time'], df_data['amplitude'])
+    plt.plot(df_data["time"], df_data["amplitude"])
     plt.show()
-    
+
     if vals_limite:
         limite_inf, limite_sup = vals_limite
-        limite_inf2 = df_data['time'].iloc[limite_inf]
-        limite_sup2 = df_data['time'].iloc[limite_sup]
+        limite_inf2 = df_data["time"].iloc[limite_inf]
+        limite_sup2 = df_data["time"].iloc[limite_sup]
     else:
-        print('\n¬øL√≠mite inferior de recorte?')
+        print("\n¬øL√≠mite inferior de recorte?")
         limite_inf = int(input())
-        print('\n¬øL√≠mite superior de recorte?')
+        print("\n¬øL√≠mite superior de recorte?")
         limite_sup = int(input())
-    
+
     if limite_inf == 0:
-        limite_inf2 = df_data['time'].iloc[limite_inf]
+        limite_inf2 = df_data["time"].iloc[limite_inf]
     if limite_sup == -1:
-        limite_sup2 = df_data['time'].iloc[limite_sup]
+        limite_sup2 = df_data["time"].iloc[limite_sup]
 
     plt.figure(figsize=(10, 6), dpi=120)
-    plt.plot(df_data['time'], df_data['amplitude'])
-    plt.axvline(limite_inf2, linestyle='--', color='red')
-    plt.axvline(limite_sup2, linestyle='--', color='red')
+    plt.plot(df_data["time"], df_data["amplitude"])
+    plt.axvline(limite_inf2, linestyle="--", color="red")
+    plt.axvline(limite_sup2, linestyle="--", color="red")
     plt.show()
-    
-    # Obtención de las posiciones límite del vector
+
+    # Get the limit positions of the vector
     data_lim = limites(df_data, limite_inf, limite_sup)
     print(data_lim)
-    # Se limita el vector de datos para quedarnos con los datos de tiempo válido
-    df_data_lim = df_data[data_lim[0]:data_lim[1]]
-    
-    # Se deshechan los datos tomados por encima del tiempo impuesto por el parámetro 'time'
-    df_drop = np.where(df_data_lim['time'] >= float(time))[0]
-    
-    df_data_rec = df_data_lim[:df_drop[0]]
-    
-    # Se arregla el tiempo de las medidas AE para que coincida con las medidas de la MTS 
+    # Limit the data vector to keep only valid time data
+    df_data_lim = df_data[data_lim[0] : data_lim[1]]
+
+    # Discard data taken above the time imposed by the 'time' parameter
+    df_drop = np.where(df_data_lim["time"] >= float(time))[0]
+
+    df_data_rec = df_data_lim[: df_drop[0]]
+
+    # Adjust the AE measurement times to match the MTS measurements
     if limite_inf != 0 or limite_sup != -1:
-        df_data['time'] = df_data_rec['time'] - recorte
-    
+        df_data["time"] = df_data_rec["time"] - recorte
+
     return df_data_rec, df_data
 
 
-# Elimina los datos temporales fuera de los límites estipulados
+# Removes temporal data outside the specified limits
 def limites(vector, limite_inf, limite_sup):
-    '''
+    """
     Description
     -----------
-    Obtención de los límites del rango temporal válido del ensayo.
+    Gets the limits of the valid time range of the test.
 
     Parameters
     ----------
     vector : DataFrame
-        Matriz de datos del ensayo ordenados temporalmente.
+        Data matrix of the test ordered by time.
     limite_inf : int
-        Valor de la fila de la matriz a partir del cual se consideran válidos los datos de la misma.
+        Row value of the matrix from which the data is considered valid.
     limite_sup : int
-        Valor de la fila de la matriz a partir del cual ya no se consideran válidos los datos de la misma.
+        Row value of the matrix from which the data is no longer considered valid.
 
     Returns
     -------
     vec_lims : list(int)
-        Lista en la que se almacenan los límites del rango de datos.
+        List storing the limits of the data range.
 
-    '''
+    """
     limite_inf = int(limite_inf)
     limite_sup = int(limite_sup)
-        
+
     if limite_inf != 0:
-        inf_pos = np.where(vector['time'] <= limite_inf)[0] + 1
+        inf_pos = np.where(vector["time"] <= limite_inf)[0] + 1
         inf_lim = inf_pos[-1]
-        
+
     if limite_inf == 0:
         inf_lim = limite_inf
-        
+
     if limite_sup != -1:
-        sup_pos = np.where(vector['time'] <= limite_sup)[0] + 1
+        sup_pos = np.where(vector["time"] <= limite_sup)[0] + 1
         sup_lim = sup_pos[-1]
-        
+
     if limite_sup == -1:
         sup_lim = vector.shape[0]
-               
+
     vec_lims = [inf_lim, sup_lim]
     return vec_lims
 
 
-# Aplica modificaciones a las imágenes originales para generar datos sintéticos 
+# Applies modifications to the original images to generate synthetic data
 def masIm(vector):
-    '''
+    """
     Description
     -----------
-    Aplicación de la metodología DataAugmentation para generar más imágenes
+    Applies Data Augmentation methodology to generate more images.
 
     Parameters
     ----------
     vector : array(float)
-        Vector de imágenes originales.
+        Array of original images.
 
     Returns
     -------
     new_vector : array(float)
-        Vector de imágenes originales más las generadas por DataAugmentation.
+        Array of original images plus those generated by Data Augmentation.
 
-    '''
+    """
     new_vector = []
     for image in vector:
         flipped_ud = np.flipud(image)
-                
-        rotated_noreshape = ndimage.rotate(image, randint(0, 360, size=1)[0], reshape=False)
-        
+
+        rotated_noreshape = ndimage.rotate(
+            image, randint(0, 360, size=1)[0], reshape=False
+        )
+
         lx, ly, lz = image.shape
         div = randint(4, 10, size=1)[0]
         lxx, lyy = int(lx / div), int(ly / div)
         crop_image = resize(image[lxx:-lxx, lyy:-lyy], (lx, ly))
-        
+
         sigma = randint(0, 5, size=1)[0]
         blurred_image = ndimage.gaussian_filter(image, sigma=sigma)
         local_mean = ndimage.uniform_filter(image, size=11)
-        
-        image_add = [image, flipped_ud, rotated_noreshape, crop_image, blurred_image, local_mean]
+
+        image_add = [
+            image,
+            flipped_ud,
+            rotated_noreshape,
+            crop_image,
+            blurred_image,
+            local_mean,
+        ]
         for addin in image_add:
             new_vector.append(addin)
     values = np.random.choice(np.arange(0, len(new_vector)), 10)
     for im in values:
         plt.imshow(new_vector[im])
-        plt.axis('off')
+        plt.axis("off")
         plt.show()
     return new_vector
 
 
-# Genera señales temporales como ruido de fondo para modificar las señales originales y obtener una mayor cantidad de datos
-def moreSignals(STD_noise, signals, time, figure_path, num_noisySignals = 5, plot = False, save_noised = False):
-    '''
+# Generates time signals as background noise to modify the original signals and obtain 
+# a larger amount of data
+
+def moreSignals(
+    STD_noise,
+    signals,
+    time,
+    figure_path,
+    num_noisySignals=5,
+    plot=False,
+    save_noised=False,
+):
+    """
     Description
     -----------
-    Aplicación de la metodología DataAugmnetation a señales temporales, de manera que se aplican señales de ruido blanco que modifiquen el contenido en frecuencia de la señal original.
-    Se generan señales de ruido blanco según una distribución normal con ciertos niveles de desviación típica.
+    Applies Data Augmentation methodology to time signals by adding white noise, 
+    modifying the frequency content of the original signal.
+    White noise signals are generated according to a normal distribution with specified
+      standard deviation levels.
 
     Parameters
     ----------
     STD_noise : list(float)
-        Vector de los valores de desviación estándar.
+        List of standard deviation values.
     signals : array(float)
-        Vector de la amplitud de la señal temporal.
+        Array of the amplitude of the time signal.
     time : array(float)
-        Vector de los valores temporales de cada punto de la señal.
+        Array of the time values for each point of the signal.
     num_noisySignals : int, optional
-        Cantidad de señales de ruido que se generan con cada desviación estándar.
+        Number of noise signals generated for each standard deviation.
 
     Returns
     -------
     more_signals : array(float)
-        Vector de señales temporales concatenadas siendo la primera la señal original y el resto las sintéticas.
+        Array of concatenated time signals, with the first being the original signal and 
+        the rest being synthetic.
 
-    '''
+    """
     more_signals = []
     length = signals[0].shape[0]
     noise_signals_1 = []
     noise_signals_2 = []
-    # Bucle para la generación de 5 señales de ruido blanco distintas para cada desviación estándar
+    # Loop for generating 5 different white noise signals for each standard deviation
     for n in range(num_noisySignals):
-        noise_1 = np.random.normal(0, STD_noise[0], length)        
+        noise_1 = np.random.normal(0, STD_noise[0], length)
         noise_2 = np.random.normal(0, STD_noise[1], length)
         noise_signals_1.append(noise_1)
         noise_signals_2.append(noise_2)
-    
+
     if plot:
-        # Graficado del ruido blanco generado
+        # Plot the generated white noise
         noise_signals_1 = np.array(noise_signals_1)
-        plt.figure(figsize = (10, 8), dpi = 130)
-        plt.title('Noise 1')
+        plt.figure(figsize=(10, 8), dpi=130)
+        plt.title("Noise 1")
         plt.plot(noise_signals_1[-1])
-        plt.xlabel('Time [us]')
-        plt.ylabel('Amplitude [mV]')
-        plt.axhline(y = 0, linestyle = '--', color = 'black')
+        plt.xlabel("Time [us]")
+        plt.ylabel("Amplitude [mV]")
+        plt.axhline(y=0, linestyle="--", color="black")
         plt.grid(True)
         plt.show()
-        
+
         noise_signals_2 = np.array(noise_signals_2)
-        plt.figure(figsize = (10, 8), dpi = 130)
-        plt.title('Noise 2')
+        plt.figure(figsize=(10, 8), dpi=130)
+        plt.title("Noise 2")
         plt.plot(noise_signals_2[-1])
-        plt.xlabel('Time [us]')
-        plt.ylabel('Amplitude [mV]')
-        plt.axhline(y = 0, linestyle = '--', color = 'black')
+        plt.xlabel("Time [us]")
+        plt.ylabel("Amplitude [mV]")
+        plt.axhline(y=0, linestyle="--", color="black")
         plt.grid(True)
         plt.show()
-    
+
     noise_choices = np.arange(0, num_noisySignals, 1)
-    
-    # Aplicación del ruido blanco
-    # Se aplica de manera aleatoria una de las 5 opciones de ruido blanco para cada desviación estándar, dando lugar a 2 señales temporales adicionales a la original
+
+    # Application of white noise
+    # Randomly applies one of the 5 white noise options for each standard deviation,
+    # resulting in 2 additional time signals per original signal
     for sig in signals:
         noise = np.random.choice(noise_choices)
         noised_signal_1 = sig + noise_signals_1[noise]
         noised_signal_2 = sig + noise_signals_2[noise]
-        
+
         more_signals.append(sig)
         more_signals.append(noised_signal_1)
         more_signals.append(noised_signal_2)
-    
-    # Se obtiene el triple de señales temporales tras el proceso 
+
+    # Triple the number of time signals after the process
     more_signals = np.array(more_signals)
-    
+
     if plot:
-        # Graficado solapado de la última señal a la que se aplica el ruido, pudiendo ver la original y la modificada para cada desviación estándar
-        plt.figure(figsize = (10, 8), dpi = 130)
+        # Overlapped plot of the last signal with noise applied, showing
+        # the original and the modified signal for each standard deviation
+        plt.figure(figsize=(10, 8), dpi=130)
         plt.plot(time, sig)
-        plt.scatter(time, noised_signal_1, marker = '.', color = 'orange')
-        plt.xlabel('Time [us]')
-        plt.ylabel('Amplitude [mV]')
-        plt.legend(['Señal sin ruido', 'Señal con ruido'])
+        plt.scatter(time, noised_signal_1, marker=".", color="orange")
+        plt.xlabel("Time [us]")
+        plt.ylabel("Amplitude [mV]")
+        plt.legend(["Signal without noise", "Signal with noise"])
         plt.grid(True)
-        plt.show() 
-    
+        plt.show()
+
     figsize = (80 / 25.4, 60 / 25.4)
 
     if save_noised:
-        # Guardado de la señal original y la señal con ruido
-        plt.figure(figsize = figsize)
-        #plt.title('Superimposition of an original signal and its augmented signal')
-        plt.plot(time, sig, linewidth = 1)
-        plt.scatter(time, noised_signal_2, marker = '.', color = 'orange', linewidths = 0.25)
-        plt.xlabel('Time [μs]')
-        plt.ylabel('Amplitude [mV]')
-        plt.legend(['Original signal', 'Noised signal'])
+        # Save the original signal and the signal with noise
+        plt.figure(figsize=figsize)
+        # plt.title('Superimposition of an original signal and its augmented signal')
+        plt.plot(time, sig, linewidth=1)
+        plt.scatter(time, noised_signal_2, marker=".", color="orange", linewidths=0.25)
+        plt.xlabel("Time [μs]")
+        plt.ylabel("Amplitude [mV]")
+        plt.legend(["Original signal", "Noised signal"])
         plt.grid(True)
-        figure_path_name = os.path.join(figure_path, 'Noised_signal.pdf')
-        plt.savefig(figure_path_name, bbox_inches = 'tight')
+        figure_path_name = os.path.join(figure_path, "Noised_signal.pdf")
+        plt.savefig(figure_path_name, bbox_inches="tight")
         plt.show()
-    
-    return more_signals 
 
-
-# Genera una gráfica completa de varias funciones
+    return more_signals
 def multiplot(conjunto, legend, plt_title, labels, axis):
-    '''
+    """
     Description
     -----------
-    Graficado de un conjunto de datos, superponiendo las rectas en el mismo gráfico
+    Plots a set of data, overlaying the lines in the same graph.
 
     Parameters
     ----------
     conjunto : list(DataFrames)
-        Lista compuesta por DataFrames de diferentes longitudes.
+        List composed of DataFrames of different lengths.
     legend : list(str)
-        Leyenda que aparece en el gráfico para los datos proporcionados en el 'conjunto'.
+        Legend that appears in the graph for the data provided in 'conjunto'.
     plt_title : list(str)
-        Lista con el título de a gráfica.
-    labels : lista(str)
-        Lista de los títulos que desean ponerse en cada eje.
-        Ejemplo:
-            labels = ['Eje x', 'Eje y']
+        List with the title of the graph.
+    labels : list(str)
+        List of the titles to be set on each axis.
+        Example:
+            labels = ['X axis', 'Y axis']
     axis : list(int)
-        Lista de las columnas que van a graficarse de los vectores del 'conjunto'.
-        Ejemplo:
+        List of the columns to be plotted from the vectors in 'conjunto'.
+        Example:
             axis = [0, 1]
-            
+
     Returns
     -------
-    Graficado de los datos proporcionados.
-    
-    '''
-    plt.rcParams['figure.constrained_layout.use'] = False
-    plt.rcParams['figure.dpi'] = 300
-    plt.figure(figsize = (10, 6), layout = 'tight')
+    None
+        Displays the plot of the provided data.
+
+    """
+    plt.rcParams["figure.constrained_layout.use"] = False
+    plt.rcParams["figure.dpi"] = 300
+    plt.figure(figsize=(10, 6), layout="tight")
     for vector in conjunto:
         if type(vector) == type(pd.DataFrame()):
             vector = vector.to_numpy()
         plt.plot(vector[:, axis[0]], vector[:, axis[1]])
     plt.grid(True)
-    plt.legend(legend, loc='best')
+    plt.legend(legend, loc="best")
     if plt_title:
         plt.title(plt_title[0])
     if labels:
         plt.xlabel(labels[0])
         plt.ylabel(labels[1])
     plt.show()
-    return print('Done')
-    
+    return print("Done")
+
 
 def normalize(x_vec):
-    '''
+    """
     Description
     -----------
-    Normaliza el vector introducido.
-    
+    Normalizes the input vector.
+
     Parameters
     ----------
     x_vec : array(float)
-        Vector de datos.
+        Data vector.
     Returns
     -------
     x_norm : array(float)
-        Vector normalizado.
+        Normalized vector.
 
-    '''
-    # Normalización del vector de imágenes
+    """
+    # Image vector normalization
     max_amp = x_vec.max()
     min_amp = x_vec.min()
     x_norm = (x_vec - min_amp) / (max_amp - min_amp)
@@ -647,23 +703,23 @@ def normalize(x_vec):
 
 
 def redim(x_vec, dims):
-    '''
+    """
     Description
     -----------
-    Redimensiona el vector introducido.
-    
+    Resizes the input vector.
+
     Parameters
     ----------
     x_vec : array(float)
-        Vector de datos.
+        Data vector.
     dims : list(int)
-        Dimensiones en las que se desean los datos proporcionados por 'vector'.
+        Dimensions to which the data in 'vector' should be resized.
     Returns
     -------
     x_norm : array(float)
-        Vector redimensionado.
-    '''    
-    # Redimensionado de las imágenes
+        Resized vector.
+    """
+    # Image resizing
     resized_images = []
     for im in x_vec:
         resized_images.append(resize(im, (dims[0], dims[1])))
@@ -671,99 +727,99 @@ def redim(x_vec, dims):
     return x_resized
 
 
-# Recorta los datos del conjunto introducido
+# Crops the data of the input set
 def recorte(conjunto, val_rec):
-    '''
+    """
     Description
     -----------
-    Recorte sobre el eje vertical de los conjuntos de imágenes.
+    Crop along the vertical axis of the image sets.
 
     Parameters
     ----------
     conjunto : list(list)
-        Conjunto de listas de imágenes.
+        Set of lists of images.
     val_rec : int
-        Valor de la fila a partir de la cual la información de la imagen es irrelevante.
+        Row value from which the image information is irrelevant.
 
     Returns
     -------
     conjunto_rec : list(list)
-        Conjunto de listas de las imágenes ya recortadas.
+        Set of lists of already cropped images.
 
-    '''
+    """
     conjunto_rec = []
     for cwt in conjunto:
         vector_rec = []
         choices = np.random.choice(np.arange(len(cwt)), 5)
         for choice in choices:
-                image_rec = cwt[choice][:val_rec]
-                plt.title(f'Recortada nº{choice}')
-                plt.imshow(image_rec, cmap='gray')
-                plt.axis('on')
-                plt.show()
+            image_rec = cwt[choice][:val_rec]
+            plt.title(f"Cropped nº{choice}")
+            plt.imshow(image_rec, cmap="gray")
+            plt.axis("on")
+            plt.show()
         for index in range(len(cwt)):
             vector_rec.append(cwt[index][:val_rec])
         conjunto_rec.append(vector_rec)
     return conjunto_rec
 
 
-# Permite truncar los datos del archivo .csv visualizando su representación gráfica
+# Allows truncating the data of the .csv file by visualizing its graphical representation
 def recorteCSV(conjunto, legend, time_rotura):
-    '''
+    """
     Description
     -----------
-    Permite graficar datos de un conjunto de datos y eliminar los datos presentados a partir de una cierta fila.
+    Allows plotting data from a dataset and removing data presented from a certain row onwards.
 
     Parameters
     ----------
     conjunto : list(DataFrame)
-        Lista de matrices de datos.
+        List of data matrices.
     legend : list(str)
-        Lista de los nombres a aplicar en la leyenda de las gráficas.
-    time_rotura : 
+        List of names to use in the plot legends.
+    time_rotura :
 
 
     Returns
     -------
     conjunto_rec : list(numpy)
-        Lista de los vectores con los datos ya eliminados.
+        List of vectors with the data already removed.
     time : list(float)
-        Lista de los instantes de tiempo empleados en el arreglo de los datos.
+        List of time instants used in the data arrangement.
 
-    '''
+    """
     conjunto_rec = []
     time = []
-    for vector in conjunto:    
+    for vector in conjunto:
         plt.figure(figsize=(10, 6), dpi=260)
         plt.plot(vector[:, 2], vector[:, 1])
-        plt.xlabel('Tiempo [s]')
-        plt.ylabel('Carga [kN]')
+        plt.xlabel("Time [s]")
+        plt.ylabel("Load [kN]")
         plt.grid(True)
         plt.show()
-        
+
         if time_rotura:
             time_rotura = int(time_rotura)
 
         else:
-            response = 'No'
-            while response == 'No' or response == 'no':
-                print('\n¬øSobre qu√© tiempo recortamos para quitar la rotura?')
+            response = "No"
+            while response == "No" or response == "no":
+                print("\nAt what time should we crop to remove the failure?")
                 time_rotura = int(input())
-                
+
                 if time_rotura == -1:
-                    time_rotura = vector[-1, 2] 
-                    
+                    time_rotura = vector[-1, 2]
+
                 plt.figure(figsize=(10, 6), dpi=260)
                 plt.plot(vector[:, 2], vector[:, 1])
-                plt.axvline(time_rotura, linestyle='--', color='red')
-                plt.xlabel('Tiempo [s]')
-                plt.ylabel('Carga [kN]')
+                plt.axvline(time_rotura, linestyle="--", color="red")
+                plt.xlabel("Time [s]")
+                plt.ylabel("Load [kN]")
                 plt.grid(True)
                 plt.show()
-                
-                print('\n¬øConforme?')
+
+                print("\nSatisfied?")
                 response = input()
-            
+
         if time_rotura == -1:
             vector_rec = vector
         else:
@@ -771,97 +827,113 @@ def recorteCSV(conjunto, legend, time_rotura):
             vector_rec = vector[:pos_rotura, :]
         conjunto_rec.append(vector_rec)
         time.append(time_rotura)
-    multiplot(conjunto, legend, ['Conjunto sin recortar'], ['Tiempo [s]', 'Fuerza [kN]'], [2, 1])
-    multiplot(conjunto_rec, legend, ['Conjunto recortado'], ['Tiempo [s]', 'Fuerza [kN]'], [2, 1])
+    multiplot(
+        conjunto,
+        legend,
+        ["Uncropped set"],
+        ["Time [s]", "Force [kN]"],
+        [2, 1],
+    )
+    multiplot(
+        conjunto_rec,
+        legend,
+        ["Cropped set"],
+        ["Time [s]", "Force [kN]"],
+        [2, 1],
+    )
     return conjunto_rec, time
 
 
-# Arregla el archivo .pridb en función del recorte generado en el .csv
+# Adjusts the .pridb file based on the cropping generated in the .csv
 def recortePRIDB(df_data, time):
-    '''
+    """
     Description
     -----------
-    Recorte de los datos del pridb a partir de un instante de tiempo del ensayo.
+    Crops the pridb data from a certain test time instant.
 
     Parameters
     ----------
     df_data : DataFrame
-        Matriz de datos del pridb.
+        pridb data matrix.
     time : int
-        Tiempo a partir del cual el ensayo no se considera válido.
+        Time after which the test is not considered valid.
 
     Returns
     -------
     df_data_rec : DataFrame
-        Matriz de datos válidos.
+        Matrix of valid data.
 
-    '''
+    """
     if time == -1:
-        time = df_data['time'].iloc[-1]
-    df_drop = np.where(df_data['time'] >= time)[0]
-    df_data_rec = df_data[:df_drop[0]]
+        time = df_data["time"].iloc[-1]
+    df_drop = np.where(df_data["time"] >= time)[0]
+    df_data_rec = df_data[: df_drop[0]]
     return df_data_rec
 
 
-# Elimina los trais que no cumplan las condiciones estipuladas
+# Removes trais that do not meet the stipulated conditions
 def TRAIdelete(df_data, amp_lim, cnts_lim):
-    '''
+    """
     Description
     -----------
-    Eliminación de los datos que no cumplan con las condiciones de umbral mínimo.
+    Removes data that do not meet the minimum threshold conditions.
 
     Parameters
     ----------
     df_data : DataFrame
-        Matriz de datos del tradb.
+        tradb data matrix.
     amp_lim : int
-        Valor mínimo a partir del cual los datos son válidos.
+        Minimum value from which the data are valid.
     cnts_lim : int
-        Valor mínimo para que un hit sea válido.
+        Minimum value for a hit to be valid.
 
     Returns
     -------
     df_data : DataFrame
-        Matriz de datos que sí cumplen las condiciones.
+        Data matrix that meets the conditions.
 
-    '''
+    """
     amp_lim = int(amp_lim)
     cnts_lim = int(cnts_lim)
     deleted = []
     for row in range(df_data.shape[0]):
-        if np.array(df_data['amplitude'])[row] < amp_lim or np.array(df_data['counts'])[row] < cnts_lim:
+        if (
+            np.array(df_data["amplitude"])[row] < amp_lim
+            or np.array(df_data["counts"])[row] < cnts_lim
+        ):
             deleted.append(row)
     df_data = df_data.reset_index(drop=True).drop(deleted, axis=0)
     return df_data
 
 
 def save_image_pred(image_list, dims, test_name, images_dir):
-    '''
+    """
     Description
     -----------
-    Guardado de las imágenes generadas por el modelo predictivo.
+    Saves the images generated by the predictive model.
 
     Parameters
     ----------
     image_list : list(array(float))
-        Lista de las imágenes generadas por el modelo.
+        List of images generated by the model.
     dims : list(int)
-        Dimensiones de las imágenes.
+        Dimensions of the images.
     path : str
-        Directorio de almacenamiento de las imágenes.
+        Directory to store the images.
     name : str
-        Nombre del archivo.
+        Name of the file.
 
     Returns
     -------
-    Guardado de las imágenes en el directorio especificado.
+    None
+        Saves the images in the specified directory.
 
-    '''
+    """
     path = os.path.join(images_dir, test_name)
     os.makedirs(path, exist_ok=True)
     image_redim = redim(image_list, dims)
     for i, image in enumerate(image_redim):
-        image_name = f'CWT_{test_name}_{i:04d}.png'
+        image_name = f"CWT_{test_name}_{i:04d}.png"
         image_path = os.path.join(path, image_name)
-        plt.imsave(image_path, image, cmap='gray')
-    return print(f'Images of test {test_name} for prediction saved')    
+        plt.imsave(image_path, image, cmap="gray")
+    return print(f"Images of test {test_name} for prediction saved")

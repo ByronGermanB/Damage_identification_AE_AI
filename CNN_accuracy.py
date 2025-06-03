@@ -1,9 +1,9 @@
 import os
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-import matplotlib.pyplot as plt
 
 # Current directory
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,7 +18,7 @@ ground_truth_csv = "labels_dbscan.csv"
 predicted = pd.read_csv(os.path.join(results_dir, predicted_csv))
 ground_truth = pd.read_csv(os.path.join(results_dir, ground_truth_csv))
 
-
+# Test set IDs to include in the evaluation
 test_set = [
     "P0_90_1",
     "P0_90_2",
@@ -41,6 +41,7 @@ ground_truth = ground_truth[ground_truth["test_id"].isin(test_set)]
 
 y_pred = predicted["CNN label"].values
 y_true = ground_truth["DBSCAN label"].values
+
 # Calculate metrics
 accuracy = accuracy_score(y_true, y_pred)
 f1 = f1_score(y_true, y_pred, average="weighted")  # Use 'weighted' for multiclass

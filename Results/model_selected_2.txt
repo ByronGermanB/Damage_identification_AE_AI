@@ -1,1 +1,0 @@
-The selected model for the damage identification paper is the CNN_model_2
