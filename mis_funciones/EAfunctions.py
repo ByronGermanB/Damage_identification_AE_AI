@@ -194,13 +194,13 @@ def calcCWT(
     cwt_image = []
 
     # Start processing data for CWT application
-    for vae, (vae_T, max_trai) in enumerate(zip(vae_Tarr, max_trais)):
+    for vae_data, (vae_T, max_trai) in enumerate(zip(vae_Tarr, max_trais)):
         # Load data
         df_T = vae_T.read()
 
         # Define the time limits of the test
-        limite_inf = float(t_trai[vae][0])
-        limite_sup = float(t_trai[vae][1])
+        limite_inf = float(t_trai[vae_data][0])
+        limite_sup = float(t_trai[vae_data][1])
 
         trai_lims = limites(df_T, limite_inf, limite_sup)
         TRAI_arr = np.arange(trai_lims[0] + 1, trai_lims[1])
@@ -242,7 +242,7 @@ def calcCWT(
         widths = np.arange(0, n_bands, 0.5) + 1  # n_bands vector
 
         # Load .pridb data for filtering valid transients
-        pridb = vae_pridb[vae].read_hits().reset_index(drop=True)
+        pridb = vae_pridb[vae_data].read_hits().reset_index(drop=True)
 
         # Convert the amplitude column units of the time signal
         pridb["amplitude"] = 20 * np.log10(pridb["amplitude"] / 1e-6)
@@ -665,7 +665,7 @@ def multiplot(conjunto, legend, plt_title, labels, axis):
     plt.rcParams["figure.dpi"] = 300
     plt.figure(figsize=(10, 6), layout="tight")
     for vector in conjunto:
-        if type(vector) == type(pd.DataFrame()):
+        if isinstance(vector, pd.DataFrame):
             vector = vector.to_numpy()
         plt.plot(vector[:, axis[0]], vector[:, axis[1]])
     plt.grid(True)
