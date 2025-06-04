@@ -1,13 +1,11 @@
-from mis_funciones import EAfunctions as eaf
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import signal
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import tensorflow as tf # type: ignore
-from tensorflow.keras.models import Model, Sequential # type: ignore
-from tensorflow.keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten, Dropout, UpSampling2D # type: ignore
+from tensorflow.keras.models import Model # type: ignore
+from tensorflow.keras.layers import Input, Dense, Conv2D, MaxPooling2D, Flatten, Dropout # type: ignore
 import os
 import pandas as pd
 from tensorflow.keras.callbacks import EarlyStopping # type: ignore
