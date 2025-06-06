@@ -105,6 +105,7 @@ labels_cnn = labels_cnn.flatten()
 # Save predictions to CSV
 labels_cnn_df = data.copy()
 labels_cnn_df["CNN label"] = labels_cnn
+
 # Save the new data DataFrame with predictions
 labels_cnn_df.to_csv(os.path.join(results_dir, f"labels_{model_name}.csv"), index=False)
 

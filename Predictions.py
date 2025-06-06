@@ -123,9 +123,9 @@ for i, ax in enumerate(axes.flat, start=1):
         i=i,
         n_col=n_col,
         n_row=n_row,
-        guardar=False,
+        save=False,
     )
-
+plt.show()
 # =============================================================================
 # Feature vs Feature Plot
 # =============================================================================
@@ -140,9 +140,9 @@ plot_cluster_feat(
     title="Feature vs. feature scatter plot",
     x_label="Partial power 3 [%]",
     y_label="Weighted peak frequency [kHz]",
-    guardar=False,
+    save=False,
 )
-
+plt.show()
 # =============================================================================
 # Stress vs Hits Plot - Clustering
 # =============================================================================
@@ -178,9 +178,9 @@ for i, ax in enumerate(axes.flat, start=1):
         i=i,
         n_col=n_col,
         n_row=n_row,
-        guardar=True,
+        save=False,
     )
-
+plt.show()
 # =============================================================================
 # Stress vs Hits Plot
 # =============================================================================
@@ -214,5 +214,6 @@ for i, ax in enumerate(axes.flat, start=1):
         i=i,
         n_col=n_col,
         n_row=n_row,
-        guardar=False,
+        save=False,
     )
+plt.show()
