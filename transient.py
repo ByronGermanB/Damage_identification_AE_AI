@@ -12,7 +12,7 @@ Created on Tue Jan 30 15:31:23 2024
 import os
 
 # Functions for feature extraction
-from mis_funciones.analisis_AE import Features
+from utils.analysis_AE import Features
 
 # =============================================================================
 # Initial data

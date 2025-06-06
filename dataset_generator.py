@@ -12,10 +12,10 @@ Created on Mon Dec 11 12:48:58 2023
 import os
 
 # Functions for feature extraction
-from mis_funciones.analisis_AE import Features, unir_df
+from utils.analysis_AE import Features, unir_df
 
 # Functions to load MTS data
-from mis_funciones.force_mts import force_data
+from utils.force_mts import force_data
 
 # =============================================================================
 # Initial data

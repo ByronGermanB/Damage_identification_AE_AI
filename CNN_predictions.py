@@ -18,8 +18,8 @@ from tensorflow.keras.models import load_model  # type: ignore
 from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ignore
 
 # Functions for dataset splitting
-from mis_funciones.analisis_AE import train_test_set
-from mis_funciones.force_mts import (
+from utils.analysis_AE import train_test_set
+from utils.force_mts import (
     limit_finder,
     limit_finder_no_label,
     plot_stress_hits,
@@ -28,7 +28,7 @@ from mis_funciones.force_mts import (
 
 # Functions for DBSCAN model
 # Functions for plotting
-from mis_funciones.no_supervisado import (
+from utils.unsupervised_functions import (
     plot_cluster_feat,
     plot_cluster_tsne,
     plot_cluster_tsne_3d,

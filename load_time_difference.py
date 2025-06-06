@@ -11,7 +11,7 @@ import os
 import pandas as pd
 
 # Functions for data splitting
-from mis_funciones.analisis_AE import train_test_set
+from utils.analysis_AE import train_test_set
 
 # Current directory
 script_dir = os.path.dirname(os.path.abspath(__file__))

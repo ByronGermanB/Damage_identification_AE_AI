@@ -3,7 +3,7 @@ import os
 import numpy as np
 from scipy import signal
 
-from mis_funciones import EAfunctions as eaf
+from utils import EAfunctions as eaf
 
 # =============================================================================
 # Directories
@@ -11,11 +11,11 @@ from mis_funciones import EAfunctions as eaf
 base_dir = os.path.dirname(os.path.abspath(__file__))
 EA_path = os.path.join(base_dir, "Datos_EA")
 
-figure_path = os.path.join(base_dir, "Figuras")
+figure_path = os.path.join(base_dir, "Figures")
 os.makedirs(figure_path, exist_ok=True)
 
 # Create directory to save images
-images_set = "train_3"
+images_set = "train"
 images_dir = os.path.join(base_dir, "datasets", "images", images_set)
 os.makedirs(images_dir, exist_ok=True)
 

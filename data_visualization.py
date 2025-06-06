@@ -15,8 +15,8 @@ import pandas as pd
 
 # Functions for dataset splitting
 # Functions for result visualization
-from mis_funciones.analisis_AE import plot_feat_vs_feat, train_test_set
-from mis_funciones.force_mts import plot_force_hits
+from utils.analysis_AE import plot_feat_vs_feat, train_test_set
+from utils.force_mts import plot_force_hits
 
 # =============================================================================
 # Initial data
