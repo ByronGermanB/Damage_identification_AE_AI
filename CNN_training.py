@@ -25,8 +25,8 @@ from tensorflow.keras.models import Model  # type: ignore
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 EA_path = os.path.join(base_dir, "Datos_EA")
-figure_path = os.path.join(base_dir, "Figuras")
-images_set = "train_3"
+figure_path = os.path.join(base_dir, "Figures")
+images_set = "train"
 images_dir = os.path.join(base_dir, "datasets", "images", images_set)
 dbscan_labels_path = os.path.join(base_dir, "Results", "labels_dbscan.csv")
 
