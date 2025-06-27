@@ -26,8 +26,7 @@ from tensorflow.keras.models import Model  # type: ignore
 base_dir = os.path.dirname(os.path.abspath(__file__))
 EA_path = os.path.join(base_dir, "Datos_EA")
 figure_path = os.path.join(base_dir, "Figures")
-images_set = "train"
-images_dir = os.path.join(base_dir, "datasets", "images", images_set)
+images_dir = os.path.join(base_dir, "datasets", "cnn_images", 'train')
 dbscan_labels_path = os.path.join(base_dir, "Results", "labels_dbscan.csv")
 
 plot = False
@@ -52,10 +51,19 @@ x_images = x_images.reshape(-1, 128, 128, 1)
 dbscan_labels = pd.read_csv(dbscan_labels_path)
 
 # Define test IDs and repeat counts for each label set
+# If you used Data augmentation, set the use_data_aug to true to
+# adjust the test IDs and repeat counts accordingly
+
+use_data_aug = True
+if use_data_aug:
+    n_repeat = 3
+else:
+    n_repeat = 1
+
 label_sets = {
-    "T0": (["P0_2", "P0_3", "P0_4", "P0_5", "P0_6"], 3),
-    "T90": (["P90_1", "P90_2", "P90_3"], 3),
-    "T090": (["P0_90_1", "P0_90_2", "P0_90_3", "P0_90_4"], 3),
+    "T0": (["P0_2", "P0_3", "P0_4", "P0_5", "P0_6"], n_repeat),
+    "T90": (["P90_1", "P90_2", "P90_3"], n_repeat),
+    "T090": (["P0_90_1", "P0_90_2", "P0_90_3", "P0_90_4"], n_repeat),
 }
 
 # Initialize an empty list to store all labels
