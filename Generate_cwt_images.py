@@ -15,23 +15,24 @@ figure_path = os.path.join(base_dir, "Figures")
 os.makedirs(figure_path, exist_ok=True)
 
 # Create directory to save images
-images_set = "train"
-images_dir = os.path.join(base_dir, "datasets", "images", images_set)
+images_dir = os.path.join(base_dir, "datasets", "cnn_images", "test")
 os.makedirs(images_dir, exist_ok=True)
 
 # Description of wavelet variables
 signal_function = signal.ricker
 sampling_rate = 2e9  # [MHz]
-n_bands = (
-    24  # Number of frequency bands to use, in an article with sam_rate=1MHz they used 8
-)
+n_bands = 12  # Number of frequency bands to use, in an article with sam_rate=1MHz
 
 # Transient filtering parameters
-t_trans = 350
+t_trans = 204.8
 amp_lim = 36
 cnts_lim = 5
+
+# Application of white noise
+# Randomly applies one of the num_ruido_options white noise options for each standard deviation
+# in STD_noise, resulting in 2 additional time signals per original signal
 STD_noise = [1.3e-3, 5e-3]
-num_ruido = 0  # Number of noise signals to add
+num_ruido_options = 5
 dims = [128, 128]
 
 # =============================================================================
@@ -66,10 +67,11 @@ cwt_image0, trais0 = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
 
+# eaf.save_image_pred(cwt_image0, dims, "1_T0", images_dir, 'train')
 
 # =============================================================================
 # Load data at 90 orientation
@@ -101,7 +103,7 @@ cwt_image90, trais90 = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
 
@@ -135,13 +137,72 @@ cwt_image090, trais_090 = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
+
+set_name = "train"
+eaf.save_image_pred(cwt_image0, dims, "1_T0", images_dir, set_name)
+eaf.save_image_pred(cwt_image90, dims, "2_T90", images_dir, set_name)
+eaf.save_image_pred(cwt_image090, dims, "3_T090", images_dir, set_name)
 
 # =============================================================================
 # Load data at 0-90W orientation
 # =============================================================================
+# Test data num_ruido_options = 0
+num_ruido_options = 0
+
+# Apply the CWT calculation function
+print("\nCWT 0")
+cwt_image0, trais0 = eaf.calcCWT(
+    vae_Tarr=vae_T0,
+    vae_pridb=vae_pridb0,
+    t_trai=t_trai_T0,
+    max_trais=max_trai_T0,
+    t_trans=t_trans,
+    signal_function=signal_function,
+    n_bands=n_bands,
+    amp_lim=amp_lim,
+    cnts_lim=cnts_lim,
+    STD_noise=STD_noise,
+    num_noisySignals=num_ruido_options,
+    figure_path=figure_path,
+)
+
+# Apply the CWT calculation function
+print("\nCWT 90")
+cwt_image90, trais90 = eaf.calcCWT(
+    vae_Tarr=vae_T90,
+    vae_pridb=vae_pridb90,
+    t_trai=t_trai_T90,
+    max_trais=max_trai_T90,
+    t_trans=t_trans,
+    signal_function=signal_function,
+    n_bands=n_bands,
+    amp_lim=amp_lim,
+    cnts_lim=cnts_lim,
+    STD_noise=STD_noise,
+    num_noisySignals=num_ruido_options,
+    figure_path=figure_path,
+)
+
+# Apply the CWT calculation function
+print("\nCWT 090")
+cwt_image090, trais_090 = eaf.calcCWT(
+    vae_Tarr=vae_T090,
+    vae_pridb=vae_pridb090,
+    t_trai=t_trai_T090,
+    max_trais=max_trai_T090,
+    t_trans=t_trans,
+    signal_function=signal_function,
+    n_bands=n_bands,
+    amp_lim=amp_lim,
+    cnts_lim=cnts_lim,
+    STD_noise=STD_noise,
+    num_noisySignals=num_ruido_options,
+    figure_path=figure_path,
+)
+
 pridb_W_1, vae_WT_1 = eaf.abreAE(EA_path, "P0_90W_1")
 pridb_W_3, vae_WT_3 = eaf.abreAE(EA_path, "P0_90W_3")
 
@@ -167,7 +228,7 @@ cwt_image090W, trais_090W = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
 
@@ -200,7 +261,7 @@ cwt_image45, trais_45 = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
 
@@ -234,16 +295,17 @@ cwt_imageQ, trais_Q = eaf.calcCWT(
     amp_lim=amp_lim,
     cnts_lim=cnts_lim,
     STD_noise=STD_noise,
-    num_noisySignals=num_ruido,
+    num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
 
 # =============================================================================
 # Save images
 # =============================================================================
-eaf.save_image_pred(cwt_image0, dims, "1_T0", images_dir)
-eaf.save_image_pred(cwt_image90, dims, "2_T90", images_dir)
-eaf.save_image_pred(cwt_image090, dims, "3_T090", images_dir)
-eaf.save_image_pred(cwt_image090W, dims, "4_T090W", images_dir)
-eaf.save_image_pred(cwt_image45, dims, "5_T45", images_dir)
-eaf.save_image_pred(cwt_imageQ, dims, "6_TQ", images_dir)
+set_name = "test"
+eaf.save_image_pred(cwt_image0, dims, "1_T0", images_dir, set_name)
+eaf.save_image_pred(cwt_image90, dims, "2_T90", images_dir, set_name)
+eaf.save_image_pred(cwt_image090, dims, "3_T090", images_dir, set_name)
+eaf.save_image_pred(cwt_image090W, dims, "4_T090W", images_dir, set_name)
+eaf.save_image_pred(cwt_image45, dims, "5_T45", images_dir, set_name)
+eaf.save_image_pred(cwt_imageQ, dims, "6_TQ", images_dir, set_name)
