@@ -506,6 +506,208 @@ def plot_stress_hits(
 
     return ax
 
+def plot_feature_time_histogram(
+    data,
+    figure_path,
+    title="Feature distribution vs Normalized time",
+    x="time_norm",
+    y="peak_freq",
+    x_label="Normalized time",
+    y_label="Peak frequency [kHz]",
+    subtitle=None,
+    width=90,
+    height=60,
+    ax=None,
+    i=1,
+    n_col=1,
+    save=False,
+):
+    """
+    Parameters
+    ----------
+    data : DataFrame
+        Data containing the features to plot, must include columns for x and y.
+    figure_path : str
+        Directory to save the figure.
+    title : str, optional
+        Title of the image to display and save. Default is 'Feature distribution vs Normalized time'.
+    x : str, optional
+        Column name for the x-axis. Default is 'time_norm'.
+    y : str, optional
+        Column name for the y-axis. Default is 'peak_freq'.
+    x_label : str, optional
+        Label for the x-axis. Default is 'Normalized time'.
+    y_label : str, optional
+        Label for the y-axis. Default is 'Peak frequency [kHz]'.
+    subtitle : str or list, optional
+        Title for each subplot, if left as default the y variable is plotted. Default is None.
+    width : int or float, optional
+        Width of the figure in millimeters. Default is 90.
+    height : int or float, optional
+        Height of the figure in millimeters. Default is 60.
+    ax : matplotlib axis object, optional
+        Axis to plot on. If not provided, a new axis will be created.
+    i : int, optional
+        Index for subplot. Default is 1.
+    n_col : int, optional
+        Number of columns. Default is 1.
+    save : boolean, optional
+        If True, saves the image. Default is False.
+
+    Returns
+    -------
+    ax : matplotlib axis object
+        Axis containing the plot.
+        Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
+    """
+   
+    # Create the plot
+    # Exclude the data in the fracture moment
+    data = data[data["time_norm"] < 0.99]
+
+    figsize_inches = (width / 25.4, height / 25.4)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        ax.set_title(f"{y} vs Normalized time")
+        ax.set_xlabel(x_label)
+
+    else:
+        ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
+        # Title for each test id
+        if subtitle is not None:
+            ax.set_title(subtitle)
+        else:
+            ax.set_title(y)
+
+    # Create the plot
+    sns.histplot(
+        data=data,
+        x=x,
+        y=y,
+        bins=60,
+        pmax=0.95,
+        cmap="rainbow",
+        cbar=True,
+        ax=ax,
+    )
+
+
+    ax.set_ylabel(y_label)
+
+    # Plot the grid
+    ax.grid(True, linestyle="-", alpha=0.7)
+    ax.set_axisbelow(True)  # Set grid lines behind the data points
+
+    # Save the image in figure_path
+    if save:
+        if ax is None:
+            figure_filename = f"{title} - {y}.pdf"
+        else:
+            figure_filename = f"{title}.pdf"
+        figure_path_name = os.path.join(figure_path, figure_filename)
+        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+
+    return ax
+
+def plot_feature_histogram(
+    data,
+    figure_path,
+    title="Feature distribution vs Normalized time",
+    x="peak_freq",
+    x_label="Peak frequency [kHz]",
+    subtitle=None,
+    width=90,
+    height=60,
+    ax=None,
+    i=1,
+    n_col=1,
+    save=False,
+):
+    """
+    Parameters
+    ----------
+    data : DataFrame
+        Data containing the features to plot, must include columns for x and y.
+    figure_path : str
+        Directory to save the figure.
+    title : str, optional
+        Title of the image to display and save. Default is 'Feature distribution vs Normalized time'.
+    x : str, optional
+        Column name for the x-axis. Default is 'time_norm'.
+    y : str, optional
+        Column name for the y-axis. Default is 'peak_freq'.
+    x_label : str, optional
+        Label for the x-axis. Default is 'Normalized time'.
+    y_label : str, optional
+        Label for the y-axis. Default is 'Peak frequency [kHz]'.
+    subtitle : str or list, optional
+        Title for each subplot, if left as default the y variable is plotted. Default is None.
+    width : int or float, optional
+        Width of the figure in millimeters. Default is 90.
+    height : int or float, optional
+        Height of the figure in millimeters. Default is 60.
+    ax : matplotlib axis object, optional
+        Axis to plot on. If not provided, a new axis will be created.
+    i : int, optional
+        Index for subplot. Default is 1.
+    n_col : int, optional
+        Number of columns. Default is 1.
+    save : boolean, optional
+        If True, saves the image. Default is False.
+
+    Returns
+    -------
+    ax : matplotlib axis object
+        Axis containing the plot.
+        Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
+    """
+   
+    # Create the plot
+    # Exclude the data in the fracture moment
+
+    figsize_inches = (width / 25.4, height / 25.4)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        ax.set_title(f"{x} Histogram")
+        ax.set_xlabel(x_label)
+
+    else:
+        ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
+        # Title for each test id
+        if subtitle is not None:
+            ax.set_title(subtitle)
+        else:
+            ax.set_title(x)
+
+    # Create the plot
+    sns.histplot(
+        data=data,
+        x=x,
+        bins=40,
+        pmax=0.95,
+        ax=ax,
+    )
+
+    # Set y-axis label only for the first plot of each row
+    if (i - 1) % n_col == 0:
+        ax.set_ylabel("Event count")
+    else:
+        ax.set_ylabel("")
+
+    # Plot the grid
+    ax.grid(True, linestyle="-", alpha=0.7)
+    ax.set_axisbelow(True)  # Set grid lines behind the data points
+
+    # Save the image in figure_path
+    if save:
+        if ax is None:
+            figure_filename = f"{title} - {x}.pdf"
+        else:
+            figure_filename = f"{title}.pdf"
+        figure_path_name = os.path.join(figure_path, figure_filename)
+        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+
+    return ax
 
 def limit_finder(labels, hits, force, test_ids):
     """

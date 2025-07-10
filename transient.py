@@ -23,7 +23,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Directory with AE data
 EA_path = os.path.join(script_dir, "Datos_EA")
 # Directory to save images
-figure_path = os.path.join(script_dir, "Figuras")
+figure_path = os.path.join(script_dir, "Figures")
 os.makedirs(figure_path, exist_ok=True)
 
 # Directory for reading AE data
@@ -67,5 +67,5 @@ trail.plot_segmentation_1(
     figure_path=figure_path,
     width=90,
     height=125,
-    guardar=True,
+    guardar=False,
 )

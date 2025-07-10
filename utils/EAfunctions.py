@@ -300,7 +300,7 @@ def calcCWT(
             more_signals = signals
         else:
             more_signals = moreSignals(
-                STD_noise, signals, time, figure_path, num_noisySignals
+                STD_noise, signals, time, figure_path, num_noisySignals, save_noised=False
             )
 
         # Apply CWT to the stored signals {original + augmented (if any)}
@@ -623,11 +623,12 @@ def moreSignals(
         # Save the original signal and the signal with noise
         plt.figure(figsize=figsize)
         # plt.title('Superimposition of an original signal and its augmented signal')
+        plt.plot(time, noised_signal_2, color="orange", linewidth=0.5, alpha=0.6)
         plt.plot(time, sig, linewidth=1)
-        plt.scatter(time, noised_signal_2, marker=".", color="orange", linewidths=0.25)
+        # plt.scatter(time, noised_signal_2, marker=".", color="orange", linewidths=0.25)
         plt.xlabel("Time [μs]")
         plt.ylabel("Amplitude [mV]")
-        plt.legend(["Original signal", "Noised signal"])
+        plt.legend(["Noised signal", "Original signal"])
         plt.grid(True)
         figure_path_name = os.path.join(figure_path, "Noised_signal.pdf")
         plt.savefig(figure_path_name, bbox_inches="tight")

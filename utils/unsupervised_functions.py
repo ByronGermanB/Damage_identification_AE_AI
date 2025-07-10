@@ -85,7 +85,8 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                 num_clusters = len(unique_labels)
 
             # Check if the current model meets the target_clusters
-            if num_clusters == target_clusters:
+            # if num_clusters == target_clusters:
+            if num_clusters > 1:
                 results.append(
                     {
                         "Epsilon": epsilon,
