@@ -1,5 +1,7 @@
 /mis_funciones/__pycache__/
-/Figuras/
+/Figures/
 /datasets/images/
+/datasets/cnn_images/
 /Datos_EA/Filtros_rotura.xlsx
 /Datos_EA/Notas sobre ensayos no incluidos.txt
+*.pyc
