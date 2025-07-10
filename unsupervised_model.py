@@ -72,14 +72,19 @@ dbscan_results_per_k = []
 # =============================================================================
 # Parameters for DBSCAN
 target_clusters = 2  # Specify the desired number of clusters
-epsilon_values = np.linspace(1, 10, 10)
+# epsilon_values = np.linspace(1, 10, 10)
+epsilon_values = [1, 5, 10, 15, 20]
 min_samples_values = np.linspace(5, 20, 4, dtype=int)
 
 # Model and adjusted parameters
 dbscan_models, results = grid_search_dbscan(
     X_reduced, target_clusters, epsilon_values, min_samples_values
 )
-
+# Convert results list to DataFrame and save as CSV
+results_df = pd.DataFrame(results)
+results_csv_path = os.path.join(datasets_path, "dbscan_grid_search_results.csv")
+results_df.to_csv(results_csv_path, index=False)
+print(f'DBSCAN grid search results saved at: "{results_csv_path}"')
 # =============================================================================
 # DBSCAN by k
 # =============================================================================
