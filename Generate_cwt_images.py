@@ -15,13 +15,13 @@ figure_path = os.path.join(base_dir, "Figures")
 os.makedirs(figure_path, exist_ok=True)
 
 # Create directory to save images
-images_dir = os.path.join(base_dir, "datasets", "cnn_images", "test")
+images_dir = os.path.join(base_dir, "datasets", "cnn_images")
 os.makedirs(images_dir, exist_ok=True)
 
 # Description of wavelet variables
 signal_function = signal.ricker
 sampling_rate = 2e9  # [MHz]
-n_bands = 12  # Number of frequency bands to use, in an article with sam_rate=1MHz
+n_bands = 24  # Number of frequency bands to use, in an article with sam_rate=1MHz
 
 # Transient filtering parameters
 t_trans = 204.8
@@ -31,7 +31,9 @@ cnts_lim = 5
 # Application of white noise
 # Randomly applies one of the num_ruido_options white noise options for each standard deviation
 # in STD_noise, resulting in 2 additional time signals per original signal
-STD_noise = [1.3e-3, 5e-3]
+# STD_noise = [1.3e-3, 5e-3]
+STD_noise = [0.03, 0.05]
+
 num_ruido_options = 5
 dims = [128, 128]
 
@@ -54,6 +56,7 @@ t_trai_0 = np.zeros(shape=(len(vae_T0), 1))
 t_trai_1 = t_trai_0 - 1
 t_trai_T0 = np.concatenate((t_trai_0, t_trai_1), axis=1)
 
+
 # Apply the CWT calculation function
 print("\nCWT 0")
 cwt_image0, trais0 = eaf.calcCWT(
@@ -70,8 +73,6 @@ cwt_image0, trais0 = eaf.calcCWT(
     num_noisySignals=num_ruido_options,
     figure_path=figure_path,
 )
-
-# eaf.save_image_pred(cwt_image0, dims, "1_T0", images_dir, 'train')
 
 # =============================================================================
 # Load data at 90 orientation

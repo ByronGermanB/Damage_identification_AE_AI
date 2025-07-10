@@ -11,7 +11,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # Directory to save results
 results_dir = os.path.join(base_dir, "Results")
 
-predicted_csv = "labels_CNN_model_2.csv"
+predicted_csv = "labels_CNN_model_1.csv"
 ground_truth_csv = "labels_dbscan.csv"
 
 # Load CSV files
@@ -52,7 +52,7 @@ print(f"F1 Score: {f1:.4f}")
 print("Confusion Matrix:")
 print(cm)
 
-plt.rcParams.update({"font.size": 8, "font.family": "Segoe UI"})
+plt.rcParams.update({"font.size": 8, "font.family": "times new roman"})
 figsize_mm = (90, 60)
 fig_size = (figsize_mm[0] / 25.4, figsize_mm[1] / 25.4)  # Convert mm to inches
 plt.figure(figsize=(fig_size))
@@ -61,12 +61,12 @@ plt.title("Confusion Matrix")
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 plt.tight_layout()
-plt.savefig(os.path.join(results_dir, "CNN_model_2_confusion_matrix.pdf"), dpi=300)
+plt.savefig(os.path.join(results_dir, "CNN_model_1_confusion_matrix.pdf"), dpi=300)
 plt.show()
 plt.close()
 
 # Save results to a text file
-results_file = os.path.join(results_dir, "CNN_model_2_accuracy_results.txt")
+results_file = os.path.join(results_dir, "CNN_model_1_accuracy_results.txt")
 with open(results_file, "w") as f:
     f.write(f"Accuracy: {accuracy:.4f}\n")
     f.write(f"F1 Score: {f1:.4f}\n")

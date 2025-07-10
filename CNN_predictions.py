@@ -21,8 +21,8 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator  # type: ign
 from utils.analysis_AE import train_test_set
 from utils.force_mts import (
     limit_finder,
-    limit_finder_no_label,
-    plot_stress_hits,
+    # limit_finder_no_label,
+    # plot_stress_hits,
     plot_stress_hits_cluster,
 )
 
@@ -31,9 +31,9 @@ from utils.force_mts import (
 from utils.unsupervised_functions import (
     plot_cluster_feat,
     plot_cluster_tsne,
-    plot_cluster_tsne_3d,
+    # plot_cluster_tsne_3d,
     tsne,
-    tsne_3d,
+    # tsne_3d,
 )
 
 # =============================================================================
@@ -52,7 +52,7 @@ os.makedirs(results_dir, exist_ok=True)
 
 models_dir = os.path.join(base_dir, "models")
 datasets_dir = os.path.join(base_dir, "datasets")
-images_dir = os.path.join(datasets_dir, "images", "test")
+images_dir = os.path.join(datasets_dir, "cnn_images", "test")
 
 # Import datasets
 data = pd.read_csv(os.path.join(datasets_dir, "Dataset_total.csv"))
@@ -66,7 +66,7 @@ X_original, X, y, hits = train_test_set(
 test_ids = hits["test_id"].unique()
 
 # T-SNE
-X_reduced = tsne_3d(X, figure_dir)
+# X_reduced = tsne_3d(X, figure_dir)
 X_reduced = tsne(X, figure_dir)
 
 # =============================================================================
@@ -91,7 +91,7 @@ test_data = test_datagen.flow_from_directory(
 # Predictions with model
 # =============================================================================
 # Load the saved model
-model_name = "CNN_model_2"
+model_name = "CNN_model_1"
 model_path = os.path.join(models_dir, model_name + ".keras")
 model = load_model(model_path)
 
@@ -107,7 +107,7 @@ labels_cnn_df = data.copy()
 labels_cnn_df["CNN label"] = labels_cnn
 
 # Save the new data DataFrame with predictions
-labels_cnn_df.to_csv(os.path.join(results_dir, f"labels_{model_name}.csv"), index=False)
+labels_cnn_df.to_csv(os.path.join(results_dir, f"labels_{model_name}.csv"), index=True)
 
 # =============================================================================
 # T-SNE plot
@@ -119,14 +119,14 @@ labels_dbscan = labels_dbscan["DBSCAN label"]
 labels = [labels_cnn, labels_dbscan]
 subtitle = ["CNN", "DBSCAN"]
 
-plot_cluster_tsne_3d(
-    labels_dbscan,
-    X_reduced,
-    figure_dir,
-    subtitle=subtitle,
-    title=f"t-SNE Clustering 3D- {model_name}",
-    guardar=False,
-)
+# plot_cluster_tsne_3d(
+#     labels_dbscan,
+#     X_reduced,
+#     figure_dir,
+#     subtitle=subtitle,
+#     title=f"t-SNE Clustering 3D- {model_name}",
+#     save=False,
+# )
 
 # Define the number of rows and columns for the subplot grid
 n_row, n_col = (2, 1)
@@ -152,7 +152,7 @@ for i, ax in enumerate(axes.flat, start=1):
         i=i,
         n_col=n_col,
         n_row=n_row,
-        guardar=False,
+        save=False,
         title=title,
     )
 plt.show()
@@ -170,7 +170,7 @@ plot_cluster_feat(
     title=f"Feature vs. feature scatter plot - {model_name}",
     x_label="Partial power 3 [%]",
     y_label="Weighted peak frequency [kHz]",
-    guardar=False,
+    save=True,
 )
 
 # =============================================================================
@@ -194,7 +194,7 @@ for i, ax in enumerate(axes.flat, start=1):
         title=title,
         x_label="Partial power 3 [%]",
         y_label="Weighted peak frequency [kHz]",
-        guardar=False,
+        save=False,
         ax=ax,
         i=i,
         n_col=n_col,
@@ -239,44 +239,7 @@ for i, ax in enumerate(axes.flat, start=1):
         i=i,
         n_col=n_col,
         n_row=n_row,
-        guardar=False,
+        save=False,
         title=title,
-    )
-plt.show()
-
-# =============================================================================
-# Stress vs hits plots
-# =============================================================================
-test_id_prueba = ["P0_2", "P90_3", "P0_90_3", "P0_90W_1", "P45_4", "PQ_3"]
-limits = limit_finder_no_label(hits, force, test_id_prueba)
-
-# Define the number of rows and columns for the subplot grid
-n_row, n_col = (2, 3)
-
-# Image size in mm
-width, height = (180, 115)
-figsize_inches = (width / 25.4, height / 25.4)
-# Create a new figure and set the size
-fig, axes = plt.subplots(
-    n_row, n_col, figsize=figsize_inches, dpi=300, tight_layout=True
-)
-plt.suptitle("Stress and Cumulative hits vs Time", fontsize=10)
-
-# Loop through the function calls and store the plots in an array
-for i, ax in enumerate(axes.flat, start=1):
-    # Call the plot_dbi function and pass the current subplot axis
-    plot_stress_hits(
-        hits,
-        force,
-        test_id_prueba[i - 1],
-        figure_dir,
-        plot_type="line",
-        limits=limits,
-        y_label_right="\u03c3 [MPa]",
-        ax=ax,
-        i=i,
-        n_col=n_col,
-        n_row=n_row,
-        guardar=False,
     )
 plt.show()

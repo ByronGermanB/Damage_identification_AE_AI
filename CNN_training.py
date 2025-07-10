@@ -27,7 +27,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 EA_path = os.path.join(base_dir, "Datos_EA")
 figure_path = os.path.join(base_dir, "Figures")
 images_dir = os.path.join(base_dir, "datasets", "cnn_images", 'train')
-dbscan_labels_path = os.path.join(base_dir, "Results", "labels_dbscan.csv")
+dbscan_labels_path = os.path.join(base_dir, "Results", "labels_dbscan_gold_standard.csv")
 
 plot = False
 
@@ -43,10 +43,25 @@ train_dataset = tf.keras.preprocessing.image_dataset_from_directory(
     batch_size=1,
 )
 
+test_dir = os.path.join(base_dir, "datasets", "cnn_images", "test")
+test_dataset = tf.keras.preprocessing.image_dataset_from_directory(
+    test_dir,
+    color_mode="grayscale",
+    image_size=(128, 128),
+    batch_size=1,
+    shuffle=False,
+    labels=None,
+)
+
 # Rescale the images from [0, 255] to [0, 1]
 train_dataset = train_dataset.map(lambda x: x / 255.0)
 x_images = np.array(list(train_dataset.as_numpy_iterator()))
 x_images = x_images.reshape(-1, 128, 128, 1)
+
+test_dataset = test_dataset.map(lambda x: x / 255.0)
+x_test = np.array(list(test_dataset.as_numpy_iterator()))
+x_test = x_test.reshape(-1, 128, 128, 1)
+
 # Read the DBSCAN labels
 dbscan_labels = pd.read_csv(dbscan_labels_path)
 
@@ -81,11 +96,27 @@ y_images = np.concatenate(labels)
 classes = np.unique(y_images)
 num_classes = len(classes)
 
+test_label_sets = {
+    "T090W": ["P0_90W_1", "P0_90W_3"],
+    "T45": ["P45_2", "P45_3", "P45_4"],
+    "TQ": ["PQ_1", "PQ_2", "PQ_3", "PQ_4"],
+}
+
+test_labels = []
+for label_name, (test_ids) in test_label_sets.items():
+    dbscan_labels_subset = dbscan_labels[dbscan_labels["test_id"].isin(test_ids)]
+    labels_subset = dbscan_labels_subset["DBSCAN label"]
+    test_labels.append(labels_subset)
+
+y_test = np.concatenate(test_labels)
+x_test = x_test[-len(y_test):]  # Keep just the last len(y_test) images
+# Because the test set is in order we keep just the last len(y_test) images
+
 # =============================================================================
 # Training loop for multiple models
 # =============================================================================
 # Reset the model number
-model_number = 3
+model_number = 1
 # Define variables to store model data
 cm_test_prec_list = []
 accuracy_arr = []
@@ -95,22 +126,22 @@ cm_test_arr = []
 
 # Define the iterative variable for model training
 random_state = 0
-rs_lim = 5
+rs_lim = 2
 
 # Once the iteration is complete, check which model has the highest accuracy and store it for later use
 while random_state <= rs_lim:
     print("\nStarting iteration: %i\n" % random_state)
 
     # Split for Train, Validation, and Test
-    x_train_val, x_test, y_train_val, y_test = train_test_split(
-        x_images, y_images, test_size=0.15, random_state=random_state, stratify=y_images
-    )
+    # x_train_val, x_test, y_train_val, y_test = train_test_split(
+    #     x_images, y_images, test_size=0.15, random_state=random_state, stratify=y_images
+    # )
     x_train, x_val, y_train, y_val = train_test_split(
-        x_train_val,
-        y_train_val,
+        x_images,
+        y_images,
         test_size=0.2,
         random_state=random_state,
-        stratify=y_train_val,
+        stratify=y_images,
     )
 
     # Ensure y_train is a 1-dimensional array
