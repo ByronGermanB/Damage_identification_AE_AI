@@ -3,7 +3,7 @@ This repository provides a framework for damage identification in PLA specimens 
 
 Feature extraction is performed using both **Fast Fourier Transform (FFT)** and **Continuous Wavelet Transform (CWT)** methods. 
 
-The extracted features are used to train unsupervised learning models **(DBSCAN and KMeans)** as well as supervised models **(such as Convolutional Neural Networks, CNNs)** to predict and classify damage mechanisms. While the current implementation focuses on PLA specimens, the framework could be extend to other materials and experimental setups.
+The extracted features are used to train unsupervised learning models **(DBSCAN and KMeans)** as well as supervised models **(Convolutional Neural Networks, CNNs)** to predict and classify damage mechanisms. While the current implementation focuses on PLA specimens, the framework could be extend to other materials and experimental setups.
 
 Below is the graphical abstract summarizing the project:
 
@@ -45,7 +45,17 @@ The following figures will be plotted:
 - A stress and cumulative hits vs time with and without clasification
 
 ### Supervised model (CNN)
+1. Ensure the `models/` directory contains [`CNN_model_1.keras`](models/CNN_model_1.keras) and you have created the cwt images (see [1. CWT images](#1-cwt-images))and they are at [`datasets`](datasets/) directory.
 
+2. Open the [`CNN_predictions.py`](CNN_predictions.py) file and run it with the default parameters.
+
+It will do the same as in the unsepervised model but for the CNN model.
+
+The following figures will be plotted:
+- A t-SNE scatter plot with out classification
+- A comparison between the CNN and DBSCAN
+- A feature vs feature scatter plot with classification
+- A stress and cumulative hits vs time with clasification
 
 ## Detailed Usage
 
@@ -66,10 +76,10 @@ Refer to [Unsupervised (DBSCAN / k-means)](#unsupervised-dbscan--k-means) sectio
 
 ### Supervised model
 #### 1. CWT images
-The [`generate_cwt_images.py`](generate_cwt_images.py) file generates cwt images for the CNN training and saves them in the `datasets/images` directory. 
+The [`generate_cwt_images.py`](generate_cwt_images.py) file generates cwt images for the CNN training and saves them in the `datasets/cnn_images` directory with subfolders for train and tes. 
 
 #### 2. Training Models
-The [`CNN_training.py`](CNN_training.py) is used to train CNN over the CWT images previously created. It can be used with the [`Dataset_0_y_90_labeled.csv`](datasets/Dataset_0_y_90_labeled.csv) file to make an hybrid approach using the labes obtained from the DBSCAN model. After training, the models are saved in the `models/` directory for later use in prediction.
+The [`CNN_training.py`](CNN_training.py) is used to train CNN over the CWT images previously created. It can be used with the [`labels_dbscan_gold_standard.csv`](results/labels_dbscan_gold_standard.csv) file to make an hybrid approach using the labes obtained from the DBSCAN model. After training, the models are saved in the `models/` directory for later use in prediction.
 
 #### 3. Making predictions
 Refer to [Supervised model (CNN)](#supervised-model-cnn) section.
