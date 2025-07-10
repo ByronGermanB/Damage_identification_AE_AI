@@ -3,7 +3,7 @@ This repository provides a framework for damage identification in PLA specimens 
 
 Feature extraction is performed using both **Fast Fourier Transform (FFT)** and **Continuous Wavelet Transform (CWT)** methods. 
 
-The extracted features are used to train unsupervised learning models **(DBSCAN and KMeans)** as well as supervised models **(Convolutional Neural Networks, CNNs)** to predict and classify damage mechanisms. While the current implementation focuses on PLA specimens, the framework could be extend to other materials and experimental setups.
+The extracted features are used to train unsupervised learning models **(DBSCAN and KMeans)** as well as supervised models **(Convolutional Neural Networks, CNNs)** to predict and classify damage mechanisms. While the current implementation focuses on PLA specimens, the framework could be extended to other materials and experimental setups.
 
 Below is the graphical abstract summarizing the project:
 
@@ -108,7 +108,7 @@ Use this bibtex to cite this repository:
 ```bibtex
 @misc{byron2024damageae,
     title        = {Damage Identification in PLA Specimens Using Acoustic Emission and AI},
-    author       = {Byron Barriga-Machado},
+    author       = {Byron Barriga-Machado and Alvaro Hernandez-Casamayor and Diego Infante-Garcia},
     year         = {2025},
     howpublished = {\url{https://github.com/ByronGerman/Damage_identification_AE_AI}},
     note         = {GitHub repository}
