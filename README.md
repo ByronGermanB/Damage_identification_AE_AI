@@ -97,9 +97,9 @@ Refer to [Supervised model (CNN)](#supervised-model-cnn) section.
 
 - Ensure your data paths and model paths are correct when running scripts.
 
-- This code implements methods and algorithms whose theoretical foundations are discussed in detail in our submitted paper. Once the paper is published, we highly encourage readers to consult it for a deeper understanding of the underlying theory.
+- This code implements methods and algorithms whose theoretical foundations are discussed in detail in our [published paper](https://doi.org/10.1016/j.engfailanal.2025.109928). we highly encourage readers to consult it for a deeper understanding of the underlying theory.
 
-- If you use this code in your research, please consider citing both the paper (once available) and this repository usign the information found below in [Citation](#citation).
+- If you use this code in your research, please consider citing both the [paper](https://doi.org/10.1016/j.engfailanal.2025.109928) and this repository, using the information found below in [Citation](#citation).
  
 ## Citation
 
