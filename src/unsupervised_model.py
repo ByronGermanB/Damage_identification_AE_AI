@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Dec 11 12:18:58 2023
 
@@ -17,7 +16,7 @@ import pandas as pd
 from joblib import dump
 
 # Functions for dataset splitting
-from utils.analysis_AE import train_test_set
+from utils.fft_analysis import train_test_set
 from utils.force_mts import (
     limit_finder,
     limit_finder_no_label,

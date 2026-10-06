@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Nov 22 13:34:48 2023
 
@@ -60,7 +59,7 @@ def abreAE(path, filename):
 
 
 # Loads a .csv file separated by , and converts it to array()
-def abreCSV(path, filename, val=int()):
+def abreCSV(path, filename, val=0):
     """
     Description
     -----------
@@ -93,7 +92,7 @@ def abreCSV(path, filename, val=int()):
 
 
 # Loads a .csv file separated by ; and converts it to array()
-def abreCSVdot(path, filename, val=int()):
+def abreCSVdot(path, filename, val=0):
     """
     Description
     -----------
@@ -226,7 +225,7 @@ def calcCWT(
                     plt.plot(time, signal_amp)
                     plt.xlabel("Time [us]")
                     plt.ylabel("Amplitude [mV]")
-                    plt.title("Trai nº %i" % trai)
+                    plt.title(f"Trai n {trai}")
                     plt.axvline(
                         x=vline,
                         linestyle="--",
@@ -490,7 +489,7 @@ def masIm(vector):
             image, randint(0, 360, size=1)[0], reshape=False
         )
 
-        lx, ly, lz = image.shape
+        lx, ly, _ = image.shape
         div = randint(4, 10, size=1)[0]
         lxx, lyy = int(lx / div), int(ly / div)
         crop_image = resize(image[lxx:-lxx, lyy:-lyy], (lx, ly))
@@ -507,8 +506,7 @@ def masIm(vector):
             blurred_image,
             local_mean,
         ]
-        for addin in image_add:
-            new_vector.append(addin)
+        new_vector.extend(image_add)
     values = np.random.choice(np.arange(0, len(new_vector)), 10)
     for im in values:
         plt.imshow(new_vector[im])

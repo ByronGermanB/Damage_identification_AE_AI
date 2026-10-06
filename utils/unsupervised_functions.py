@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Dec 11 10:54:49 2023
 
@@ -516,7 +515,7 @@ def plot_cluster_feat(
 
     # If there is just one plot and set the title
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         if title is None:
             ax.set_title(f"{feat_1} vs {feat_2} - Clustering")
         else:
@@ -870,7 +869,7 @@ def plot_cluster_tsne(
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(title)
         ax.set_xlabel(x_label)
     else:
@@ -1098,7 +1097,7 @@ def plot_dbi(
     # Plotting with Seaborn scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_xlabel("Number of Clusters")
         ax.set_title("Davies-Bouldin Index for Different Cluster Numbers")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Jan  9 11:09:45 2024
 
@@ -26,7 +25,7 @@ matplotlib.rcParams["font.size"] = 8
 matplotlib.rcParams["figure.dpi"] = 150
 
 
-def force_data(path, section=[22, 2.4]):
+def force_data(path, section=None):
     """
     Parameters
     ----------
@@ -41,6 +40,8 @@ def force_data(path, section=[22, 2.4]):
         Dataframe containing force, displacement, time, and test_id data.
 
     """
+    if section is None:
+        section = [22, 2.4]
     files = os.listdir(path)
     forces_list = []
 
@@ -199,7 +200,7 @@ def plot_stress_hits_cluster(
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f"Stress and Cumulative hits vs Time - {test_id}")
         ax.set_xlabel(x_label)
 
@@ -411,7 +412,7 @@ def plot_stress_hits(
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f"Stress and Cumulative hits vs Time - {test_id}")
         ax.set_xlabel(x_label)
 
@@ -567,7 +568,7 @@ def plot_feature_time_histogram(
 
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f"{y} vs Normalized time")
         ax.set_xlabel(x_label)
 
@@ -667,7 +668,7 @@ def plot_feature_histogram(
 
     figsize_inches = (width / 25.4, height / 25.4)
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         ax.set_title(f"{x} Histogram")
         ax.set_xlabel(x_label)
 

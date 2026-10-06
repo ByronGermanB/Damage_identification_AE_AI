@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu Nov 16 10:24:10 2023
 
@@ -209,10 +208,8 @@ class Features:
         x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
 
         # Main for loop for each transient
-        N_iter = 0  # This will count the iterations if for some reason the trai do not
-        # follow the sequence of 1 in 1 (e.g. use of filter)
-        for trans in trai:
-            amp, tiempo = tradb.read_wave(
+        for N_iter, trans in enumerate(trai):
+            amp, _ = tradb.read_wave(
                 trans, time_axis=False
             )  # Read the i-th transient
 
@@ -392,8 +389,6 @@ class Features:
             v_features_total[N_iter] = (
                 v_features  # Chain the values to each row of the matrix to create the feature matrix
             )
-
-            N_iter += 1  # Update the counter
 
         # Feature names
 
@@ -769,7 +764,7 @@ class Features:
 
         # Multiple plots in one figure
         figsize_inches = (width / 25.4, height / 25.4)
-        fig, axs = plt.subplots(
+        _, axs = plt.subplots(
             2, self.N_seg, figsize=figsize_inches, dpi=300, tight_layout=True
         )
         if title is None:
@@ -1249,7 +1244,7 @@ def conf_matrix(
     """
     # Plot the confusion matrix
     figsize_inches = (width / 25.4, height / 25.4)
-    fig, axs = plt.subplots(
+    _, axs = plt.subplots(
         nrows=1, ncols=2, figsize=figsize_inches, dpi=300, tight_layout=True
     )
     plt.subplots_adjust(wspace=0.4)
@@ -1400,7 +1395,7 @@ def plot_histogram(
     for feature in X.columns:
         # Set up the figure and axis
         figsize_inches = (width / 25.4, height / 25.4)
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
         # Set the number of bins for the histogram
         bins = 30
 
@@ -1507,7 +1502,7 @@ def plot_feat_vs_feat(
 
     # If there is just one plot and set the title
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
+        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
         if title is None:
             ax.set_title(f"{feat_1} vs {feat_2}")
         else:
