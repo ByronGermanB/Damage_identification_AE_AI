@@ -1,0 +1,22 @@
+{
+    "config_name": "dbscan_1",
+    "dataset_name": "3d_specimen",
+    "normalization": "log-std",
+    "columns_to_transform": ["energy"],
+    "use_tsne": false,
+    "use_kmeans": true,
+
+    "dbscan": {
+        "epsilon_values": [1, 5, 10, 15, 20],
+        "min_samples_limits": [5, 20],
+        "min_samples_num": 4,
+        "k_num": 3
+    },
+
+    "saving_names": {
+        "dbscan_models": "dbscan_models.joblib",
+        "dbscan_results": "dbscan_results.joblib",
+        "kmeans_models": "kmeans_models.joblib",
+        "kmeans_results": "kmeans_results.joblib"
+    }
+}
