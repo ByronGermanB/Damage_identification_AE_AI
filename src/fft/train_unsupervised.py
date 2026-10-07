@@ -17,7 +17,7 @@ from utils.unsupervised_functions import (
 )
 
 CONFIG_DIR = Path("parameters") / "3d_specimen"
-config_name = "dbscan.json"
+config_name = "dbscan_trial_1.json"
 
 
 def main(config_name: str) -> None:
@@ -34,7 +34,9 @@ def main(config_name: str) -> None:
     show_plots = config["plots"]["show"]
     save_plots = config["plots"]["save"]
 
-    models_dir = Path("results") / dataset_name / "models" / "trials"
+    models_dir = (
+        Path("results") / dataset_name / "models" / "trials" / config["trial_name"]
+    )
     models_dir.mkdir(parents=True, exist_ok=True)
 
     # Directories
@@ -54,7 +56,6 @@ def main(config_name: str) -> None:
         columns_to_transform=config.get("columns_to_transform", ["energy"]),
         split=False,
     )  # Normalization: log-std or std
-
 
     if config.get("use_tsne", False):
         with timer.section("TSNE"):

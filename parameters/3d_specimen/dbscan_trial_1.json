@@ -1,5 +1,5 @@
 {
-    "config_name": "dbscan_1",
+    "trial_name": "dbscan_1",
     "dataset_name": "3d_specimen",
     "normalization": "log-std",
     "columns_to_transform": ["energy"],
@@ -18,5 +18,10 @@
         "dbscan_results": "dbscan_results.joblib",
         "kmeans_models": "kmeans_models.joblib",
         "kmeans_results": "kmeans_results.joblib"
+    },
+
+    "plots": {
+        "show": true,
+        "save": false
     }
 }
