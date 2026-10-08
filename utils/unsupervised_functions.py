@@ -56,7 +56,7 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
     best_models : list
         List containing the DBSCAN models that meet the target clusters condition.
     results : list
-        List containing the values of epsilon, min_samples, number of clusters, 
+        List containing the values of epsilon, min_samples, number of clusters,
         number and percentage of anomalies for each DBSCAN model.
 
     """
@@ -155,7 +155,15 @@ def kmeans_per_k(X, k, selected_features=None):
     return kmeans_per_k, silhouette_scores, dbi_scores
 
 
-def tsne(X, figure_path, width=90, height=60, selected_features=None, save=False):
+def tsne(
+    X: pd.DataFrame | np.ndarray,
+    figure_path: str,
+    width: float = 90,
+    height: float = 60,
+    selected_features: list | None = None,
+    save: bool = False,
+    show: bool = False,
+):
     """
     Parameters
     ----------
@@ -207,13 +215,15 @@ def tsne(X, figure_path, width=90, height=60, selected_features=None, save=False
         figure_filename = "t-SNE Visualization.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-    plt.show()
+    if show:
+        plt.show()
 
     return X_reduced
 
 
-def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, save=False):
+def plot_kmeans_per_k(
+    X, kmeans_per_k, silhouette_scores, figure_path, save=False, show=False
+):
     """
     Parameters
     ----------
@@ -235,26 +245,44 @@ def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, save=Fals
 
     """
 
-    plt.figure(figsize=(11, 9))
+    n_plots = len(kmeans_per_k)
+    if n_plots == 0:
+        raise ValueError("kmeans_per_k must contain at least one model.")
+
+    ncols = min(3, int(np.ceil(np.sqrt(n_plots))))
+    nrows = int(np.ceil(n_plots / ncols))
+    fig, axes = plt.subplots(
+        nrows,
+        ncols,
+        figsize=(5 * ncols, 4.5 * nrows),
+        squeeze=False,
+    )
+    axes = axes.ravel()
 
     # Add a super title
-    plt.suptitle("Silhouette Analysis for K-Means Clustering", fontsize=16)
+    fig.suptitle("Silhouette Analysis for K-Means Clustering", fontsize=16)
 
-    for k in (2, 3, 4, 5):
-        plt.subplot(2, 2, k - 1)
+    for plot_index, (model, score) in enumerate(
+        zip(kmeans_per_k, silhouette_scores)
+    ):
+        ax = axes[plot_index]
+        labels = np.asarray(model.labels_)
+        cluster_labels = np.unique(labels)
+        n_clusters = len(cluster_labels)
 
-        y_pred = kmeans_per_k[k - 2].labels_
-        silhouette_coefficients = silhouette_samples(X, y_pred)
+        silhouette_coefficients = silhouette_samples(X, labels)
 
-        padding = len(X) // 30
+        padding = max(1, len(X) // 30)
         pos = padding
         ticks = []
-        for i in range(k):
-            coeffs = silhouette_coefficients[y_pred == i]
+        for cluster_label in cluster_labels:
+            coeffs = silhouette_coefficients[labels == cluster_label]
             coeffs.sort()
 
-            color = plt.cm.nipy_spectral(float(i) / k)
-            plt.fill_betweenx(
+            color = plt.cm.nipy_spectral(
+                float(len(ticks)) / max(1, n_clusters)
+            )
+            ax.fill_betweenx(
                 np.arange(pos, pos + len(coeffs)),
                 0,
                 coeffs,
@@ -265,29 +293,35 @@ def plot_kmeans_per_k(X, kmeans_per_k, silhouette_scores, figure_path, save=Fals
             ticks.append(pos + len(coeffs) // 2)
             pos += len(coeffs) + padding
 
-        plt.gca().yaxis.set_major_locator(FixedLocator(ticks))
-        plt.gca().yaxis.set_major_formatter(FixedFormatter(range(k)))
-        plt.gca().set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+        ax.yaxis.set_major_locator(FixedLocator(ticks))
+        ax.yaxis.set_major_formatter(FixedFormatter(cluster_labels))
+        ax.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
 
-        if k in (2, 4):
-            plt.ylabel("Cluster")
+        row, col = divmod(plot_index, ncols)
+        if col == 0:
+            ax.set_ylabel("Cluster")
 
-        if k in (4, 5):
-            plt.xlabel("Silhouette Coefficient")
+        if row == nrows - 1:
+            ax.set_xlabel("Silhouette Coefficient")
 
-        plt.axvline(x=silhouette_scores[k - 2], color="red", linestyle="--")
-        plt.title(f"$k={k}$")
+        ax.axvline(x=score, color="red", linestyle="--")
+        ax.set_title(f"$k={n_clusters}$")
         # Activate grid
-        plt.grid(axis="x", linestyle="--", which="major", color="grey", alpha=0.5)
-        plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
+        ax.grid(axis="x", linestyle="--", which="major", color="grey", alpha=0.5)
+        ax.set_axisbelow(True)  # Set grid lines behind the data points
+
+    for ax in axes[n_plots:]:
+        ax.remove()
+
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
 
     # Save the image in figure_path
     if save:
         figure_filename = "Silhouette Analysis for K-Means Clustering.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-    plt.show()
+        fig.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+    if show:
+        plt.show()
 
 
 def plot_silhouette(
@@ -465,10 +499,10 @@ def plot_cluster_feat(
     figure_path : str
         Directory to save the figure.
     title : str or list, optional
-        Title of the figure. If left as default, it will be {feat_1} vs {feat_2} - 
+        Title of the figure. If left as default, it will be {feat_1} vs {feat_2} -
         Clustering. The default is None
     subtitle : str or list, optional
-        Subtitle of the figure. If left as default, it will be {feat_1} vs {feat_2} - 
+        Subtitle of the figure. If left as default, it will be {feat_1} vs {feat_2} -
         Clustering. The default is None
     x_label : str, optional
         Label for the x-axis. The default is None
@@ -497,10 +531,11 @@ def plot_cluster_feat(
     """
     labels = pd.Series(labels, name="Labels")
     # Rename 'Labels' column in y if it already exists in X
-    if "Labels" in X.columns:
-        X = X.drop(["Labels"], axis=1)
+    if isinstance(X, pd.DataFrame):
+        labels.index = X.index
+        if "Labels" in X.columns:
+            X = X.drop(["Labels"], axis=1)
 
-    labels.index = X.index
     data = pd.concat([X, labels], axis=1)
 
     # Masks to change markers
@@ -845,7 +880,7 @@ def plot_cluster_tsne(
     -------
     ax : matplotlib axis object
         Axis containing the plot.
-        Plots and (saves) a scatter plot of the data with dimensionality reduction with 
+        Plots and (saves) a scatter plot of the data with dimensionality reduction with
         cluster markers in PDF format.
     """
     # Create a DataFrame for easy use with Seaborn
@@ -965,7 +1000,7 @@ def plot_cluster_tsne_3d(
     -------
     ax : matplotlib axis object
         Axis containing the plot.
-        Plots and (saves) a 3D scatter plot of the data with dimensionality reduction 
+        Plots and (saves) a 3D scatter plot of the data with dimensionality reduction
         and cluster markers in PDF format.
     """
     # Create a DataFrame for easy use with Seaborn
@@ -1042,6 +1077,7 @@ def plot_dbi(
     n_col=1,
     n_row=1,
     save=False,
+    show=False,
 ):
     """
     Parameters
@@ -1078,18 +1114,42 @@ def plot_dbi(
         Plots and (saves) a diagram of the DBI scores for k-means and DBSCAN in PDF format.
     """
     # Create a DataFrame with the labels
-    x = pd.Series(range(k_min, k_max + 1), name="k")
+    kmeans_k = range(k_min, k_min + len(dbi_kmeans))
+    dbscan_k = range(k_min, k_min + len(dbi_dbscan))
 
-    dbi_kmeans_df = pd.Series(dbi_kmeans, name="DBI")
-    dbi_kmeans_df = pd.concat([x, dbi_kmeans_df], axis=1)
-    dbi_kmeans_df["Algorithm"] = "k-means"
+    dbi_kmeans_df = pd.DataFrame(
+        {
+            "k": kmeans_k,
+            "DBI": dbi_kmeans,
+            "Algorithm": "k-means",
+        }
+    )
 
-    dbi_dbscan_df = pd.Series(dbi_dbscan, name="DBI")
-    dbi_dbscan_df = pd.concat([x, dbi_dbscan_df], axis=1)
-    dbi_dbscan_df["Algorithm"] = "DBSCAN"
+    dbi_dbscan_df = pd.DataFrame(
+        {
+            "k": dbscan_k,
+            "DBI": dbi_dbscan,
+            "Algorithm": "DBSCAN",
+        }
+    )
 
-    # Concatenate the new DataFrames
-    dbi_scores = pd.concat([dbi_kmeans_df, dbi_dbscan_df], axis=0)
+    dbi_scores = pd.concat(
+        [dbi_kmeans_df, dbi_dbscan_df],
+        ignore_index=True,
+    )
+
+    # x = pd.Series(range(k_min, k_max + 1), name="k")
+
+    # dbi_kmeans_df = pd.Series(dbi_kmeans, name="DBI")
+    # dbi_kmeans_df = pd.concat([x, dbi_kmeans_df], axis=1)
+    # dbi_kmeans_df["Algorithm"] = "k-means"
+
+    # dbi_dbscan_df = pd.Series(dbi_dbscan, name="DBI")
+    # dbi_dbscan_df = pd.concat([x, dbi_dbscan_df], axis=1)
+    # dbi_dbscan_df["Algorithm"] = "DBSCAN"
+
+    # # Concatenate the new DataFrames
+    # dbi_scores = pd.concat([dbi_kmeans_df, dbi_dbscan_df], axis=0)
 
     # Define custom markers for each class
     markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
@@ -1135,5 +1195,6 @@ def plot_dbi(
         figure_filename = "Davies-Bouldin Index.pdf"
         figure_path_name = os.path.join(figure_path, figure_filename)
         plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
+    if show:
+        plt.show()
     return ax
