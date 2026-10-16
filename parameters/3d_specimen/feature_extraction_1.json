@@ -1,5 +1,5 @@
 {
-    "dataset_name": "3d_specimen",
+    "dataset_name": "trail",
     "feature_extraction_trial_name": "feature_extraction_1",
     "output_name": "features.csv",
     "EA_DATA_DIR": "D:\\ByronGerman\\profile\\Documents\\Datasets\\Termography_dataset\\2026_Datos_Bloque_Termico\\M01-B06",
@@ -11,7 +11,7 @@
         "N_samp": 1024,
         "N_seg": 1,
         "desfase": 200,
-        "threshold": 0.1,
+        "threshold": 40,
         "counts": 5
     },
 

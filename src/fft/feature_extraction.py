@@ -23,6 +23,7 @@ def main(config_name: str) -> None:
     # Directories
     EA_DATA_DIR = Path(config["EA_DATA_DIR"])
     DATASET_DIR = Path("datasets") / dataset_name
+    DATASET_DIR.mkdir(parents=True, exist_ok=True)
 
     if config["files"] == "all":
         pri_dirs = [
@@ -33,9 +34,6 @@ def main(config_name: str) -> None:
 
     pri_names = [path.stem for path in pri_dirs]
     print(f"[INFO] Found {len(pri_dirs)} .pridb files in {EA_DATA_DIR}")
-
-    # FIGURES_DIR = Path("figures") / dataset_name
-    # DATASETS_DIR = Path("datasets") / dataset_name
 
     # =============================================================================
     # Object initialization
