@@ -63,14 +63,14 @@ matplotlib.rcParams["figure.dpi"] = 150
 class Features:
     def __init__(
         self,
-        path,
-        lower_freq,
-        upper_freq,
-        sampling_rate,
-        N_samp,
-        N_seg,
-        desfase,
-        desfase_carga,
+        path: str,
+        lower_freq: float,
+        upper_freq: float,
+        sampling_rate: float,
+        N_samp: int,
+        N_seg: int,
+        desfase: int,
+        desfase_carga: int = 0,
     ):
         """
         Parameters
@@ -141,16 +141,16 @@ class Features:
             self.lower_freq_index : self.upper_freq_index + 1
         ]  # Section the frequency values
 
-    def feature_extr(self, umbral, counts, clase, test_id, max_trai=None, min_trai=1):
+    def feature_extr(self, threshold, counts, label, test_id, max_trai=None, min_trai=1):
         """
 
         Parameters
         ----------
-        umbral : int
+        threshold : int
             Threshold amplitude value for filtering.
         counts : int
             Minimum counts value for filtering.
-        clase : int or str
+        label : int or str
             Class to which the signal belongs.
         test_id : str
             Test code for later identification.
@@ -174,13 +174,13 @@ class Features:
         df_hits = pridb.read_hits()  # Read the hits that have occurred
 
         # Signal filtering (trai threshold and counts)
-        umbral_V = 10 ** (umbral / 20 - 6)  # Threshold in Volts
+        threshold_V = 10 ** (threshold / 20 - 6)  # Threshold in Volts
         no_saturacion = 10 ** (94 / 20 - 6)
 
         if max_trai is not None:
             df_hits_filtro = df_hits[
                 (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= umbral_V)
+                & (df_hits["amplitude"] >= threshold_V)
                 & (df_hits["amplitude"] <= no_saturacion)
                 & (df_hits["trai"] >= min_trai)
                 & (df_hits["trai"] <= max_trai)
@@ -189,7 +189,7 @@ class Features:
         else:
             df_hits_filtro = df_hits[
                 (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= umbral_V)
+                & (df_hits["amplitude"] >= threshold_V)
                 & (df_hits["amplitude"] <= no_saturacion)
                 & (df_hits["trai"] >= min_trai)
                 & (df_hits["counts"] >= counts)
@@ -453,10 +453,10 @@ class Features:
         df_time["time_norm"] = df_time["time"] / max(df_time["time"])
 
         # Class DataFrame
-        df_clase = pd.DataFrame({"Clase": [clase] * N_trai})
+        df_label = pd.DataFrame({"label": [label] * N_trai})
 
         # Total DataFrame
-        df_total = pd.concat([df_features, df_time, df_clase, df_trai], axis=1)
+        df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
         df_total["test_id"] = test_id
 
         # The function returns the total DataFrame
@@ -892,7 +892,7 @@ def train_test_set(
     # Separate features from classes
     X = data.drop(
         [
-            "Clase",
+            "label",
             "trai",
             "time",
             "test_id",
@@ -906,7 +906,7 @@ def train_test_set(
         ],
         axis=1,
     )  # Remove class and trais columns (also remove counts and time_norm)
-    y = data["Clase"].copy()  # Create a copy of the class column
+    y = data["label"].copy()  # Create a copy of the class column
 
     X_original = X.copy()
 
@@ -951,7 +951,7 @@ def train_test_set(
             X,
             y,
             test_size=test_size,
-            stratify=data["Clase"],
+            stratify=data["label"],
             random_state=0,
             shuffle=True,
         )
@@ -968,7 +968,7 @@ def train_test_set(
             [
                 "test_id",
                 "trai",
-                "Clase",
+                "label",
                 "time",
                 "amplitude",
                 "energy",

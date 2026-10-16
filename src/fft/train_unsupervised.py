@@ -33,6 +33,7 @@ def main(config_name: str) -> None:
     dataset_name = config["dataset_name"]
     show_plots = config["plots"]["show"]
     save_plots = config["plots"]["save"]
+    save_data = config.get("save_data", False)
 
     models_dir = (
         Path("results") / dataset_name / "models" / "trials" / config["trial_name"]
@@ -56,6 +57,26 @@ def main(config_name: str) -> None:
         columns_to_transform=config.get("columns_to_transform", ["energy"]),
         split=False,
     )  # Normalization: log-std or std
+
+    if save_data:
+        data_saving_path = (
+            DATASETS_DIR
+            / "trial_data"
+            / config["trial_name"]
+            / "preprocessed_data.joblib"
+        )
+        data_saving_path.parent.mkdir(parents=True, exist_ok=True)
+
+        dump(
+            {
+                "X_original": X_original,
+                "X": X,
+                "y": y,
+                "hits": hits,
+            },
+            data_saving_path,
+        )
+        print(f'Preprocessed data saved at: "{data_saving_path}"')
 
     if config.get("use_tsne", False):
         with timer.section("TSNE"):

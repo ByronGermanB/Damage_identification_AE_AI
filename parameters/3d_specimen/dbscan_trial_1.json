@@ -5,6 +5,7 @@
     "columns_to_transform": ["energy"],
     "use_tsne": false,
     "use_kmeans": true,
+    "save_data": true,
 
     "dbscan": {
         "epsilon_values": [1, 5, 10, 15, 20],
