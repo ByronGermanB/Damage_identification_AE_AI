@@ -54,6 +54,7 @@ matplotlib.rcParams["font.serif"] = "Times New Roman"
 matplotlib.rcParams["font.size"] = 8
 matplotlib.rcParams["figure.dpi"] = 150
 
+MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
 
 # =============================================================================
 # Feature extraction
@@ -141,7 +142,9 @@ class Features:
             self.lower_freq_index : self.upper_freq_index + 1
         ]  # Section the frequency values
 
-    def feature_extr(self, threshold, counts, label, test_id, max_trai=None, min_trai=1):
+    def feature_extr(
+        self, threshold, counts, label, test_id, max_trai=None, min_trai=1
+    ):
         """
 
         Parameters
@@ -194,7 +197,12 @@ class Features:
                 & (df_hits["trai"] >= min_trai)
                 & (df_hits["counts"] >= counts)
             ]  # Select only the values that meet the conditions
-
+        if df_hits_filtro.empty:
+            print(
+                f"[WARNING] No transients found for label '{label}' with the given filtering criteria."
+            )
+            return pd.DataFrame()  # Return an empty DataFrame if no transients are found
+        
         trai = df_hits_filtro[
             "trai"
         ].to_numpy()  # Extract the column with the TRAI values (transient indices)
@@ -209,9 +217,7 @@ class Features:
 
         # Main for loop for each transient
         for N_iter, trans in enumerate(trai):
-            amp, _ = tradb.read_wave(
-                trans, time_axis=False
-            )  # Read the i-th transient
+            amp, _ = tradb.read_wave(trans, time_axis=False)  # Read the i-th transient
 
             amp *= 1e3  # in mV   # The operator *= is updating the amplitude value
             # -- amplitude = amplitude * 1e3
@@ -1428,7 +1434,7 @@ def plot_feat_vs_feat(
     y,
     feat_1,
     feat_2,
-    figure_path,
+    figure_path="Feat_vs_Feat.png",
     title=None,
     subtitle=None,
     x_label=None,
@@ -1439,7 +1445,8 @@ def plot_feat_vs_feat(
     i=1,
     n_col=1,
     n_row=1,
-    guardar=False,
+    save=False,
+    show=False,
 ):
     """
     Parameters
@@ -1476,9 +1483,10 @@ def plot_feat_vs_feat(
         Number of columns. The default is 1.
     n_row : int, optional
         Number of rows. The default is 1.
-    guardar : boolean, optional
+    save : boolean, optional
         "True" to save the image. The default is False.
-
+    show : boolean, optional
+        "True" to show the image. The default is False.
         e.g. Feat_vs_Feat_{feat_1}_{feat_2}.pdf
 
     Returns
@@ -1493,10 +1501,14 @@ def plot_feat_vs_feat(
 
     y.index = X.index
     datos = pd.concat([X, y], axis=1)
+    label_order = list(pd.unique(datos["Labels"]))
+    n_labels = len(label_order)
 
     # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
-
+    markers = {
+        label: MARKER_LIST[i % len(MARKER_LIST)]
+        for i, label in enumerate(label_order)
+    }
     # Create a scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
 
@@ -1529,10 +1541,13 @@ def plot_feat_vs_feat(
         y=feat_2,
         hue="Labels",
         style="Labels",
+        hue_order=label_order,
+        style_order=label_order,
         data=datos,
         markers=markers,
-        palette=sns.color_palette(),
+        palette=sns.color_palette("tab20", n_colors=n_labels),
         ax=ax,
+        legend=(n_labels <= 6)
     )
 
     # Set y-axis label only for the first plot of each row
@@ -1556,12 +1571,12 @@ def plot_feat_vs_feat(
     ax.set_axisbelow(True)  # Set grid lines behind the data points
 
     # Save the image in figure_path
-    if guardar:
-        if ax is None:
-            figure_filename = f"Feat_vs_Feat_{feat_1}_{feat_2}.pdf"
-        else:
-            figure_filename = "Feat_vs_Feat_plot.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+    if save:
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+    if show:
+        plt.show()
+
+    plt.close()
 
     return ax

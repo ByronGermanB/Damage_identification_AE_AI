@@ -1,8 +1,7 @@
 {
-    "dataset_name": "trail",
-    "feature_extraction_trial_name": "feature_extraction_1",
+    "dataset_name": "3d_specimen",
     "output_name": "features.csv",
-    "EA_DATA_DIR": "D:\\ByronGerman\\profile\\Documents\\Datasets\\Termography_dataset\\2026_Datos_Bloque_Termico\\M01-B06",
+    "EA_DATA_DIR": "Datos_EA",
 
     "parameters": {
         "lower_freq": 0,
@@ -15,11 +14,7 @@
         "counts": 5
     },
 
-    "files": [
-        "5kN_bloque",
-        "10kN_bloque",
-        "15kN_bloque"
-    ],
+    "files": "all",
 
     "min_trais": null,
 

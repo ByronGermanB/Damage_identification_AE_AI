@@ -222,7 +222,12 @@ def tsne(
 
 
 def plot_kmeans_per_k(
-    X, kmeans_per_k, silhouette_scores, figure_path, save=False, show=False
+    X,
+    kmeans_per_k,
+    silhouette_scores,
+    figure_path="Silhouette Analysis for K-Means Clustering.pdf",
+    save=False,
+    show=False,
 ):
     """
     Parameters
@@ -262,9 +267,7 @@ def plot_kmeans_per_k(
     # Add a super title
     fig.suptitle("Silhouette Analysis for K-Means Clustering", fontsize=16)
 
-    for plot_index, (model, score) in enumerate(
-        zip(kmeans_per_k, silhouette_scores)
-    ):
+    for plot_index, (model, score) in enumerate(zip(kmeans_per_k, silhouette_scores)):
         ax = axes[plot_index]
         labels = np.asarray(model.labels_)
         cluster_labels = np.unique(labels)
@@ -279,9 +282,7 @@ def plot_kmeans_per_k(
             coeffs = silhouette_coefficients[labels == cluster_label]
             coeffs.sort()
 
-            color = plt.cm.nipy_spectral(
-                float(len(ticks)) / max(1, n_clusters)
-            )
+            color = plt.cm.nipy_spectral(float(len(ticks)) / max(1, n_clusters))
             ax.fill_betweenx(
                 np.arange(pos, pos + len(coeffs)),
                 0,
@@ -317,9 +318,8 @@ def plot_kmeans_per_k(
 
     # Save the image in figure_path
     if save:
-        figure_filename = "Silhouette Analysis for K-Means Clustering.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        fig.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        fig.savefig(figure_path, format=fig_format, bbox_inches="tight")
     if show:
         plt.show()
 
@@ -639,7 +639,7 @@ def plot_cluster_time(
     Parameters
     ----------
     labels : array
-        Labels of the clusters obtained by k-means or dbscan.
+        Labels of the clusters obtaied by k-means or dbscan.
     hits : DataFrame
         DataFrame containing the features over time of the hits and their id.
     test_id : str
@@ -1067,15 +1067,13 @@ def plot_cluster_tsne_3d(
 def plot_dbi(
     dbi_kmeans,
     dbi_dbscan,
-    figure_path,
-    k_min=2,
-    k_max=6,
     width=90,
     height=60,
     ax=None,
     i=1,
     n_col=1,
     n_row=1,
+    figure_path="Davies-Bouldin Index.pdf",
     save=False,
     show=False,
 ):
@@ -1090,8 +1088,6 @@ def plot_dbi(
         Directory to save the figure.
     k_min : int, optional
         Minimum number of clusters. The default is 2.
-    k_max : int, optional
-        Maximum number of clusters. The default is 6.
     width : int or float, optional
         Width of the figure in millimeters. The default is 90
     height : int or float, optional
@@ -1114,6 +1110,9 @@ def plot_dbi(
         Plots and (saves) a diagram of the DBI scores for k-means and DBSCAN in PDF format.
     """
     # Create a DataFrame with the labels
+    
+    k_min = 2  
+    k_max = k_min + len(dbi_kmeans) 
     kmeans_k = range(k_min, k_min + len(dbi_kmeans))
     dbscan_k = range(k_min, k_min + len(dbi_dbscan))
 
@@ -1137,19 +1136,6 @@ def plot_dbi(
         [dbi_kmeans_df, dbi_dbscan_df],
         ignore_index=True,
     )
-
-    # x = pd.Series(range(k_min, k_max + 1), name="k")
-
-    # dbi_kmeans_df = pd.Series(dbi_kmeans, name="DBI")
-    # dbi_kmeans_df = pd.concat([x, dbi_kmeans_df], axis=1)
-    # dbi_kmeans_df["Algorithm"] = "k-means"
-
-    # dbi_dbscan_df = pd.Series(dbi_dbscan, name="DBI")
-    # dbi_dbscan_df = pd.concat([x, dbi_dbscan_df], axis=1)
-    # dbi_dbscan_df["Algorithm"] = "DBSCAN"
-
-    # # Concatenate the new DataFrames
-    # dbi_scores = pd.concat([dbi_kmeans_df, dbi_dbscan_df], axis=0)
 
     # Define custom markers for each class
     markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
@@ -1192,9 +1178,8 @@ def plot_dbi(
 
     # Save the image in figure_path
     if save:
-        figure_filename = "Davies-Bouldin Index.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
     if show:
         plt.show()
     return ax

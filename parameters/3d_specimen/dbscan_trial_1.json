@@ -1,9 +1,10 @@
 {
     "trial_name": "dbscan_1",
     "dataset_name": "3d_specimen",
+    "feat_data_name": "features.csv",
     "normalization": "log-std",
     "columns_to_transform": ["energy"],
-    "use_tsne": false,
+    "use_tsne": true,
     "use_kmeans": true,
     "save_data": true,
 
@@ -22,7 +23,7 @@
     },
 
     "plots": {
-        "show": true,
+        "show": false,
         "save": false
     }
 }
