@@ -43,7 +43,10 @@
 
     "plots": {
         "save_feat_vs_feat_images": true,
-        "labeled": true
+        "labeled": true,
+        "reduced_points": true,
+        "max_points": 50,
+        "fig_size": [120, 90]
     }
     
 }

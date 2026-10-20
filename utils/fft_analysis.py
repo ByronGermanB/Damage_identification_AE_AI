@@ -201,8 +201,10 @@ class Features:
             print(
                 f"[WARNING] No transients found for label '{label}' with the given filtering criteria."
             )
-            return pd.DataFrame()  # Return an empty DataFrame if no transients are found
-        
+            return (
+                pd.DataFrame()
+            )  # Return an empty DataFrame if no transients are found
+
         trai = df_hits_filtro[
             "trai"
         ].to_numpy()  # Extract the column with the TRAI values (transient indices)
@@ -1432,8 +1434,8 @@ def plot_histogram(
 def plot_feat_vs_feat(
     X,
     y,
-    feat_1,
-    feat_2,
+    feat_x,
+    feat_y,
     figure_path="Feat_vs_Feat.png",
     title=None,
     subtitle=None,
@@ -1500,14 +1502,13 @@ def plot_feat_vs_feat(
         X = X.drop(["Labels"], axis=1)
 
     y.index = X.index
-    datos = pd.concat([X, y], axis=1)
-    label_order = list(pd.unique(datos["Labels"]))
+    data = pd.concat([X, y], axis=1)
+    label_order = list(pd.unique(data["Labels"]))
     n_labels = len(label_order)
 
     # Define custom markers for each class
     markers = {
-        label: MARKER_LIST[i % len(MARKER_LIST)]
-        for i, label in enumerate(label_order)
+        label: MARKER_LIST[i % len(MARKER_LIST)] for i, label in enumerate(label_order)
     }
     # Create a scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
@@ -1516,59 +1517,71 @@ def plot_feat_vs_feat(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
         if title is None:
-            ax.set_title(f"{feat_1} vs {feat_2}")
+            ax.set_title(f"{feat_x} vs {feat_y}")
         else:
             ax.set_title(title)
         if x_label is None:
-            ax.set_xlabel(feat_1)
+            ax.set_xlabel(feat_x)
         else:
             ax.set_xlabel(x_label)
 
     else:
         if x_label is None:
-            ax.set_xlabel(f"{feat_1}\n(" + string.ascii_lowercase[i - 1] + ")")
+            ax.set_xlabel(f"{feat_x}\n(" + string.ascii_lowercase[i - 1] + ")")
         else:
             ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
         # Title for each test id
         if subtitle is not None:
             ax.set_title(subtitle)
         else:
-            ax.set_title(f"{feat_1} vs {feat_2}")
+            ax.set_title(f"{feat_x} vs {feat_y}")
 
     # Create the plot
     sns.scatterplot(
-        x=feat_1,
-        y=feat_2,
+        x=feat_x,
+        y=feat_y,
         hue="Labels",
         style="Labels",
         hue_order=label_order,
         style_order=label_order,
-        data=datos,
+        data=data,
         markers=markers,
         palette=sns.color_palette("tab20", n_colors=n_labels),
         ax=ax,
-        legend=(n_labels <= 6)
+        legend=True,
     )
 
     # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
         if y_label is None:
-            ax.set_ylabel(feat_2)
+            ax.set_ylabel(feat_y)
         else:
             ax.set_ylabel(y_label)
     else:
         ax.set_ylabel("")
 
     # Logarithmic scale if you choose energy
-    if feat_1 == "energy":
+    if feat_x == "energy":
         ax.set_xscale("log")
 
-    if feat_2 == "energy":
+    if feat_y == "energy":
         ax.set_yscale("log")
 
     # Activate the grid
     ax.grid()
     ax.set_axisbelow(True)  # Set grid lines behind the data points
+
+    if n_labels > 6:
+        ax.legend(
+            title="Label",
+            bbox_to_anchor=(1.02, 1),
+            loc="upper left",
+            borderaxespad=0,
+            fontsize=7,
+        )
+
+    fig = ax.get_figure()
+    fig.subplots_adjust(right=0.72)
 
     # Save the image in figure_path
     if save:
@@ -1580,3 +1593,32 @@ def plot_feat_vs_feat(
     plt.close()
 
     return ax
+
+
+def select_significant_indices(
+    data,
+    label_column,
+    feature_columns,
+    max_points=20,
+):
+    selected_indices = []
+
+    for _, group in data.groupby(label_column, sort=False):
+        values = group[feature_columns].apply(pd.to_numeric, errors="coerce")
+        values = values.dropna(how="all")
+
+        if values.empty:
+            continue
+
+        median = values.median()
+        mad = (values - median).abs().median()
+        mad = mad.mask(mad == 0, 1.0)
+
+        robust_z = 0.6745 * (values - median) / mad
+        significance = robust_z.abs().mean(axis=1)
+
+        selected_indices.extend(
+            significance.nlargest(min(max_points, len(significance))).index
+        )
+
+    return selected_indices
