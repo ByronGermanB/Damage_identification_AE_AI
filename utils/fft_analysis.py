@@ -862,7 +862,12 @@ def unir_df(*dataframes):
 
 
 def train_test_set(
-    data, normalization=None, columns_to_transform=None, split=True, test_size=0.2
+    data,
+    normalization=None,
+    columns_to_transform=None,
+    features=None,
+    split=True,
+    test_size=0.2,
 ):
     """
     Parameters
@@ -904,16 +909,13 @@ def train_test_set(
             "trai",
             "time",
             "test_id",
-            "amplitude",
-            "time_norm",
-            "counts",
-            "rise_time",
-            "p_power_4",
-            "p_power_5",
-            "p_power_6",
         ],
         axis=1,
     )  # Remove class and trais columns (also remove counts and time_norm)
+
+    if features:
+        X = X[features]
+
     y = data["label"].copy()  # Create a copy of the class column
 
     X_original = X.copy()
