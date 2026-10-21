@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Dec 11 12:48:58 2023
 
@@ -12,7 +11,7 @@ Created on Mon Dec 11 12:48:58 2023
 import os
 
 # Functions for feature extraction
-from utils.analysis_AE import Features, unir_df
+from utils.fft_analysis import Features, unir_df
 
 # Functions to load MTS data
 from utils.force_mts import force_data
