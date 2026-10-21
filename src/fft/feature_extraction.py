@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.fft_analysis import Features, plot_feat_vs_feat
+from utils.fft_analysis import Features, plot_feat_vs_feat, select_significant_indices
 
-CONFIG_DIR = Path("parameters") / "trial"
+CONFIG_DIR = Path("parameters") / "arcan"
 config_name = "feature_extraction_1.json"
 
 
@@ -80,9 +80,9 @@ def main(config_name: str) -> None:
         dfs.append(df)
 
     # Merge all the individual DataFrames into a single DataFrame
-    df_total = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
-    df_total["label"] = 0
-    df_total.to_csv(
+    data = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+    data["label"] = 0
+    data.to_csv(
         DATASET_DIR / config.get("output_name", "features.csv"), index=False
     )
     print("[INFO] Feature extraction completed. Data saved to CSV.")
@@ -102,27 +102,41 @@ def main(config_name: str) -> None:
     ]
 
     if config["plots"].get("save_feat_vs_feat_images", False):
-        print("[INFO] Saving Feature vs Feature images...")
-
-        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
-        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
-
-        if config["plots"].get("labeled", False):
-            y = df_total["test_id"]
-        else:
-            y = df_total["label"]
-
-        for feature_x, feature_y in combinations(features_to_plot, 2):
-            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.png"
-            plot_feat_vs_feat(
-                X=df_total,
-                y=y,
-                feat_1=feature_x,
-                feat_2=feature_y,
-                figure_path=figure_path,
-                save=True,
-            )
-        print("[INFO] Feature vs Feature images saved.")
+            print("[INFO] Saving Feature vs Feature images...")
+    
+            width, height = config["plots"].get("fig_size", [90, 60])
+    
+            feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
+            feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
+    
+            label_column = "test_id" if config["plots"].get("labeled", False) else "label"
+    
+            if config["plots"].get("reduced_points", False):
+                selected_indices = select_significant_indices(
+                    data=data,
+                    label_column=label_column,
+                    feature_columns=features_to_plot,
+                    max_points=config["plots"].get("max_points", 20),
+                )
+                data = data.loc[selected_indices].copy()
+            
+            y = data[label_column]
+    
+            for feature_x, feature_y in combinations(features_to_plot, 2):
+                figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.png"
+    
+                plot_feat_vs_feat(
+                    X=data,
+                    y=y,
+                    feat_x=feature_x,
+                    feat_y=feature_y,
+                    figure_path=figure_path,
+                    width=width,
+                    height=height,
+                    save=True,
+                )
+    
+            print("[INFO] Feature vs Feature images saved.")
 
 
 if __name__ == "__main__":

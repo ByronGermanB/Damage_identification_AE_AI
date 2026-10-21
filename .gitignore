@@ -5,6 +5,7 @@
 /datasets/3d_specimen/images/
 /Datos_EA/Filtros_rotura.xlsx
 /Datos_EA/Notas sobre ensayos no incluidos.txt
+/results
 *.pyc
 
 .vscode/

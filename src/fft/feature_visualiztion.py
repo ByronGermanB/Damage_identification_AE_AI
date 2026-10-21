@@ -6,7 +6,7 @@ import pandas as pd
 
 from utils.fft_analysis import plot_feat_vs_feat, select_significant_indices
 
-CONFIG_DIR = Path("parameters") / "trial"
+CONFIG_DIR = Path("parameters") / "arcan"
 config_name = "feature_extraction_1.json"
 
 
