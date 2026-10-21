@@ -16,7 +16,7 @@ from utils.unsupervised_functions import (
     tsne,
 )
 
-CONFIG_DIR = Path("parameters") / "3d_specimen"
+CONFIG_DIR = Path("parameters") / "arcan"
 config_name = "dbscan_trial_1.json"
 
 
@@ -45,7 +45,7 @@ def main(config_name: str) -> None:
     DATASETS_DIR = Path("datasets") / dataset_name
 
     # Import datasets
-    DATA_PATH = DATASETS_DIR / "Dataset_total.csv"
+    DATA_PATH = DATASETS_DIR / config["feat_data_name"]
 
     # Read the datasets
     data = pd.read_csv(DATA_PATH)
@@ -55,6 +55,7 @@ def main(config_name: str) -> None:
         data,
         normalization=config.get("normalization", "log-std"),
         columns_to_transform=config.get("columns_to_transform", ["energy"]),
+        features=config.get("features", None),
         split=False,
     )  # Normalization: log-std or std
 
