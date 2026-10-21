@@ -6,6 +6,8 @@
 /Datos_EA/Filtros_rotura.xlsx
 /Datos_EA/Notas sobre ensayos no incluidos.txt
 /results
+/parameters
+/datasets
 *.pyc
 
 .vscode/
