@@ -1,4 +1,6 @@
+import io
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -20,11 +22,30 @@ CONFIG_DIR = Path("parameters") / "arcan"
 config_name = "dbscan_trial_1.json"
 
 
+class _OutputTee:
+    """Send printed output to both the console and a text buffer."""
+
+    def __init__(self, console, buffer):
+        self.console = console
+        self.buffer = buffer
+
+    def write(self, text):
+        self.console.write(text)
+        self.buffer.write(text)
+
+    def flush(self):
+        self.console.flush()
+        self.buffer.flush()
+
+
 def main(config_name: str) -> None:
     """
     Ex
     """
     timer = Profiler()
+    original_stdout = sys.stdout
+    output_buffer = io.StringIO()
+    sys.stdout = _OutputTee(original_stdout, output_buffer)
     config_path = CONFIG_DIR / config_name
 
     with config_path.open("r", encoding="utf-8") as file:
@@ -41,8 +62,10 @@ def main(config_name: str) -> None:
     models_dir.mkdir(parents=True, exist_ok=True)
 
     # Directories
-    FIGURES_DIR = Path("figures") / dataset_name
+    FIGURES_DIR = Path("figures") / dataset_name / config["trial_name"]
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     DATASETS_DIR = Path("datasets") / dataset_name
+    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Import datasets
     DATA_PATH = DATASETS_DIR / config["feat_data_name"]
@@ -59,19 +82,18 @@ def main(config_name: str) -> None:
         split=False,
     )  # Normalization: log-std or std
 
-
     if config.get("use_tsne", False):
         with timer.section("TSNE"):
             # T-SNE
             X_reduced = tsne(
                 X,
-                FIGURES_DIR,
+                FIGURES_DIR / "t-SNE Visualization.png",
                 show=show_plots,
                 save=save_plots,
             )
     else:
         X_reduced = X
-    
+
     if save_data:
         data_saving_path = (
             DATASETS_DIR
@@ -156,6 +178,13 @@ def main(config_name: str) -> None:
 
             print(f'K-means models saved at: "{kmeans_models_path}"')
             print(f'K-means results saved at: "{kmeans_results_path}"')
+
+        # Save everything printed during the run while keeping console output.
+        sys.stdout = original_stdout
+        report_path = models_dir / "training_output.txt"
+        report_path.write_text(output_buffer.getvalue(), encoding="utf-8")
+        print(f'Results printed during training saved at: "{report_path}"')
+
     timer.report()
 
 

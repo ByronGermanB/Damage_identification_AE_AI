@@ -33,6 +33,9 @@ matplotlib.rcParams["font.serif"] = "Times New Roman"
 matplotlib.rcParams["font.size"] = 8
 matplotlib.rcParams["figure.dpi"] = 150
 
+
+MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+
 # =============================================================================
 # DBSCAN
 # =============================================================================
@@ -84,8 +87,8 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                 num_clusters = len(unique_labels)
 
             # Check if the current model meets the target_clusters
-            # if num_clusters == target_clusters:
-            if num_clusters > 1:
+            if num_clusters == target_clusters:
+                # if num_clusters > 1:
                 results.append(
                     {
                         "Epsilon": epsilon,
@@ -101,8 +104,14 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                     }
                 )
                 best_models.append(dbscan_model)
+            else:
+                print(
+                    f"Model with eps={epsilon}, min_samples={min_samples} does not meet the target clusters condition."
+                    f"Found {num_clusters} clusters instead of {target_clusters}."
+                )
 
     # Print the results
+    print(f"\nDBSCAN models that meet the target clusters condition ({target_clusters} clusters):\n")
     for i, result in enumerate(results):
         for key, value in result.items():
             print(f"{key}: {value}")
@@ -157,7 +166,7 @@ def kmeans_per_k(X, k, selected_features=None):
 
 def tsne(
     X: pd.DataFrame | np.ndarray,
-    figure_path: str,
+    figure_path: str = "t-SNE Visualization.pdf",
     width: float = 90,
     height: float = 60,
     selected_features: list | None = None,
@@ -212,9 +221,8 @@ def tsne(
 
     # Save the image in figure_path
     if save:
-        figure_filename = "t-SNE Visualization.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
     if show:
         plt.show()
 
@@ -470,9 +478,9 @@ def tsne_3d(X, figure_path, width=180, height=120, selected_features=None, save=
 def plot_cluster_feat(
     labels,
     X,
-    feat_1,
-    feat_2,
-    figure_path,
+    feat_x,
+    feat_y,
+    figure_path="Feat_vs_Feat_clustering.pdf",
     title=None,
     subtitle=None,
     x_label=None,
@@ -484,6 +492,7 @@ def plot_cluster_feat(
     n_col=1,
     n_row=1,
     save=False,
+    show=False,
 ):
     """
     Parameters
@@ -492,9 +501,9 @@ def plot_cluster_feat(
         Labels of the clusters obtained by k-means or dbscan.
     X : DataFrame, array
         Feature set for training.
-    feat_1 : str
+    feat_x : str
         Name of feature 1 to plot.
-    feat_2 : str
+    feat_y : str
         Name of feature 2 to plot.
     figure_path : str
         Directory to save the figure.
@@ -552,29 +561,29 @@ def plot_cluster_feat(
     if ax is None:
         _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
         if title is None:
-            ax.set_title(f"{feat_1} vs {feat_2} - Clustering")
+            ax.set_title(f"{feat_x} vs {feat_y} - Clustering")
         else:
             ax.set_title(title)
         if x_label is None:
-            ax.set_xlabel(feat_1)
+            ax.set_xlabel(feat_x)
         else:
             ax.set_xlabel(x_label)
 
     else:
         if x_label is None:
-            ax.set_xlabel(f"{feat_1}\n(" + string.ascii_lowercase[i - 1] + ")")
+            ax.set_xlabel(f"{feat_x}\n(" + string.ascii_lowercase[i - 1] + ")")
         else:
             ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
         # Title for each test id
         if subtitle is not None:
             ax.set_title(subtitle)
         else:
-            ax.set_title(f"{feat_1} vs {feat_2}")
+            ax.set_title(f"{feat_x} vs {feat_y}")
 
     # Use Seaborn scatter plot with hue and style parameters
     sns.scatterplot(
-        x=valid_points[feat_1],
-        y=valid_points[feat_2],
+        x=valid_points[feat_x],
+        y=valid_points[feat_y],
         hue="Labels",
         style="Labels",
         data=valid_points,
@@ -584,32 +593,33 @@ def plot_cluster_feat(
     )
 
     # Scatter points with label '-1' separately as red 'x'
-    sns.scatterplot(
-        x=anomalies[feat_1],
-        y=anomalies[feat_2],
-        hue="Labels",
-        style="Labels",
-        data=anomalies,
-        palette=["r"],
-        markers="x",
-        linewidth=1.5,
-        ax=ax,
-    )
+    if not anomalies.empty:
+        sns.scatterplot(
+            x=anomalies[feat_x],
+            y=anomalies[feat_y],
+            hue="Labels",
+            style="Labels",
+            data=anomalies,
+            palette=["r"],
+            markers="x",
+            linewidth=1.5,
+            ax=ax,
+        )
 
     # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
         if y_label is None:
-            ax.set_ylabel(feat_2)
+            ax.set_ylabel(feat_y)
         else:
             ax.set_ylabel(y_label)
     else:
         ax.set_ylabel("")
 
     # Logarithmic scale if you choose energy
-    if feat_1 == "energy":
+    if feat_x == "energy":
         ax.set_xscale("log")
 
-    if feat_2 == "energy":
+    if feat_y == "energy":
         ax.set_yscale("log")
 
     # Activate the grid
@@ -618,16 +628,11 @@ def plot_cluster_feat(
 
     # Save the image in figure_path
     if save:
-        if ax is None:
-            figure_filename = f"Feat_vs_Feat_{feat_1}_{feat_2} - Clustering.pdf"
-
-        elif title is not None:
-            figure_filename = f"{title}.pdf"
-
-        else:
-            figure_filename = "Feat_vs_Feat_clustering.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close()
 
     return ax
 
@@ -829,7 +834,7 @@ def plot_cluster_hits(
 def plot_cluster_tsne(
     labels,
     X_reduced,
-    figure_path,
+    figure_path="t-SNE Clustering.pdf",
     title="t-SNE Clustering",
     subtitle="",
     x_label="t-SNE Dimension 1",
@@ -841,6 +846,7 @@ def plot_cluster_tsne(
     n_col=1,
     n_row=1,
     save=False,
+    show=False,
 ):
     """
     Parameters
@@ -895,10 +901,9 @@ def plot_cluster_tsne(
     num_labels = valid_points["Labels"].nunique()
 
     # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
     palette = sns.color_palette()
     # Customize the markers list to match the number of unique labels
-    markers = markers[:num_labels]
+    markers = MARKER_LIST[:num_labels]
     palette = palette[:num_labels]
 
     # Create the plot
@@ -925,17 +930,18 @@ def plot_cluster_tsne(
     )
 
     # Scatter points with label '-1' separately as red 'x'
-    sns.scatterplot(
-        x=anomalies["t-SNE_1"],
-        y=anomalies["t-SNE_2"],
-        hue="Labels",
-        style="Labels",
-        data=anomalies,
-        palette=["r"],
-        markers="x",
-        linewidth=1.5,
-        ax=ax,
-    )
+    if not anomalies.empty:
+        sns.scatterplot(
+            x=anomalies["t-SNE_1"],
+            y=anomalies["t-SNE_2"],
+            hue="Labels",
+            style="Labels",
+            data=anomalies,
+            palette=["r"],
+            markers="x",
+            linewidth=1.5,
+            ax=ax,
+        )
 
     # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
@@ -948,9 +954,12 @@ def plot_cluster_tsne(
 
     # Save the image in figure_path
     if save:
-        figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+
+    if show:
+        plt.show()
+    plt.close()  # Close the plot to free up memory
 
     return ax
 
@@ -1073,6 +1082,7 @@ def plot_dbi(
     i=1,
     n_col=1,
     n_row=1,
+    k_min=2,
     figure_path="Davies-Bouldin Index.pdf",
     save=False,
     show=False,
@@ -1110,9 +1120,8 @@ def plot_dbi(
         Plots and (saves) a diagram of the DBI scores for k-means and DBSCAN in PDF format.
     """
     # Create a DataFrame with the labels
-    
-    k_min = 2  
-    k_max = k_min + len(dbi_kmeans) 
+    n_k = len(dbi_kmeans)
+    k_max = k_min + n_k
     kmeans_k = range(k_min, k_min + len(dbi_kmeans))
     dbscan_k = range(k_min, k_min + len(dbi_dbscan))
 
@@ -1138,7 +1147,7 @@ def plot_dbi(
     )
 
     # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+    markers = MARKER_LIST[:n_k]
 
     # Plotting with Seaborn scatter plot
     figsize_inches = (width / 25.4, height / 25.4)
@@ -1161,7 +1170,7 @@ def plot_dbi(
         style="Algorithm",
         data=dbi_scores,
         markers=markers,
-        palette=sns.color_palette(),
+        palette=sns.color_palette(n_colors=n_k),
         ax=ax,
     )
 
@@ -1182,4 +1191,5 @@ def plot_dbi(
         plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
     if show:
         plt.show()
+    plt.close()
     return ax

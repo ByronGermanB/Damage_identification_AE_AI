@@ -1548,7 +1548,7 @@ def plot_feat_vs_feat(
         style_order=label_order,
         data=data,
         markers=markers,
-        palette=sns.color_palette("tab20", n_colors=n_labels),
+        palette=sns.color_palette(n_colors=n_labels),
         ax=ax,
         legend=True,
     )
