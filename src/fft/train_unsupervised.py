@@ -59,6 +59,19 @@ def main(config_name: str) -> None:
         split=False,
     )  # Normalization: log-std or std
 
+
+    if config.get("use_tsne", False):
+        with timer.section("TSNE"):
+            # T-SNE
+            X_reduced = tsne(
+                X,
+                FIGURES_DIR,
+                show=show_plots,
+                save=save_plots,
+            )
+    else:
+        X_reduced = X
+    
     if save_data:
         data_saving_path = (
             DATASETS_DIR
@@ -73,23 +86,12 @@ def main(config_name: str) -> None:
                 "X_original": X_original,
                 "X": X,
                 "y": y,
+                "X_reduced": X_reduced,
                 "hits": hits,
             },
             data_saving_path,
         )
         print(f'Preprocessed data saved at: "{data_saving_path}"')
-
-    if config.get("use_tsne", False):
-        with timer.section("TSNE"):
-            # T-SNE
-            X_reduced = tsne(
-                X,
-                FIGURES_DIR,
-                show=show_plots,
-                save=save_plots,
-            )
-    else:
-        X_reduced = X
 
     # =============================================================================
     # K-means by k
