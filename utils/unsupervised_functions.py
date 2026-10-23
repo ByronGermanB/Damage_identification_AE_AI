@@ -551,10 +551,16 @@ def plot_cluster_feat(
     # Masks to change markers
     valid_points = data[data["Labels"] != -1]
     anomalies = data[data["Labels"] == -1]
+    
+    # Count the number of unique labels in the DataFrame
+    num_labels = valid_points["Labels"].nunique()
 
     # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
-
+    palette = sns.color_palette()
+    # Customize the markers list to match the number of unique labels
+    markers = MARKER_LIST[:num_labels]
+    palette = palette[:num_labels]
+    
     # Create a figure
     figsize_inches = (width / 25.4, height / 25.4)
 
@@ -588,7 +594,7 @@ def plot_cluster_feat(
         hue="Labels",
         style="Labels",
         data=valid_points,
-        palette=sns.color_palette(),
+        palette=palette,
         markers=markers,
         ax=ax,
     )

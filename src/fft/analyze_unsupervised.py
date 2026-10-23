@@ -2,12 +2,12 @@ import json
 from itertools import combinations
 from pathlib import Path
 
+import numpy as np
 from joblib import load
 
 from utils.unsupervised_functions import (
     plot_cluster_feat,
     plot_cluster_tsne,
-    plot_dbi,
     plot_kmeans_per_k,
 )
 
@@ -52,11 +52,12 @@ def main(config_name: str) -> None:
     if kmeans_models_path.exists():
         kmeans_models = load(kmeans_models_path)
         k_means_results = load(k_means_results_path)
-        dbi_kmeans = k_means_results["dbi_kmeans"]
         k_means_fig_dir = FIGURES_DIR / "kmeans"
         k_means_fig_dir.mkdir(parents=True, exist_ok=True)
 
         # # plot k-means results
+        print("[INFO] Plotting K-means results...")
+        print("[INFO] Plotting silhouette scores...")
         plot_kmeans_per_k(
             X=X,
             kmeans_per_k=kmeans_models,
@@ -67,6 +68,9 @@ def main(config_name: str) -> None:
         )
 
         for model in kmeans_models:
+            print(
+                f"[INFO] Plotting K-means cluster in t-SNE for k={model.n_clusters}..."
+            )
             plot_cluster_tsne(
                 labels=model.labels_,
                 X_reduced=X_reduced,
@@ -80,6 +84,7 @@ def main(config_name: str) -> None:
                     k_means_fig_dir
                     / f"k{model.n_clusters}_{feature_x}_vs_{feature_y}.png"
                 )
+                print(f"[INFO] Plotting K-means cluster {feature_x} and {feature_y}...")
                 plot_cluster_feat(
                     labels=model.labels_,
                     X=X_original,
@@ -89,57 +94,48 @@ def main(config_name: str) -> None:
                     save=save_plots,
                     show=show_plots,
                 )
-    else:
-        dbi_kmeans = None
 
     # =============================================================================
     # DBSCAN
     # =============================================================================
     dbscan_models_path = TRIALS_DIR / "dbscan_models.joblib"
-    dbscan_results_path = TRIALS_DIR / "dbscan_results.joblib"
-    dbscan_per_k = load(dbscan_models_path)
-    dbscan_results = load(dbscan_results_path)
+    dbscan_models = load(dbscan_models_path)
     dbscan_fig_dir = FIGURES_DIR / "dbscan"
     dbscan_fig_dir.mkdir(parents=True, exist_ok=True)
 
-    for i in range(len(dbscan_per_k[0])):
-        dbi_dbscan = []
-        for k in range(len(dbscan_per_k)):
-            dbi_dbscan.append(dbscan_results[k][i]["DBI Score"])
-            model = dbscan_per_k[k][i]
-            eps = model.eps
-            min_samples = model.min_samples
+    for model in dbscan_models:
+        eps = model.eps
+        min_samples = model.min_samples
 
-            k = model.labels_.max()
+        k = len(np.unique(model.labels_)) - (1 if -1 in model.labels_ else 0)
 
-            plot_cluster_tsne(
-                labels=model.labels_,
-                X_reduced=X_reduced,
-                figure_path=dbscan_fig_dir
-                / f"tsne_dbscan_eps_{eps}_min_samples_{min_samples}_k_{k}.png",
-                save=save_plots,
-                show=show_plots,
-            )
-
-            for feature_x, feature_y in combinations(X_original.columns, 2):
-                figure_path = dbscan_fig_dir / f"k{k}_{feature_x}_vs_{feature_y}.png"
-                plot_cluster_feat(
-                    labels=model.labels_,
-                    X=X_original,
-                    feat_x=feature_x,
-                    feat_y=feature_y,
-                    figure_path=figure_path,
-                    save=save_plots,
-                    show=show_plots,
-                )
-
-        plot_dbi(
-            dbi_kmeans=dbi_kmeans,
-            dbi_dbscan=dbi_dbscan,
-            figure_path=FIGURES_DIR / f"dbi_eps_{eps}_min_samples_{min_samples}.png",
+        print(
+            f"[INFO] Plotting DBSCAN cluster in t-SNE for eps={eps}, min_samples={min_samples}, k={k}..."
+        )
+        plot_cluster_tsne(
+            labels=model.labels_,
+            X_reduced=X_reduced,
+            figure_path=dbscan_fig_dir
+            / f"tsne_k_{k}_eps_{eps}_min_samples_{min_samples}.png",
             save=save_plots,
             show=show_plots,
         )
+
+        for feature_x, feature_y in combinations(X_original.columns, 2):
+            print(f"[INFO] Plotting DBSCAN cluster {feature_x} and {feature_y}...")
+            figure_path = (
+                dbscan_fig_dir
+                / f"k{k}_eps_{eps}_min_samples_{min_samples}_{feature_x}_vs_{feature_y}.png"
+            )
+            plot_cluster_feat(
+                labels=model.labels_,
+                X=X_original,
+                feat_x=feature_x,
+                feat_y=feature_y,
+                figure_path=figure_path,
+                save=save_plots,
+                show=show_plots,
+            )
 
 
 if __name__ == "__main__":
