@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from joblib import dump
+from joblib import dump, load
 from mylib.utils.time_report import Profiler  # type: ignore
 
 # Functions for dataset splitting
@@ -19,7 +19,7 @@ from utils.unsupervised_functions import (
 )
 
 CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "dbscan_trial_1.json"
+config_name = "dbscan_trial_2.json"
 
 
 class _OutputTee:
@@ -68,31 +68,34 @@ def main(config_name: str) -> None:
     DATASETS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Import datasets
-    DATA_PATH = DATASETS_DIR / config["feat_data_name"]
+    if config.get("saved_data_path", None) is not None:
+        DATA_PATH = Path(config["saved_data_path"])
+        X_original, X, y, X_reduced, hits = load(DATA_PATH).values()
 
-    # Read the datasets
-    data = pd.read_csv(DATA_PATH)
-
-    # Separate features and labels
-    X_original, X, y, hits = train_test_set(
-        data,
-        normalization=config.get("normalization", "log-std"),
-        columns_to_transform=config.get("columns_to_transform", ["energy"]),
-        features=config.get("features", None),
-        split=False,
-    )  # Normalization: log-std or std
-
-    if config.get("use_tsne", False):
-        with timer.section("TSNE"):
-            # T-SNE
-            X_reduced = tsne(
-                X,
-                FIGURES_DIR / "t-SNE Visualization.png",
-                show=show_plots, 
-                save=save_plots,
-            )
     else:
-        X_reduced = X
+        DATA_PATH = DATASETS_DIR / config["feat_data_name"]
+        data = pd.read_csv(DATA_PATH)
+
+        # Separate features and labels
+        X_original, X, y, hits = train_test_set(
+            data,
+            normalization=config.get("normalization", "log-std"),
+            columns_to_transform=config.get("columns_to_transform", ["energy"]),
+            features=config.get("features", None),
+            split=False,
+        )  # Normalization: log-std or std
+
+        if config.get("use_tsne", False):
+            with timer.section("TSNE"):
+                # T-SNE
+                X_reduced = tsne(
+                    X,
+                    FIGURES_DIR / "t-SNE Visualization.png",
+                    show=show_plots,
+                    save=save_plots,
+                )
+        else:
+            X_reduced = X
 
     if save_data:
         data_saving_path = (
@@ -120,9 +123,9 @@ def main(config_name: str) -> None:
     # =============================================================================
     if config.get("use_kmeans", False):
         with timer.section("K-means"):
-            k_num = config["dbscan"]["k_num"]
+            k_max = config["dbscan"]["k_max"]
             kmeans_models, silhouette_scores, dbi_kmeans = kmeans_per_k(
-                X_reduced, k_num
+                X_reduced, k_max
             )
             kmeans_results = {
                 "silhouette_scores": silhouette_scores,
@@ -133,9 +136,6 @@ def main(config_name: str) -> None:
     # DBSCAN
     # =============================================================================
     with timer.section("DBSCAN"):
-        # List with dbscan models for k
-        dbscan_per_k = []
-        dbscan_results_per_k = []
 
         # Parameters for DBSCAN
         epsilon_values = config["dbscan"]["epsilon_values"]
@@ -146,24 +146,18 @@ def main(config_name: str) -> None:
             min_samples_limits[0], min_samples_limits[1], min_samples_num, dtype=int
         )
 
-        for k in range(2, k_num + 1):
-            print(f"\nDBSCAN for k={k} clusters")
-            # Adjust the target_clusters for the current k
-            # Model and adjusted parameters
-            dbscan_models, results = grid_search_dbscan(
-                X_reduced, k, epsilon_values, min_samples_values
-            )
-
-            dbscan_per_k.append(dbscan_models)
-            dbscan_results_per_k.append(results)
+        target_clusters = [k for k in range(2, k_max + 1) ]
+        dbscan_models, results = grid_search_dbscan(
+            X_reduced, target_clusters, epsilon_values, min_samples_values
+        )
 
     with timer.section("Saving results"):
         # Save the DBSCAN models and results
         dbscan_models_path = models_dir / config["saving_names"]["dbscan_models"]
         dbscan_results_path = models_dir / config["saving_names"]["dbscan_results"]
 
-        dump(dbscan_per_k, dbscan_models_path)
-        dump(dbscan_results_per_k, dbscan_results_path)
+        dump(dbscan_models, dbscan_models_path)
+        dump(results, dbscan_results_path)
 
         print(f'DBSCAN models saved at: "{dbscan_models_path}"')
         print(f'DBSCAN results saved at: "{dbscan_results_path}"')

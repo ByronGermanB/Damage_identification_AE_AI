@@ -47,7 +47,7 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
     ----------
     X : DataFrame, array
         Feature set for training.
-    target_clusters : int
+    target_clusters : list
         Target number of clusters.
     epsilon_values : array or list
         Values that epsilon can take for clustering.
@@ -87,7 +87,7 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                 num_clusters = len(unique_labels)
 
             # Check if the current model meets the target_clusters
-            if num_clusters == target_clusters:
+            if num_clusters in target_clusters:
                 # if num_clusters > 1:
                 results.append(
                     {
@@ -115,6 +115,7 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
     for i, result in enumerate(results):
         for key, value in result.items():
             print(f"{key}: {value}")
+        print(f"Index: {i}")
         print("-----")
 
     return best_models, results
