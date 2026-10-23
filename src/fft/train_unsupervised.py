@@ -88,7 +88,7 @@ def main(config_name: str) -> None:
             X_reduced = tsne(
                 X,
                 FIGURES_DIR / "t-SNE Visualization.png",
-                show=show_plots,
+                show=show_plots, 
                 save=save_plots,
             )
     else:

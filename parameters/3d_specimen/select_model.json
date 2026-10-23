@@ -22,7 +22,15 @@
     },
 
     "plots": {
-        "show": true,
-        "save": false
+        "show": false,
+        "save": false,
+        "kmeans_per_k": {
+            "fig_name": "kmeans_per_k.png"
+        },
+        "dbi": {
+            "fig_name": "dbi.png"
+        }
+
     }
+
 }
