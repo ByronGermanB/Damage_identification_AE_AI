@@ -1537,6 +1537,10 @@ def plot_feat_vs_feat(
             ax.set_title(subtitle)
         else:
             ax.set_title(f"{feat_x} vs {feat_y}")
+    if n_labels > 10:
+        palette = sns.color_palette("tab20", n_colors=n_labels)
+    else:
+        palette = sns.color_palette("tab10", n_colors=n_labels)
 
     # Create the plot
     sns.scatterplot(
@@ -1548,7 +1552,7 @@ def plot_feat_vs_feat(
         style_order=label_order,
         data=data,
         markers=markers,
-        palette=sns.color_palette(n_colors=n_labels),
+        palette=palette,
         ax=ax,
         legend=True,
     )
