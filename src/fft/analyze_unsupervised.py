@@ -12,7 +12,7 @@ from utils.unsupervised_functions import (
 )
 
 CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "select_model.json"
+config_name = "analyze_unsupervised.json"
 
 
 def main(config_name: str) -> None:

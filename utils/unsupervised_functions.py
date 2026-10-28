@@ -111,7 +111,9 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                 )
 
     # Print the results
-    print(f"\nDBSCAN models that meet the target clusters condition ({target_clusters} clusters):\n")
+    print(
+        f"\nDBSCAN models that meet the target clusters condition ({target_clusters} clusters):\n"
+    )
     for i, result in enumerate(results):
         for key, value in result.items():
             print(f"{key}: {value}")
@@ -157,10 +159,10 @@ def kmeans_per_k(X, k, selected_features=None):
 
     # Print silhouette scores for each model
     for i, score in enumerate(silhouette_scores, start=2):
-        print(f"Silhouette Score for k={i}: {score:.2f}")
+        print(f"Model index: {i - 2}, k={i}, Silhouette Score: {score:.4f}")
 
     for i, score in enumerate(dbi_scores, start=2):
-        print(f"Davies-Bouldin Score for k={i}: {score:.2f}")
+        print(f"Model index: {i - 2}, k={i}, Davies-Bouldin Score: {score:.2f}")
 
     return kmeans_per_k, silhouette_scores, dbi_scores
 
@@ -551,7 +553,7 @@ def plot_cluster_feat(
     # Masks to change markers
     valid_points = data[data["Labels"] != -1]
     anomalies = data[data["Labels"] == -1]
-    
+
     # Count the number of unique labels in the DataFrame
     num_labels = valid_points["Labels"].nunique()
 
@@ -560,7 +562,7 @@ def plot_cluster_feat(
     # Customize the markers list to match the number of unique labels
     markers = MARKER_LIST[:num_labels]
     palette = palette[:num_labels]
-    
+
     # Create a figure
     figsize_inches = (width / 25.4, height / 25.4)
 
@@ -1199,4 +1201,129 @@ def plot_dbi(
     if show:
         plt.show()
     plt.close()
+    return ax
+
+
+def plot_cluster_test_id(
+    X,
+    labels,
+    test_id,
+    feat_x,
+    feat_y,
+    figure_path="Test ID Clustering.pdf",
+    title=None,
+    subtitle=None,
+    x_label=None,
+    y_label=None,
+    width=90,
+    height=60,
+    ax=None,
+    i=1,
+    n_col=1,
+    save=False,
+    show=False,
+):
+
+    labels = pd.Series(labels, name="Labels")
+    # Rename 'Labels' column in y if it already exists in X
+    if isinstance(X, pd.DataFrame):
+        labels.index = X.index
+        if "Labels" in X.columns:
+            X = X.drop(["Labels"], axis=1)
+
+    data = pd.concat([X, labels], axis=1)
+
+    # Masks to change markers
+    valid_points = data[data["Labels"] != -1]
+    anomalies = data[data["Labels"] == -1]
+
+    # Count the number of unique labels in the DataFrame
+    num_labels = valid_points["Labels"].nunique()
+
+    # Define custom markers for each class
+    palette = sns.color_palette()
+    # Customize the markers list to match the number of unique labels
+    markers = MARKER_LIST[:num_labels]
+    palette = palette[:num_labels]
+
+    # Create a figure
+    figsize_inches = (width / 25.4, height / 25.4)
+
+    # If there is just one plot and set the title
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+        if title is None:
+            ax.set_title(f"{feat_x} vs {feat_y} - Clustering")
+        else:
+            ax.set_title(title)
+        if x_label is None:
+            ax.set_xlabel(feat_x)
+        else:
+            ax.set_xlabel(x_label)
+
+    else:
+        if x_label is None:
+            ax.set_xlabel(f"{feat_x}\n(" + string.ascii_lowercase[i - 1] + ")")
+        else:
+            ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
+        # Title for each test id
+        if subtitle is not None:
+            ax.set_title(subtitle)
+        else:
+            ax.set_title(f"{feat_x} vs {feat_y}")
+
+    # Use Seaborn scatter plot with hue and style parameters
+    sns.scatterplot(
+        x=valid_points[feat_x],
+        y=valid_points[feat_y],
+        hue="Labels",
+        style="Labels",
+        data=valid_points,
+        palette=palette,
+        markers=markers,
+        ax=ax,
+    )
+
+    # Scatter points with label '-1' separately as red 'x'
+    if not anomalies.empty:
+        sns.scatterplot(
+            x=anomalies[feat_x],
+            y=anomalies[feat_y],
+            hue="Labels",
+            style="Labels",
+            data=anomalies,
+            palette=["r"],
+            markers="x",
+            linewidth=1.5,
+            ax=ax,
+        )
+
+    # Set y-axis label only for the first plot of each row
+    if (i - 1) % n_col == 0:
+        if y_label is None:
+            ax.set_ylabel(feat_y)
+        else:
+            ax.set_ylabel(y_label)
+    else:
+        ax.set_ylabel("")
+
+    # Logarithmic scale if you choose energy
+    if feat_x == "energy":
+        ax.set_xscale("log")
+
+    if feat_y == "energy":
+        ax.set_yscale("log")
+
+    # Activate the grid
+    ax.grid()
+    ax.set_axisbelow(True)  # Set grid lines behind the data points
+
+    # Save the image in figure_path
+    if save:
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close()
+
     return ax

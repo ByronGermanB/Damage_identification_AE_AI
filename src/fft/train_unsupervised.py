@@ -123,6 +123,7 @@ def main(config_name: str) -> None:
     # =============================================================================
     if config.get("use_kmeans", False):
         with timer.section("K-means"):
+            print("[INFO] Performing K-means clustering...")
             k_max = config["dbscan"]["k_max"]
             kmeans_models, silhouette_scores, dbi_kmeans = kmeans_per_k(
                 X_reduced, k_max
