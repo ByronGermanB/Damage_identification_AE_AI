@@ -105,6 +105,7 @@ def main(config_name: str) -> None:
             print("[INFO] Saving Feature vs Feature images...")
     
             width, height = config["plots"].get("fig_size", [90, 60])
+            format_plot = config["plots"].get("format", "png")
     
             feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
             feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
@@ -123,7 +124,7 @@ def main(config_name: str) -> None:
             y = data[label_column]
     
             for feature_x, feature_y in combinations(features_to_plot, 2):
-                figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.png"
+                figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
     
                 plot_feat_vs_feat(
                     X=data,

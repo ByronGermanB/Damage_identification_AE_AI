@@ -19,7 +19,7 @@ from utils.unsupervised_functions import (
 )
 
 CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "dbscan_trial_2.json"
+config_name = "dbscan_trial_1.json"
 
 
 class _OutputTee:
@@ -54,6 +54,7 @@ def main(config_name: str) -> None:
     dataset_name = config["dataset_name"]
     show_plots = config["plots"]["show"]
     save_plots = config["plots"]["save"]
+    format_plot = config["plots"].get("format", "png")
     save_data = config.get("save_data", False)
 
     models_dir = (
@@ -90,7 +91,7 @@ def main(config_name: str) -> None:
                 # T-SNE
                 X_reduced = tsne(
                     X,
-                    FIGURES_DIR / "t-SNE Visualization.png",
+                    FIGURES_DIR / f"t-SNE Visualization.{format_plot}",
                     show=show_plots,
                     save=save_plots,
                 )

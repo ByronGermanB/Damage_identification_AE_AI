@@ -49,7 +49,7 @@ def main(config_name: str) -> None:
 
     if config["plots"].get("save_feat_vs_feat_images", False):
         print("[INFO] Saving Feature vs Feature images...")
-
+        format_plot = config["plots"].get("format", "png")
         width, height = config["plots"].get("fig_size", [90, 60])
 
         feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
@@ -65,11 +65,11 @@ def main(config_name: str) -> None:
                 max_points=config["plots"].get("max_points", 20),
             )
             data = data.loc[selected_indices].copy()
-        
+
         y = data[label_column]
 
         for feature_x, feature_y in combinations(features_to_plot, 2):
-            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.png"
+            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
 
             plot_feat_vs_feat(
                 X=data,

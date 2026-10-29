@@ -29,6 +29,7 @@ def main(config_name: str) -> None:
     data_trial_name = config.get("data_trial_name", trial_name)
     show_plots = config["plots"]["show"]
     save_plots = config["plots"]["save"]
+    format_plots = config["plots"]["format"]
 
     # Directories
     TRIALS_DIR = Path("results") / dataset_name / "models" / "trials" / trial_name
@@ -62,7 +63,7 @@ def main(config_name: str) -> None:
             X=X,
             kmeans_per_k=kmeans_models,
             silhouette_scores=k_means_results["silhouette_scores"],
-            figure_path=k_means_fig_dir / "silhouette_scores.png",
+            figure_path=k_means_fig_dir / f"silhouette_scores.{format_plots}",
             save=save_plots,
             show=show_plots,
         )
@@ -74,7 +75,8 @@ def main(config_name: str) -> None:
             plot_cluster_tsne(
                 labels=model.labels_,
                 X_reduced=X_reduced,
-                figure_path=k_means_fig_dir / f"tsne_kmeans_k_{model.n_clusters}.png",
+                figure_path=k_means_fig_dir
+                / f"tsne_kmeans_k_{model.n_clusters}.{format_plots}",
                 save=save_plots,
                 show=show_plots,
             )
@@ -82,7 +84,7 @@ def main(config_name: str) -> None:
             for feature_x, feature_y in combinations(X_original.columns, 2):
                 figure_path = (
                     k_means_fig_dir
-                    / f"k{model.n_clusters}_{feature_x}_vs_{feature_y}.png"
+                    / f"k{model.n_clusters}_{feature_x}_vs_{feature_y}.{format_plots}"
                 )
                 print(f"[INFO] Plotting K-means cluster {feature_x} and {feature_y}...")
                 plot_cluster_feat(
@@ -116,7 +118,7 @@ def main(config_name: str) -> None:
             labels=model.labels_,
             X_reduced=X_reduced,
             figure_path=dbscan_fig_dir
-            / f"tsne_k_{k}_eps_{eps}_min_samples_{min_samples}.png",
+            / f"tsne_k_{k}_eps_{eps}_min_samples_{min_samples}.{format_plots}",
             save=save_plots,
             show=show_plots,
         )
@@ -125,7 +127,7 @@ def main(config_name: str) -> None:
             print(f"[INFO] Plotting DBSCAN cluster {feature_x} and {feature_y}...")
             figure_path = (
                 dbscan_fig_dir
-                / f"k{k}_eps_{eps}_min_samples_{min_samples}_{feature_x}_vs_{feature_y}.png"
+                / f"k{k}_eps_{eps}_min_samples_{min_samples}_{feature_x}_vs_{feature_y}.{format_plots}"
             )
             plot_cluster_feat(
                 labels=model.labels_,

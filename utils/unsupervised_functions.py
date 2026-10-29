@@ -99,6 +99,11 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
                             np.sum(labels == -1) / total_samples
                         )
                         * 100,
+                        "Labels Distribution": {
+                            int(label): int(np.sum(labels == label))
+                            for label in np.unique(labels)
+                            if label != -1
+                        },
                         "Silhouette Score": silhouette_score(X, labels),
                         "DBI Score": davies_bouldin_score(X, labels),
                     }
@@ -116,7 +121,12 @@ def grid_search_dbscan(X, target_clusters, epsilon_values, min_samples_values):
     )
     for i, result in enumerate(results):
         for key, value in result.items():
-            print(f"{key}: {value}")
+            if key == "Labels Distribution":
+                print(f"{key}:")
+                for label, count in value.items():
+                    print(f"    {label}: {count}")
+            else:
+                print(f"{key}: {value}")
         print(f"Index: {i}")
         print("-----")
 
@@ -1205,8 +1215,7 @@ def plot_dbi(
 
 
 def plot_cluster_test_id(
-    X,
-    labels,
+    data,
     test_id,
     feat_x,
     feat_y,
@@ -1223,16 +1232,8 @@ def plot_cluster_test_id(
     save=False,
     show=False,
 ):
-
-    labels = pd.Series(labels, name="Labels")
-    # Rename 'Labels' column in y if it already exists in X
-    if isinstance(X, pd.DataFrame):
-        labels.index = X.index
-        if "Labels" in X.columns:
-            X = X.drop(["Labels"], axis=1)
-
-    data = pd.concat([X, labels], axis=1)
-
+    data = data[data["test_id"] == test_id]
+    
     # Masks to change markers
     valid_points = data[data["Labels"] != -1]
     anomalies = data[data["Labels"] == -1]
