@@ -1233,13 +1233,13 @@ def plot_cluster_test_id(
     show=False,
 ):
     data = data[data["test_id"] == test_id]
-    
+
     # Masks to change markers
-    valid_points = data[data["Labels"] != -1]
-    anomalies = data[data["Labels"] == -1]
+    valid_points = data[data["label"] != -1]
+    anomalies = data[data["label"] == -1]
 
     # Count the number of unique labels in the DataFrame
-    num_labels = valid_points["Labels"].nunique()
+    num_labels = valid_points["label"].nunique()
 
     # Define custom markers for each class
     palette = sns.color_palette()
@@ -1277,8 +1277,8 @@ def plot_cluster_test_id(
     sns.scatterplot(
         x=valid_points[feat_x],
         y=valid_points[feat_y],
-        hue="Labels",
-        style="Labels",
+        hue="label",
+        style="label",
         data=valid_points,
         palette=palette,
         markers=markers,
@@ -1290,8 +1290,8 @@ def plot_cluster_test_id(
         sns.scatterplot(
             x=anomalies[feat_x],
             y=anomalies[feat_y],
-            hue="Labels",
-            style="Labels",
+            hue="label",
+            style="label",
             data=anomalies,
             palette=["r"],
             markers="x",
