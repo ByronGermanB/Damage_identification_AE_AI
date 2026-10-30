@@ -8,8 +8,10 @@ Created on Tue Jan  9 11:09:45 2024
 # Import necessary libraries
 # =============================================================================
 # Dataframes
+import csv
 import os
 import string
+from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,7 +27,7 @@ matplotlib.rcParams["font.size"] = 8
 matplotlib.rcParams["figure.dpi"] = 150
 
 
-def force_data(path, section=None):
+def force_data(path, section=None, test_id=None):
     """
     Parameters
     ----------
@@ -49,34 +51,61 @@ def force_data(path, section=None):
         # Check if the files are .csv
         if item.endswith(".csv"):
             # Path of the folder joined with the file
-            force_filename_path = os.path.join(path, item)
+            force_filename_path = Path(path) / item
 
             # Load the csv file
-            force = pd.read_csv(force_filename_path, sep=";")
+            # force = pd.read_csv(force_filename_path, sep=";")
+            # Find the first row whose first column is numeric
+            with force_filename_path.open("r", encoding="utf-8-sig", newline="") as file:
+                reader = csv.reader(file, delimiter=";")
 
-            # Rename the columns and remove the units row
-            new_column_names = ["Crosshead [mm]", "Load [kN]", "Time [s]"]
-            force.columns = new_column_names
-            force = force.iloc[1:]
+                for row_number, row in enumerate(reader):
+                    if not row:
+                        continue
+
+                    first_value = row[0].strip().replace(",", ".")
+
+                    try:
+                        float(first_value)
+                        first_data_row = row_number
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    raise ValueError(f"No numeric data found in {force_filename_path}")
+
+            # Read from the first numeric row
+            force = pd.read_csv(
+                force_filename_path,
+                sep=";",
+                skiprows=first_data_row,
+                header=None,
+                names=["Crosshead [mm]", "Load [kN]", "Time [s]"],
+                decimal=",",
+            )
+
+            # # Rename the columns and remove the units row
+            # new_column_names = ["Crosshead [mm]", "Load [kN]", "Time [s]"]
+            # force.columns = new_column_names
+            # force = force.iloc[1:]
 
             # Add a row of 0 where the test starts
             new_row = pd.Series(0, index=force.columns)
             force = pd.concat([pd.DataFrame([new_row]), force], ignore_index=True)
-
-            # Change all the , to .
-            force = force.replace({",": "."}, regex=True)
-            force = force.apply(pd.to_numeric, errors="coerce")
 
             # Stress
             area = np.prod(section)
             force["Stress [MPa]"] = force["Load [kN]"] * 1000 / area
 
             # Add the test id column
-            test_id = item.split(".")[0]
+            if test_id is None:
+                test_id = item.split(".")[0]
             force["test_id"] = test_id
             forces_list.append(force)
-
-    force_df = pd.concat(forces_list, ignore_index=True)
+        if not forces_list:
+            print(f"[INFO] No .csv files found in {path}. Please check the directory.")
+        else:
+            force_df = pd.concat(forces_list, ignore_index=True)
     return force_df
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from utils.fft_analysis import Features, plot_feat_vs_feat, select_significant_indices
+from utils.force_mts import force_data
 
 CONFIG_DIR = Path("parameters") / "arcan"
 config_name = "feature_extraction_1.json"
@@ -52,6 +53,7 @@ def main(config_name: str) -> None:
         max_trais = [None for _ in range(len(pri_dirs))]
 
     dfs = []
+    force_dfs = []
 
     for pri_dir, pri_name in zip(pri_dirs, pri_names):
         print(f"[INFO] Processing {pri_name}...")
@@ -79,27 +81,32 @@ def main(config_name: str) -> None:
             continue  # Skip to the next pri_dir if no transients were found
         dfs.append(df)
 
+        # Force data saving if specified in the configuration
+        if config["force"].get("force_data", False):
+            data_force_i = force_data(
+                path=pri_dir,
+                section=config["force"].get("section", None),
+                test_id=pri_name,
+            )
+        force_dfs.append(data_force_i)
+
+
     # Merge all the individual DataFrames into a single DataFrame
-    data = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+    data = pd.concat(dfs, ignore_index=True)
     data["label"] = 0
     data.to_csv(
         DATASET_DIR / config.get("output_name", "features.csv"), index=False
     )
     print("[INFO] Feature extraction completed. Data saved to CSV.")
 
+    if config["force"].get("force_data", False):
+        data_force = pd.concat(force_dfs, ignore_index=True) 
+        data_force.to_csv(
+            DATASET_DIR / config.get("force_output_name", "force_data.csv"), index=False
+        )
+
     # Saving feat vs feat images
-    features_to_plot = [
-        "peak_freq",
-        "w_peak_freq",
-        "centroid_freq",
-        "p_power_1",
-        "p_power_2",
-        "p_power_3",
-        "p_power_4",
-        "p_power_5",
-        "p_power_6",
-        "energy",
-    ]
+    features_to_plot = config["plots"].get("features_to_plot", [])
 
     if config["plots"].get("save_feat_vs_feat_images", False):
             print("[INFO] Saving Feature vs Feature images...")
