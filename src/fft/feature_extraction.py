@@ -58,6 +58,15 @@ def main(config_name: str) -> None:
     for pri_dir, pri_name in zip(pri_dirs, pri_names):
         print(f"[INFO] Processing {pri_name}...")
 
+        # Force data saving if specified in the configuration
+        if config["force"].get("force_data", False):
+            data_force_i = force_data(
+                path=pri_dir,
+                section=config["force"].get("section", None),
+                test_id=pri_name,
+            )
+        force_dfs.append(data_force_i)
+
         features = Features(
             path=pri_dir,
             lower_freq=parameters["lower_freq"],
@@ -67,6 +76,7 @@ def main(config_name: str) -> None:
             N_seg=parameters["N_seg"],
             desfase=parameters["desfase"],
             desfase_carga=parameters.get("desfase_carga", 0),
+            force=data_force_i if config["force"].get("force_data", False) else None,
         )
 
         df = features.feature_extr(
@@ -81,26 +91,15 @@ def main(config_name: str) -> None:
             continue  # Skip to the next pri_dir if no transients were found
         dfs.append(df)
 
-        # Force data saving if specified in the configuration
-        if config["force"].get("force_data", False):
-            data_force_i = force_data(
-                path=pri_dir,
-                section=config["force"].get("section", None),
-                test_id=pri_name,
-            )
-        force_dfs.append(data_force_i)
-
-
     # Merge all the individual DataFrames into a single DataFrame
     data = pd.concat(dfs, ignore_index=True)
     data["label"] = 0
-    data.to_csv(
-        DATASET_DIR / config.get("output_name", "features.csv"), index=False
-    )
+    data.to_csv(DATASET_DIR / config.get("output_name", "features.csv"), index=False)
     print("[INFO] Feature extraction completed. Data saved to CSV.")
 
+    # Force data
     if config["force"].get("force_data", False):
-        data_force = pd.concat(force_dfs, ignore_index=True) 
+        data_force = pd.concat(force_dfs, ignore_index=True)
         data_force.to_csv(
             DATASET_DIR / config.get("force_output_name", "force_data.csv"), index=False
         )
@@ -109,42 +108,42 @@ def main(config_name: str) -> None:
     features_to_plot = config["plots"].get("features_to_plot", [])
 
     if config["plots"].get("save_feat_vs_feat_images", False):
-            print("[INFO] Saving Feature vs Feature images...")
-    
-            width, height = config["plots"].get("fig_size", [90, 60])
-            format_plot = config["plots"].get("format", "png")
-    
-            feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
-            feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
-    
-            label_column = "test_id" if config["plots"].get("labeled", False) else "label"
-    
-            if config["plots"].get("reduced_points", False):
-                selected_indices = select_significant_indices(
-                    data=data,
-                    label_column=label_column,
-                    feature_columns=features_to_plot,
-                    max_points=config["plots"].get("max_points", 20),
-                )
-                data = data.loc[selected_indices].copy()
-            
-            y = data[label_column]
-    
-            for feature_x, feature_y in combinations(features_to_plot, 2):
-                figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
-    
-                plot_feat_vs_feat(
-                    X=data,
-                    y=y,
-                    feat_x=feature_x,
-                    feat_y=feature_y,
-                    figure_path=figure_path,
-                    width=width,
-                    height=height,
-                    save=True,
-                )
-    
-            print("[INFO] Feature vs Feature images saved.")
+        print("[INFO] Saving Feature vs Feature images...")
+
+        width, height = config["plots"].get("fig_size", [90, 60])
+        format_plot = config["plots"].get("format", "png")
+
+        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
+        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
+
+        label_column = "test_id" if config["plots"].get("labeled", False) else "label"
+
+        if config["plots"].get("reduced_points", False):
+            selected_indices = select_significant_indices(
+                data=data,
+                label_column=label_column,
+                feature_columns=features_to_plot,
+                max_points=config["plots"].get("max_points", 20),
+            )
+            data = data.loc[selected_indices].copy()
+
+        y = data[label_column]
+
+        for feature_x, feature_y in combinations(features_to_plot, 2):
+            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
+
+            plot_feat_vs_feat(
+                X=data,
+                y=y,
+                feat_x=feature_x,
+                feat_y=feature_y,
+                figure_path=figure_path,
+                width=width,
+                height=height,
+                save=True,
+            )
+
+        print("[INFO] Feature vs Feature images saved.")
 
 
 if __name__ == "__main__":

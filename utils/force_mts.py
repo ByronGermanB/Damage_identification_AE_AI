@@ -26,6 +26,8 @@ matplotlib.rcParams["font.serif"] = "Times New Roman"
 matplotlib.rcParams["font.size"] = 8
 matplotlib.rcParams["figure.dpi"] = 150
 
+MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+
 
 def force_data(path, section=None, test_id=None):
     """
@@ -56,7 +58,9 @@ def force_data(path, section=None, test_id=None):
             # Load the csv file
             # force = pd.read_csv(force_filename_path, sep=";")
             # Find the first row whose first column is numeric
-            with force_filename_path.open("r", encoding="utf-8-sig", newline="") as file:
+            with force_filename_path.open(
+                "r", encoding="utf-8-sig", newline=""
+            ) as file:
                 reader = csv.reader(file, delimiter=";")
 
                 for row_number, row in enumerate(reader):
@@ -114,9 +118,8 @@ def plot_stress_hits_cluster(
     hits,
     force,
     test_id,
-    figure_path,
+    figure_path="Stress and Cumulative hits vs Time - Clustering.pdf",
     plot_type="scatter",
-    title="Stress and Cumulative hits vs Time - Clustering",
     x="time",
     y="Cumulative_Label",
     x_label="Time [s]",
@@ -129,8 +132,8 @@ def plot_stress_hits_cluster(
     ax=None,
     i=1,
     n_col=1,
-    n_row=1,
     save=False,
+    show=True,
 ):
     """
     Parameters
@@ -220,10 +223,8 @@ def plot_stress_hits_cluster(
     num_labels = filtered_hits["Labels"].nunique()
 
     # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+    markers = MARKER_LIST[:num_labels]
     palette = sns.color_palette()
-    # Customize the markers list to match the number of unique labels
-    markers = markers[:num_labels]
     palette = palette[:num_labels]
 
     # Create the plot
@@ -333,12 +334,12 @@ def plot_stress_hits_cluster(
 
     # Save the image in figure_path
     if save:
-        if ax is None:
-            figure_filename = f"{title} - {test_id}.pdf"
-        else:
-            figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        fig_format = figure_path.name.split(".")[-1]
+        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+
+    if show:
+        plt.show()
+    plt.close()  # Close the plot to free up memory
 
     return ax
 
@@ -536,6 +537,7 @@ def plot_stress_hits(
 
     return ax
 
+
 def plot_feature_time_histogram(
     data,
     figure_path,
@@ -590,7 +592,7 @@ def plot_feature_time_histogram(
         Axis containing the plot.
         Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
     """
-   
+
     # Create the plot
     # Exclude the data in the fracture moment
     data = data[data["time_norm"] < 0.99]
@@ -621,7 +623,6 @@ def plot_feature_time_histogram(
         ax=ax,
     )
 
-
     ax.set_ylabel(y_label)
 
     # Plot the grid
@@ -638,6 +639,7 @@ def plot_feature_time_histogram(
         plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
 
     return ax
+
 
 def plot_feature_histogram(
     data,
@@ -691,7 +693,7 @@ def plot_feature_histogram(
         Axis containing the plot.
         Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
     """
-   
+
     # Create the plot
     # Exclude the data in the fracture moment
 
@@ -739,7 +741,8 @@ def plot_feature_histogram(
 
     return ax
 
-def limit_finder(labels, hits, force, test_ids):
+
+def limit_finder(labels, hits, force, test_ids=None):
     """
     Parameters
     ----------
@@ -768,6 +771,8 @@ def limit_finder(labels, hits, force, test_ids):
     hits_labels = pd.concat([hits, labels_df], axis=1)
 
     # Condition to filter rows based on the string column
+    if test_ids is None:
+        test_ids = hits_labels["test_id"].unique()
     condition = hits_labels["test_id"].isin(test_ids)
     condition_force = force["test_id"].isin(test_ids)
 

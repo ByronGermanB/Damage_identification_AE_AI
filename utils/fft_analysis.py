@@ -72,6 +72,7 @@ class Features:
         N_seg: int,
         desfase: int,
         desfase_carga: int = 0,
+        force: pd.DataFrame = None,
     ):
         """
         Parameters
@@ -109,6 +110,7 @@ class Features:
         self.desfase = desfase  # Depends on the pretrigger time, allows starting from
         # the beginning of the signal or with a positive offset
         self.desfase_carga = desfase_carga  # Offset of the time taken in AE and in MTS
+        self.force = force  # Force data for time alignment
 
         # Open pri and tra files
         files = os.listdir(self.path)
@@ -457,7 +459,12 @@ class Features:
             .drop(["set_id"], axis=1)
         )
         df_time["amplitude"] = 20 * (np.log10(df_time["amplitude"]) + 6)
-        df_time["time"] = df_time["time"] - self.desfase_carga
+        
+        if self.force is not None:
+            desfase_carga = df_time["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
+        else:
+            desfase_carga = self.desfase_carga
+        df_time["time"] = df_time["time"] - desfase_carga
         df_time["time_norm"] = df_time["time"] / max(df_time["time"])
 
         # Class DataFrame
