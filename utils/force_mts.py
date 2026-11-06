@@ -114,8 +114,7 @@ def force_data(path, section=None, test_id=None):
 
 
 def plot_stress_hits_cluster(
-    labels,
-    hits,
+    data,
     force,
     test_id,
     figure_path="Stress and Cumulative hits vs Time - Clustering.pdf",
@@ -125,6 +124,7 @@ def plot_stress_hits_cluster(
     x_label="Time [s]",
     y_label="Cumulative hits",
     y_label_right="Stress [MPa]",
+    use_log_scale=False,
     subtitle=None,
     limits=None,
     width=90,
@@ -138,10 +138,8 @@ def plot_stress_hits_cluster(
     """
     Parameters
     ----------
-    labels : array
-        Labels of the clusters obtained by k-means or dbscan.
-    hits : Dataframe
-        Set containing the characteristics over time of the hits and their id.
+    data : Dataframe
+        Set containing the data for the plot labeled and with their id.
     force : Dataframe
         Set containing load displacement, time data, and their id.
     test_id : str
@@ -199,20 +197,13 @@ def plot_stress_hits_cluster(
     else:
         time_limit, hits_limit, stress_limit = limits
 
-    # Create a DataFrame with the labels
-    labels_df = pd.Series(labels, name="Labels")
-    labels_df.index = hits.index
-
-    # Concatenate the new DataFrame with the existing one
-    hits_labels = pd.concat([hits, labels_df], axis=1)
-
     # Condition to filter rows based on the string column
-    condition = hits_labels["test_id"] == test_id
+    condition = data["test_id"] == test_id
     condition_force = force["test_id"] == test_id
 
     # Filtered DataFrame
-    filtered_hits = hits_labels.loc[condition].copy()
-    filtered_hits["Cumulative_Label"] = filtered_hits.groupby("Labels")[
+    filtered_hits = data.loc[condition].copy()
+    filtered_hits["Cumulative_Label"] = filtered_hits.groupby("label")[
         "Count"
     ].cumsum()
 
@@ -220,12 +211,13 @@ def plot_stress_hits_cluster(
     filtered_force = force[condition_force]
 
     # Count the number of unique labels in the DataFrame
-    num_labels = filtered_hits["Labels"].nunique()
+    num_labels = filtered_hits["label"].nunique()
+    first_label = filtered_hits["label"].unique()[0]
 
     # Define custom markers for each class
-    markers = MARKER_LIST[:num_labels]
+    markers = MARKER_LIST[first_label:first_label + num_labels]
     palette = sns.color_palette()
-    palette = palette[:num_labels]
+    palette = palette[first_label:first_label + num_labels]
 
     # Create the plot
     figsize_inches = (width / 25.4, height / 25.4)
@@ -247,8 +239,8 @@ def plot_stress_hits_cluster(
         sns.scatterplot(
             x=x,
             y=y,
-            hue="Labels",
-            style="Labels",
+            hue="label",
+            style="label",
             data=filtered_hits,
             markers=markers,
             palette=palette,
@@ -256,12 +248,15 @@ def plot_stress_hits_cluster(
             s=20,
             ax=ax,
         )
+        if use_log_scale:
+            ax.set_yscale("log")
+
     elif plot_type == "line":
         sns.lineplot(
             x=x,
             y=y,
-            hue="Labels",
-            style="Labels",
+            hue="label",
+            style="label",
             data=filtered_hits,
             palette=palette,
             linewidth=2,
@@ -742,14 +737,12 @@ def plot_feature_histogram(
     return ax
 
 
-def limit_finder(labels, hits, force, test_ids=None):
+def limit_finder(data, force, test_ids=None):
     """
     Parameters
     ----------
-    labels : array
-        Labels of the clusters obtained by k-means or dbscan.
-    hits : Dataframe
-        Dataframe containing the characteristics over time of the hits and their id.
+    data : Dataframe
+        Dataframe containing the labeled data and test ids.
     force : Dataframe
         Dataframe containing load displacement, time data, and their id.
     test_ids : list
@@ -763,27 +756,21 @@ def limit_finder(labels, hits, force, test_ids=None):
         Maximum value for stress.
 
     """
-    # Create a DataFrame with the labels
-    labels_df = pd.Series(labels, name="Labels")
-    labels_df.index = hits.index
-
-    # Concatenate the new DataFrame with the existing one
-    hits_labels = pd.concat([hits, labels_df], axis=1)
 
     # Condition to filter rows based on the string column
     if test_ids is None:
-        test_ids = hits_labels["test_id"].unique()
-    condition = hits_labels["test_id"].isin(test_ids)
+        test_ids = data["test_id"].unique()
+    condition = data["test_id"].isin(test_ids)
     condition_force = force["test_id"].isin(test_ids)
 
     # Filtered DataFrame
-    filtered_hits = hits_labels.loc[condition].copy()
+    filtered_hits = data.loc[condition].copy()
     filtered_hits["Cumulative_Label"] = None
 
     for test_id in test_ids:
         single_condition = filtered_hits["test_id"] == test_id
         filtered_hits.loc[single_condition, "Cumulative_Label"] = (
-            filtered_hits[single_condition].groupby("Labels")["Count"].cumsum()
+            filtered_hits[single_condition].groupby("label")["Count"].cumsum()
         )
 
     # Force data

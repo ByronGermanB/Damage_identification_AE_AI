@@ -19,7 +19,7 @@ from utils.unsupervised_functions import (
 )
 
 CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "dbscan_trial_1.json"
+config_name = "dbscan_trial_2.json"
 
 
 class _OutputTee:
