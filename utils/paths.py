@@ -1,4 +1,4 @@
-from mylib.utils.io import ProjectLayout
+from mylib.utils.io import ProjectLayout  #type: ignore
 
 PROJECT_DIRS = ['src', 'parameters', 'results', 'utils', 'datasets', 'figures']
 
