@@ -212,7 +212,7 @@ def plot_stress_hits_cluster(
 
     # Count the number of unique labels in the DataFrame
     num_labels = filtered_hits["label"].nunique()
-    first_label = filtered_hits["label"].unique()[0]
+    first_label = np.sort(filtered_hits["label"].unique())[0]
 
     # Define custom markers for each class
     markers = MARKER_LIST[first_label:first_label + num_labels]
