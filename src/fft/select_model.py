@@ -1,10 +1,11 @@
 import json
-from pathlib import Path
 
 import pandas as pd
 from joblib import dump, load
 
-CONFIG_DIR = Path("parameters") / "arcan"
+from utils.paths import DATASETS_DIR, PARAMETERS_DIR, RESULTS_DIR
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "select_model.json"
 
 
@@ -22,8 +23,8 @@ def main(config_name: str) -> None:
         index = config["model"]["index"]
 
     # Directories
-    TRIALS_DIR = Path("results") / dataset_name / "models" / "trials" / trial_name
-    MODELS_DIR = Path("results") / dataset_name / "models" / output_model_name
+    TRIALS_DIR = RESULTS_DIR / dataset_name / "models" / "trials" / trial_name
+    MODELS_DIR = RESULTS_DIR / dataset_name / "models" / output_model_name
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Import trial
@@ -41,7 +42,7 @@ def main(config_name: str) -> None:
 
         feat_data_name = trial_config["feat_data_name"]
 
-    DATA_PATH = Path("datasets") / dataset_name / feat_data_name
+    DATA_PATH = DATASETS_DIR / dataset_name / feat_data_name
     data = pd.read_csv(DATA_PATH)
     data["label"] = selected_model.labels_
 

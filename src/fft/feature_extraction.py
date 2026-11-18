@@ -6,8 +6,9 @@ import pandas as pd
 
 from utils.fft_analysis import Features, plot_feat_vs_feat, select_significant_indices
 from utils.force_mts import force_data
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR
 
-CONFIG_DIR = Path("parameters") / "arcan"
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "feature_extraction_1.json"
 
 
@@ -24,11 +25,11 @@ def main(config_name: str) -> None:
 
     # Directories
     EA_DATA_DIR = Path(config["EA_DATA_DIR"])
-    DATASET_DIR = Path("datasets") / dataset_name
-    DATASET_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = DATASETS_DIR / dataset_name
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    FIGURES_DIR = Path("figures") / dataset_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    FIG_DIR = FIGURES_DIR / dataset_name
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
 
     if config["files"] == "all":
         pri_dirs = [
@@ -94,14 +95,14 @@ def main(config_name: str) -> None:
     # Merge all the individual DataFrames into a single DataFrame
     data = pd.concat(dfs, ignore_index=True)
     data["label"] = 0
-    data.to_csv(DATASET_DIR / config.get("output_name", "features.csv"), index=False)
+    data.to_csv(DATA_DIR / config.get("output_name", "features.csv"), index=False)
     print("[INFO] Feature extraction completed. Data saved to CSV.")
 
     # Force data
     if config["force"].get("force_data", False):
         data_force = pd.concat(force_dfs, ignore_index=True)
         data_force.to_csv(
-            DATASET_DIR / config.get("force_output_name", "force_data.csv"), index=False
+            DATA_DIR / config.get("force_output_name", "force_data.csv"), index=False
         )
 
     # Saving feat vs feat images
@@ -113,7 +114,7 @@ def main(config_name: str) -> None:
         width, height = config["plots"].get("fig_size", [90, 60])
         format_plot = config["plots"].get("format", "png")
 
-        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
+        feat_vs_feat_dir = FIG_DIR / "feat_vs_feat"
         feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
 
         label_column = "test_id" if config["plots"].get("labeled", False) else "label"

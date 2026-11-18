@@ -5,13 +5,14 @@ from pathlib import Path
 import numpy as np
 from joblib import load
 
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
 from utils.unsupervised_functions import (
     plot_cluster_feat,
     plot_cluster_tsne,
     plot_kmeans_per_k,
 )
 
-CONFIG_DIR = Path("parameters") / "arcan"
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "analyze_unsupervised.json"
 
 
@@ -32,12 +33,12 @@ def main(config_name: str) -> None:
     format_plots = config["plots"]["format"]
 
     # Directories
-    TRIALS_DIR = Path("results") / dataset_name / "models" / "trials" / trial_name
-    FIGURES_DIR = Path("figures") / dataset_name / trial_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    DATASETS_DIR = Path("datasets") / dataset_name
+    TRIALS_DIR = RESULTS_DIR / dataset_name / "models" / "trials" / trial_name
+    FIG_DIR = FIGURES_DIR / dataset_name / trial_name
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = DATASETS_DIR / dataset_name
     DATA_PATH = (
-        DATASETS_DIR / "trial_data" / data_trial_name / "preprocessed_data.joblib"
+        DATA_DIR / "trial_data" / data_trial_name / "preprocessed_data.joblib"
     )
 
     # Import datasets
@@ -53,7 +54,7 @@ def main(config_name: str) -> None:
     if kmeans_models_path.exists():
         kmeans_models = load(kmeans_models_path)
         k_means_results = load(k_means_results_path)
-        k_means_fig_dir = FIGURES_DIR / "kmeans"
+        k_means_fig_dir = FIG_DIR / "kmeans"
         k_means_fig_dir.mkdir(parents=True, exist_ok=True)
 
         # # plot k-means results
@@ -102,7 +103,7 @@ def main(config_name: str) -> None:
     # =============================================================================
     dbscan_models_path = TRIALS_DIR / "dbscan_models.joblib"
     dbscan_models = load(dbscan_models_path)
-    dbscan_fig_dir = FIGURES_DIR / "dbscan"
+    dbscan_fig_dir = FIG_DIR / "dbscan"
     dbscan_fig_dir.mkdir(parents=True, exist_ok=True)
 
     for model in dbscan_models:

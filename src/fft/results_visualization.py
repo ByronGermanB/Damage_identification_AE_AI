@@ -3,11 +3,13 @@ from itertools import combinations
 from pathlib import Path
 
 import pandas as pd
+from joblib import load
 
 from utils.force_mts import limit_finder, plot_stress_hits_cluster
-from utils.unsupervised_functions import plot_cluster_test_id
+from utils.paths import FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
+from utils.unsupervised_functions import plot_cluster_test_id, plot_cluster_tsne
 
-CONFIG_DIR = Path("parameters") / "arcan"
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "results_visualization.json"
 
 
@@ -19,6 +21,7 @@ def main(config_name: str) -> None:
 
         dataset_name = config["dataset_name"]
         model_name = config["model_name"]
+        data_tsne_path = config["data_tsne_path"]
         plots_config = config["plots"]
         show_plots = plots_config.get("show", False)
         save_plots = plots_config.get("save", False)
@@ -28,9 +31,9 @@ def main(config_name: str) -> None:
         width, height = fig_size
 
         # Directories
-        MODELS_DIR = Path("results") / dataset_name / "models" / model_name
-        FIGURES_DIR = Path("figures") / dataset_name / model_name
-        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        MODELS_DIR = RESULTS_DIR / dataset_name / "models" / model_name
+        FIG_DIR = FIGURES_DIR / dataset_name / model_name
+        FIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # Import data
     data_path = MODELS_DIR / "data_labeled.csv"
@@ -48,7 +51,7 @@ def main(config_name: str) -> None:
     if plots_config.get("feat_vs_feat_test_id", False):
         print("[INFO] Plotting Feature vs Feature Test ID images...")
 
-        feat_vs_feat_test_id_dir = FIGURES_DIR / "feat_vs_feat_test_id"
+        feat_vs_feat_test_id_dir = FIG_DIR / "feat_vs_feat_test_id"
         feat_vs_feat_test_id_dir.mkdir(parents=True, exist_ok=True)
 
         for feature_x, feature_y in combinations(features_to_plot, 2):
@@ -78,7 +81,7 @@ def main(config_name: str) -> None:
     if plots_config.get("hits_vs_stress", False):
         print("[INFO] Plotting Hits vs Stress images...")
 
-        hits_vs_stress_dir = FIGURES_DIR / "hits_vs_stress"
+        hits_vs_stress_dir = FIG_DIR / "hits_vs_stress"
         hits_vs_stress_dir.mkdir(parents=True, exist_ok=True)
 
         if plots_config.get("use_limit_finder", False):
@@ -132,6 +135,28 @@ def main(config_name: str) -> None:
                     show=show_plots,
                     save=save_plots,
                 )
+
+    # tsne clustering
+    if plots_config.get("tsne_clustering", False):
+        print("[INFO] Plotting t-SNE clustering...")
+
+        tsne_dir = FIG_DIR / "tsne_clustering"
+        tsne_dir.mkdir(parents=True, exist_ok=True)
+
+        figure_path = tsne_dir / f"t-SNE_Clustering.{format_plots}"
+
+        _, _, _, X_reduced, _ = load(data_tsne_path).values()
+        print(f'Preprocessed data loaded from: "{data_tsne_path}"')
+
+        plot_cluster_tsne(
+            labels=data["label"],
+            X_reduced=X_reduced,
+            figure_path=figure_path,
+            width=width,
+            height=height,
+            show=show_plots,
+            save=save_plots,
+        )
 
 
 if __name__ == "__main__":

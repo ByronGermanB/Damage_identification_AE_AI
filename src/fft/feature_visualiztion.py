@@ -1,12 +1,12 @@
 import json
 from itertools import combinations
-from pathlib import Path
 
 import pandas as pd
 
 from utils.fft_analysis import plot_feat_vs_feat, select_significant_indices
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR
 
-CONFIG_DIR = Path("parameters") / "arcan"
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "feature_extraction_1.json"
 
 
@@ -23,12 +23,12 @@ def main(config_name: str) -> None:
     output_name = config.get("output_name", "features.csv")
 
     # Directories
-    DATASET_DIR = Path("datasets") / dataset_name
+    DATA_DIR = DATASETS_DIR / dataset_name
 
-    FIGURES_DIR = Path("figures") / dataset_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    FIG_DIR = FIGURES_DIR / dataset_name
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    DATA_PATH = DATASET_DIR / output_name
+    DATA_PATH = DATA_DIR / output_name
 
     # Read the datasets
     data = pd.read_csv(DATA_PATH)
@@ -52,7 +52,7 @@ def main(config_name: str) -> None:
         format_plot = config["plots"].get("format", "png")
         width, height = config["plots"].get("fig_size", [90, 60])
 
-        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
+        feat_vs_feat_dir = FIG_DIR / "feat_vs_feat"
         feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
 
         label_column = "test_id" if config["plots"].get("labeled", False) else "label"

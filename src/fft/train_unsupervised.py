@@ -10,6 +10,7 @@ from mylib.utils.time_report import Profiler  # type: ignore
 
 # Functions for dataset splitting
 from utils.fft_analysis import train_test_set
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
 
 # Functions for DBSCAN model
 from utils.unsupervised_functions import (
@@ -18,7 +19,7 @@ from utils.unsupervised_functions import (
     tsne,
 )
 
-CONFIG_DIR = Path("parameters") / "arcan"
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
 config_name = "dbscan_trial_2.json"
 
 
@@ -58,15 +59,15 @@ def main(config_name: str) -> None:
     save_data = config.get("save_data", False)
 
     models_dir = (
-        Path("results") / dataset_name / "models" / "trials" / config["trial_name"]
+        RESULTS_DIR / dataset_name / "models" / "trials" / config["trial_name"]
     )
     models_dir.mkdir(parents=True, exist_ok=True)
 
     # Directories
-    FIGURES_DIR = Path("figures") / dataset_name / config["trial_name"]
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    DATASETS_DIR = Path("datasets") / dataset_name
-    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
+    FIG_DIR = FIGURES_DIR / dataset_name / config["trial_name"]
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = DATASETS_DIR / dataset_name
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Import datasets
     if config.get("saved_data_path", None) is not None:
@@ -74,7 +75,7 @@ def main(config_name: str) -> None:
         X_original, X, y, X_reduced, hits = load(DATA_PATH).values()
 
     else:
-        DATA_PATH = DATASETS_DIR / config["feat_data_name"]
+        DATA_PATH = DATA_DIR / config["feat_data_name"]
         data = pd.read_csv(DATA_PATH)
 
         # Separate features and labels
@@ -91,7 +92,7 @@ def main(config_name: str) -> None:
                 # T-SNE
                 X_reduced = tsne(
                     X,
-                    FIGURES_DIR / f"t-SNE Visualization.{format_plot}",
+                    FIG_DIR / f"t-SNE Visualization.{format_plot}",
                     show=show_plots,
                     save=save_plots,
                 )
@@ -100,7 +101,7 @@ def main(config_name: str) -> None:
 
     if save_data:
         data_saving_path = (
-            DATASETS_DIR
+            DATA_DIR
             / "trial_data"
             / config["trial_name"]
             / "preprocessed_data.joblib"
