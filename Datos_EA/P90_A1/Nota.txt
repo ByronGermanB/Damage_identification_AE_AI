@@ -1,2 +1,0 @@
-Rompe la primera mitad de la sección hasta el concentrador y se para de tomar datos, pero la mts sigue cargando hasta fallo final
-El DIC se para al mismo tiempo que el linwave
