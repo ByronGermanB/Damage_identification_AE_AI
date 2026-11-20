@@ -12,3 +12,5 @@ RESULTS_DIR = layout["results"]
 UTILS_DIR = layout["utils"]
 DATASETS_DIR = layout["datasets"]
 FIGURES_DIR = layout["figures"]
+EXAMPLE_DATA_DIR = DATASETS_DIR / "example_data" / "data"
+EXAMPLE_TRADB = EXAMPLE_DATA_DIR / "FV_mod1_1.tradb"
