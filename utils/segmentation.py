@@ -92,7 +92,7 @@ def _refine_arrival_onset(
 def segment_merged_hits(
     waveform: npt.NDArray[np.floating],
     fs: float = 5e6,
-    threshold_dbae: float = 45.0,
+    threshold_dbae: float = 30.0,
     pre_trigger_us: float = 40.0,
     smoothing_us: float = 80.0,
     min_separation_us: float = 250.0,
@@ -110,12 +110,13 @@ def segment_merged_hits(
         return []
 
     # 1. Compute zero-phase smoothed Hilbert envelope [mV]
+    dt_us = 1e6 / fs
     threshold_mV = dbae_to_mV(threshold_dbae)
     smooth_env = compute_smoothed_envelope(waveform, fs=fs, smoothing_us=smoothing_us)
 
     # 2. Detect candidate peaks using both height and prominence to reject coda ripples
-    min_dist_samples = max(1, round(min_separation_us * 1e-6 * fs))
-    pre_trigger_samples = max(0, round(pre_trigger_us * 1e-6 * fs))
+    min_dist_samples = max(1, round(min_separation_us / dt_us))
+    pre_trigger_samples = max(0, round(pre_trigger_us / dt_us))
     min_prominence = max(threshold_mV * 0.5, min_prominence_ratio * threshold_mV)
 
     candidate_peaks, _ = find_peaks(
@@ -168,7 +169,7 @@ def segment_merged_hits(
 
     # First burst: realign t0 if a sub-threshold precursor triggered early
     first_peak = valid_peaks[0]
-    if first_peak * 1e-6 * fs > (pre_trigger_us + min_separation_us):
+    if first_peak * dt_us > (pre_trigger_us + min_separation_us):
         initial_valley = _find_preceding_valley(smooth_env, first_peak)
         first_onset = _refine_arrival_onset(
             waveform, smooth_env, initial_valley, first_peak, onset_rise_fraction
@@ -331,12 +332,11 @@ def plot_subhit_segmentation(
         label=f"Threshold ({threshold_dbae:.1f} dBAE)",
     )
     axs[0].axhline(
-            -threshold_mV,
-            color="crimson",
-            linestyle=":",
-            linewidth=0.7,
-            label=f"Threshold ({threshold_dbae:.1f} dBAE)",
-        )
+        -threshold_mV,
+        color="crimson",
+        linestyle=":",
+        linewidth=0.7,
+    )
 
     for idx, seg in enumerate(segments):
         color = colors[idx % len(colors)]
@@ -545,7 +545,9 @@ def run_segmentation_grid_search(
     profiler = Profiler()
     with profiler.section("Load .tradb waveforms"):
         tradb = vae.io.TraDatabase(Path(tradb_path))
-        waveforms: dict[int, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]] = {}
+        waveforms: dict[
+            int, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
+        ] = {}
         for trai in trai_list:
             amp_v, time = tradb.read_wave(trai, time_axis=True)
             waveforms[trai] = (amp_v * 1e3, time)
