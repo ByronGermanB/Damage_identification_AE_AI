@@ -18,28 +18,11 @@ import seaborn as sns
 from mylib import (  # type: ignore
     IMG_SIZE,
     MARKER_LIST,
+    get_active_palette,
     img_size_inches,
+    resolve_save_target,
     save_fig,
 )
-
-
-def _get_active_palette(n_colors: int) -> list[str]:
-    """Return `n_colors` from the active Matplotlib color cycle set by `configure_plots()`."""
-    cycle_colors = plt.rcParams["axes.prop_cycle"].by_key().get("color", [])
-    if not cycle_colors:
-        cycle_colors = sns.color_palette().as_hex()
-    return [cycle_colors[idx % len(cycle_colors)] for idx in range(n_colors)]
-
-
-def _resolve_save_target(
-    figure_path: str | Path | None,
-    default_filename: str,
-) -> str | Path:
-    """Resolve `figure_path` whether it is a directory, a full file path, or None."""
-    if figure_path is None:
-        return default_filename
-    target = Path(figure_path)
-    return target if target.suffix else target / default_filename
 
 
 def force_data(
@@ -163,7 +146,7 @@ def plot_stress_hits_cluster(
 
     num_labels = filtered_hits["label"].nunique()
     markers = [MARKER_LIST[idx % len(MARKER_LIST)] for idx in range(num_labels)]
-    palette = _get_active_palette(num_labels)
+    palette = get_active_palette(num_labels)
 
     own_fig = ax is None
     if own_fig:
@@ -303,7 +286,7 @@ def plot_stress_hits(
     filtered_hits["Cumulative_Label"] = filtered_hits["Count"].cumsum()
     filtered_force = force[condition_force]
 
-    primary_color = _get_active_palette(1)[0]
+    primary_color = get_active_palette(1)[0]
 
     own_fig = ax is None
     if own_fig:
@@ -392,7 +375,7 @@ def plot_stress_hits(
 
     if save:
         default_name = f"{title} - {test_id}.pdf" if own_fig else f"{title}.pdf"
-        save_fig(fig, _resolve_save_target(figure_path, default_name))
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 
@@ -445,7 +428,7 @@ def plot_feature_time_histogram(
 
     if save:
         default_name = f"{title} - {y}.pdf" if own_fig else f"{title}.pdf"
-        save_fig(fig, _resolve_save_target(figure_path, default_name))
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 
@@ -467,7 +450,7 @@ def plot_feature_histogram(
     Plot and optionally save a 1D histogram of a feature distribution.
     `figsize` is specified in millimeters `(width, height)`.
     """
-    primary_color = _get_active_palette(1)[0]
+    primary_color = get_active_palette(1)[0]
 
     own_fig = ax is None
     if own_fig:
@@ -498,7 +481,7 @@ def plot_feature_histogram(
 
     if save:
         default_name = f"{title} - {x}.pdf" if own_fig else f"{title}.pdf"
-        save_fig(fig, _resolve_save_target(figure_path, default_name))
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 

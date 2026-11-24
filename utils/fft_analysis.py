@@ -10,15 +10,26 @@ Created on Thu Nov 16 10:24:10 2023
 
 # Main libraries
 import os
+import re
 import string
+from collections.abc import Sequence
+from pathlib import Path
 
 # Import necessary libraries
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import vallenae as vae
+from mylib import (  # type: ignore
+    IMG_SIZE,
+    MARKER_LIST,
+    configure_plots,
+    get_active_palette,
+    img_size_inches,
+    resolve_save_target,
+    save_fig,
+)
 
 # Libraries for signal processing
 from scipy.fft import fft, fftfreq
@@ -31,7 +42,6 @@ from sklearn.feature_selection import RFECV
 # Feature visualization
 from sklearn.manifold import TSNE
 from sklearn.metrics import (
-    ConfusionMatrixDisplay,
     accuracy_score,
     f1_score,
     make_scorer,
@@ -48,13 +58,7 @@ from sklearn.model_selection import (
 # Data processing and normalization
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler, StandardScaler
 
-# Set font to Times New Roman and size to 8
-matplotlib.rcParams["font.family"] = "serif"
-matplotlib.rcParams["font.serif"] = "Times New Roman"
-matplotlib.rcParams["font.size"] = 8
-matplotlib.rcParams["figure.dpi"] = 150
-
-MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+configure_plots(font="IBM Plex Sans")
 
 # =============================================================================
 # Feature extraction
@@ -64,808 +68,609 @@ MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
 class Features:
     def __init__(
         self,
-        path: str,
+        path: str | Path,
         lower_freq: float,
         upper_freq: float,
         sampling_rate: float,
         N_samp: int,
         N_seg: int,
-        desfase: int,
-        desfase_carga: int = 0,
-        force: pd.DataFrame = None,
+        signal_offset: float,
+        load_offset: float = 0,
+        force: pd.DataFrame | None = None,
     ):
         """
         Parameters
         ----------
-        path : str
-            Directory where the pri and tra files are located.
-        lower_freq : int, float
+        path : str or Path
+            Directory where the `.pridb` and `.tradb` files are located.
+        lower_freq : float
             Lower frequency limit in kHz.
-        upper_freq : int, float
+        upper_freq : float
             Upper frequency limit in kHz.
-        sampling_rate : int, float
+        sampling_rate : float
             Data acquisition frequency per second in MHz.
         N_samp : int
-            Number of samples (data points) in each segment for Fourier analysis (preferably a power of 2).
+            Number of samples in each segment for Fourier analysis (power of 2).
         N_seg : int
-            Total number of segments to analyze.
-        desfase : int
-            Index to start the signal from the beginning or with a positive offset, depending on the pretrigger.
-        desfase_carga : int
-            Offset of the time taken in AE and in MTS.
-
-        Returns
-        -------
-        Object initialized with values to apply extraction and plotting functions.
-
+            Total number of overlapping segments to analyze.
+        signal_offset : float
+            Start offset in microseconds [µs] depending on pretrigger.
+        load_offset : float, default=0
+            Offset between AE and MTS time bases [s].
+        force : DataFrame, optional
+            MTS force data for automatic time alignment.
         """
-        self.path = path
-        self.lower_freq = lower_freq  # Lower frequency limit in kHz
-        self.upper_freq = upper_freq  # Upper frequency limit in kHz
-        self.sampling_rate = (
-            sampling_rate  # Data acquisition frequency per second in MHz
-        )
-        self.N_samp = N_samp  # Number of samples (data points) in each segment
-        self.N_seg = N_seg  # Number of segments
-        self.desfase = desfase  # Depends on the pretrigger time, allows starting from
-        # the beginning of the signal or with a positive offset
-        self.desfase_carga = desfase_carga  # Offset of the time taken in AE and in MTS
-        self.force = force  # Force data for time alignment
+        self.path = Path(path)
+        self.lower_freq = lower_freq
+        self.upper_freq = upper_freq
+        self.sampling_rate = sampling_rate
+        self.N_samp = N_samp
+        self.N_seg = N_seg
+        self.signal_offset_us = signal_offset
+        self.signal_offset = int(signal_offset * sampling_rate)
+        self.load_offset = load_offset
+        self.force = force
 
-        # Open pri and tra files
-        files = os.listdir(self.path)
-        for item in files:
+        for item in os.listdir(self.path):
             if item.endswith(".tradb"):
-                self.tradb_path = os.path.join(self.path, item)
-
+                self.tradb_path = self.path / item
             elif item.endswith(".pridb"):
-                self.pridb_path = os.path.join(self.path, item)
+                self.pridb_path = self.path / item
 
-        # Calculate values
-        self.res_freq = sampling_rate * 1000 / N_samp  # Frequency resolution in kHz
-        self.time_samp = 1 / sampling_rate  # Sampling time in µs (microseconds)
-        self.time_seg = self.time_samp * N_samp  # Time of each segment in µs
+        self.res_freq = sampling_rate * 1000.0 / N_samp
+        self.time_samp = 1.0 / sampling_rate
+        self.time_seg = self.time_samp * N_samp
 
-        # Calculate frequency range indices
-        self.lower_freq_index = int(
-            self.lower_freq // self.res_freq
-        )  # Lower frequency index
-        self.upper_freq_index = int(
-            self.upper_freq // self.res_freq + 1
-        )  # Upper frequency index
-        self.N_feat_seg = 9  # Number of features per segment
+        self.lower_freq_index = int(self.lower_freq // self.res_freq)
+        self.upper_freq_index = int(self.upper_freq // self.res_freq + 1)
+        self.N_feat_seg = 9
 
-        # Values for FFT that are calculated only once
-        self.window = hamming(self.N_samp)  # Create the Hamming window
-        self.freq_fft = (fftfreq(self.N_samp, self.time_samp * 1e-6) / 1000)[
+        self.window = hamming(self.N_samp)
+        self.freq_fft = (fftfreq(self.N_samp, self.time_samp * 1e-6) / 1000.0)[
             : self.N_samp // 2
-        ]  # Positive frequency values of the FFT in kHz
+        ]
         self.freq_fft_rango = self.freq_fft[
             self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the frequency values
+        ]
+
+    def read_transient(self, trai: int) -> tuple[np.ndarray, np.ndarray]:
+        """Load `(time_us, amp_mv)` for a given `trai` from `self.tradb_path`."""
+        return load_transient_wave(self.tradb_path, trai)
 
     def feature_extr(
-        self, threshold, counts, label, test_id, max_trai=None, min_trai=1
-    ):
-        """
+        self,
+        threshold: float,
+        counts: int,
+        label: int | str,
+        test_id: str,
+        max_trai: int | None = None,
+        min_trai: int = 1,
+    ) -> pd.DataFrame:
+        """Extract frequency and time-domain features for all filtered transients."""
+        pridb = vae.io.PriDatabase(str(self.pridb_path))
+        tradb = vae.io.TraDatabase(str(self.tradb_path))
+        df_hits = pridb.read_hits()
 
-        Parameters
-        ----------
-        threshold : int
-            Threshold amplitude value for filtering.
-        counts : int
-            Minimum counts value for filtering.
-        label : int or str
-            Class to which the signal belongs.
-        test_id : str
-            Test code for later identification.
-        max_trai : int, optional
-            Maximum trai index to consider, if you want to exclude the break.
-            The default is None.
-        min_trai : int, optional
-            Minimum trai index to consider, if you want to exclude some erroneous
-            initial data. The default is 1.
+        threshold_V = 10 ** (threshold / 20 - 6)
+        no_saturation = 10 ** (94 / 20 - 6)
 
-        Returns
-        -------
-        df_total : DataFrame
-            DataFrame containing frequency features + rise time, classes, and trai number.
-
-        """
-
-        # Read files
-        pridb = vae.io.PriDatabase(self.pridb_path)
-        tradb = vae.io.TraDatabase(self.tradb_path)
-        df_hits = pridb.read_hits()  # Read the hits that have occurred
-
-        # Signal filtering (trai threshold and counts)
-        threshold_V = 10 ** (threshold / 20 - 6)  # Threshold in Volts
-        no_saturacion = 10 ** (94 / 20 - 6)
-
+        mask = (
+            (df_hits["channel"] >= 1)
+            & (df_hits["amplitude"] >= threshold_V)
+            & (df_hits["amplitude"] <= no_saturation)
+            & (df_hits["trai"] >= min_trai)
+            & (df_hits["counts"] >= counts)
+        )
         if max_trai is not None:
-            df_hits_filtro = df_hits[
-                (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= threshold_V)
-                & (df_hits["amplitude"] <= no_saturacion)
-                & (df_hits["trai"] >= min_trai)
-                & (df_hits["trai"] <= max_trai)
-                & (df_hits["counts"] >= counts)
-            ]  # Select only the values that meet the conditions
-        else:
-            df_hits_filtro = df_hits[
-                (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= threshold_V)
-                & (df_hits["amplitude"] <= no_saturacion)
-                & (df_hits["trai"] >= min_trai)
-                & (df_hits["counts"] >= counts)
-            ]  # Select only the values that meet the conditions
+            mask &= df_hits["trai"] <= max_trai
+
+        df_hits_filtro = df_hits[mask]
         if df_hits_filtro.empty:
             print(
                 f"[WARNING] No transients found for label '{label}' with the given filtering criteria."
             )
-            return (
-                pd.DataFrame()
-            )  # Return an empty DataFrame if no transients are found
+            return pd.DataFrame()
 
-        trai = df_hits_filtro[
-            "trai"
-        ].to_numpy()  # Extract the column with the TRAI values (transient indices)
-        N_trai = trai.size  # Total number of transients
+        trai = df_hits_filtro["trai"].to_numpy()
+        N_trai = trai.size
+        v_features_total = np.zeros((N_trai, self.N_seg * self.N_feat_seg))
 
-        # Create matrix to store features
-        v_features_total = np.zeros(
-            (N_trai, self.N_seg * self.N_feat_seg)
-        )  # Array that will store the features in each iteration
+        n_bins = len(self.freq_fft_rango)
+        bin_edges = [int(n_bins * k / 6) for k in range(7)]
 
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
-
-        # Main for loop for each transient
         for N_iter, trans in enumerate(trai):
-            amp, _ = tradb.read_wave(trans, time_axis=False)  # Read the i-th transient
+            amp, _ = tradb.read_wave(trans, time_axis=False)
+            amp *= 1e3  # mV
 
-            amp *= 1e3  # in mV   # The operator *= is updating the amplitude value
-            # -- amplitude = amplitude * 1e3
-            # The signal was in volts and is represented in mV
-            # This is the amplitude
-            # time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in
-            # seconds and represented in µs
-
-            # Create the segments
-            seg_total = np.zeros(
-                (self.N_seg, self.N_samp)
-            )  # Array that will store the amplitude values in each segment
-
-            # For loop to apply the Fourier transform
-            for i in x:
+            seg_total = np.zeros((self.N_seg, self.N_samp))
+            for i in range(self.N_seg):
                 seg_total[i] = amp[
-                    int(i * self.N_samp / 2) + self.desfase : int(
-                        (i / 2 + 1) * self.N_samp
+                    int(i * self.N_samp / 2 + self.signal_offset) : int(
+                        (i / 2 + 1) * self.N_samp + self.signal_offset
                     )
-                    + self.desfase
                 ]
 
-            # Apply Hamming windows to each segment
-            seg_t_window = (
-                seg_total * self.window
-            )  # Apply the window to the segment matrix
-
-            # Calculate FFT of the segment matrix
-            amp_fft = fft(
-                seg_t_window
-            )  # Calculate the Fourier transform of the segment matrix
-            amp_fft = np.abs(
-                amp_fft
-            )  # Calculate the amplitude modulus to not represent with its phase
-
-            # Select the range of interest frequencies
+            amp_fft = np.abs(fft(seg_total * self.window))
             amp_fft_rango = amp_fft[
                 :, self.lower_freq_index : self.upper_freq_index + 1
-            ]  # Section the amplitude values in the established frequency range
+            ]
 
-            # Initialize frequency feature vectors for each segment
-            peak_freq = np.zeros(
-                self.N_seg
-            )  # Store the peak frequencies of each segment
-            centroid_freq = np.zeros(
-                self.N_seg
-            )  # Store the centroid frequencies of each segment
-            part_power_1 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 1 of each segment
-            part_power_2 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 2 of each segment
-            part_power_3 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 3 of each segment
-            part_power_4 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 4 of each segment
-            part_power_5 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 5 of each segment
-            part_power_6 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 6 of each segment
+            peak_freq = np.zeros(self.N_seg)
+            centroid_freq = np.zeros(self.N_seg)
+            part_powers = np.zeros((6, self.N_seg))
 
-            # For loop to calculate features
-            for i in x:
-                # Peak frequency
-                peak_index = np.argmax(amp_fft_rango[i])
-                peak_freq[i] = self.freq_fft_rango[peak_index]
+            for i in range(self.N_seg):
+                spectrum = amp_fft_rango[i]
+                peak_freq[i] = self.freq_fft_rango[np.argmax(spectrum)]
+                centroid_freq[i] = np.sum(spectrum * self.freq_fft_rango) / np.sum(
+                    spectrum
+                )
 
-                # Centroid frequency
-                centroid_freq[i] = np.sum(
-                    amp_fft_rango[i] * self.freq_fft_rango
-                ) / np.sum(amp_fft_rango[i])
-
-                # Partial Power 1 - 6
-                denominator = np.sum((amp_fft_rango[i]) ** 2)
-                part_power_1[i] = (
-                    np.sum(
-                        (amp_fft_rango[i, 0 : int(len(self.freq_fft_rango) * 1 / 6)])
-                        ** 2
+                power_spec = spectrum**2
+                denominator = np.sum(power_spec)
+                for band in range(6):
+                    part_powers[band, i] = (
+                        np.sum(power_spec[bin_edges[band] : bin_edges[band + 1]])
+                        * 100.0
+                        / denominator
                     )
-                    * 100
-                    / denominator
-                )
-                part_power_2[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 1 / 6) : int(
-                                    len(self.freq_fft_rango) * 2 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
-                    )
-                    * 100
-                    / denominator
-                )
-                part_power_3[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 2 / 6) : int(
-                                    len(self.freq_fft_rango) * 3 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
-                    )
-                    * 100
-                    / denominator
-                )
-                part_power_4[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 3 / 6) : int(
-                                    len(self.freq_fft_rango) * 4 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
-                    )
-                    * 100
-                    / denominator
-                )
-                part_power_5[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 4 / 6) : int(
-                                    len(self.freq_fft_rango) * 5 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
-                    )
-                    * 100
-                    / denominator
-                )
-                part_power_6[i] = (
-                    np.sum(
-                        (amp_fft_rango[i, int(len(self.freq_fft_rango) * 5 / 6) :]) ** 2
-                    )
-                    * 100
-                    / denominator
-                )
 
             w_peak_freq = (peak_freq * centroid_freq) ** 0.5
 
-            # Feature vector
             v_features = np.hstack(
                 (
                     peak_freq,
                     w_peak_freq,
                     centroid_freq,
-                    part_power_1,
-                    part_power_2,
-                    part_power_3,
-                    part_power_4,
-                    part_power_5,
-                    part_power_6,
+                    part_powers[0],
+                    part_powers[1],
+                    part_powers[2],
+                    part_powers[3],
+                    part_powers[4],
+                    part_powers[5],
                 )
-            )  # Group the features
-            v_features = v_features.reshape(
+            )
+            v_features_total[N_iter] = v_features.reshape(
                 1, self.N_feat_seg * self.N_seg
-            )  # Reshape the feature matrix into a single row vector
-            v_features_total[N_iter] = (
-                v_features  # Chain the values to each row of the matrix to create the feature matrix
             )
 
-        # Feature names
+        base_features = [
+            "peak_freq",
+            "w_peak_freq",
+            "centroid_freq",
+            *(f"p_power_{k}" for k in range(1, 7)),
+        ]
 
-        if self.N_seg == 3:
-            name_feature = [
-                "peak_freq_1",
-                "peak_freq_2",
-                "peak_freq_3",
-                "w_peak_freq_1",
-                "w_peak_freq_2",
-                "w_peak_freq_3",
-                "centroid_freq_1",
-                "centroid_freq_2",
-                "centroid_freq_3",
-                "p_power_1_1",
-                "p_power_1_2",
-                "p_power_1_3",
-                "p_power_2_1",
-                "p_power_2_2",
-                "p_power_2_3",
-                "p_power_3_1",
-                "p_power_3_2",
-                "p_power_3_3",
-                "p_power_4_1",
-                "p_power_4_2",
-                "p_power_4_3",
-                "p_power_5_1",
-                "p_power_5_2",
-                "p_power_5_3",
-                "p_power_6_1",
-                "p_power_6_2",
-                "p_power_6_3",
-            ]  # Array that will store the feature names per segment
+        name_feature = (
+            base_features
+            if self.N_seg == 1
+            else [
+                f"{feat}_{seg}"
+                for feat in base_features
+                for seg in range(1, self.N_seg + 1)
+            ]
+        )
 
-        elif self.N_seg == 1:
-            name_feature = [
-                "peak_freq",
-                "w_peak_freq",
-                "centroid_freq",
-                "p_power_1",
-                "p_power_2",
-                "p_power_3",
-                "p_power_4",
-                "p_power_5",
-                "p_power_6",
-            ]  # Array that will store the feature names per segment
-
-        # Feature DataFrame
         df_features = pd.DataFrame(v_features_total, columns=name_feature)
-
-        # Trai DataFrame
         df_trai = pd.DataFrame(trai, columns=["trai"])
 
-        # Time and rise time DataFrame
         df_time = (
             df_hits_filtro[["rise_time", "time", "amplitude", "energy", "counts"]]
             .reset_index()
-            .drop(["set_id"], axis=1)
+            .drop(columns=["set_id"], errors="ignore")
         )
         df_time["amplitude"] = 20 * (np.log10(df_time["amplitude"]) + 6)
-        
+
         if self.force is not None:
-            desfase_carga = df_time["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
+            load_offset = df_time["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
         else:
-            desfase_carga = self.desfase_carga
-        df_time["time"] = df_time["time"] - desfase_carga
-        df_time["time_norm"] = df_time["time"] / max(df_time["time"])
+            load_offset = self.load_offset
 
-        # Class DataFrame
+        df_time["time"] = df_time["time"] - load_offset
+        df_time["time_norm"] = df_time["time"] / df_time["time"].max()
+
         df_label = pd.DataFrame({"label": [label] * N_trai})
-
-        # Total DataFrame
         df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
         df_total["test_id"] = test_id
 
-        # The function returns the total DataFrame
         return df_total
 
     def plot_signal(
         self,
-        trai,
-        name_figure,
-        figure_path,
-        time_graph=None,
-        title=None,
-        x_label="Time [µs]",
-        y_label="Amplitude [mV]",
-        width=90,
-        height=60,
-        guardar=False,
-    ):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title.
+        trai: int,
+        name_figure: str,
+        figure_path: str | Path | None = None,
+        time_graph: float | None = None,
+        title: str | None = None,
+        x_label: str = "Time [µs]",
+        y_label: str = "Amplitude [mV]",
+        figsize: tuple[float, float] = IMG_SIZE,
+        ax: plt.Axes | None = None,
+        save: bool = False,
+        show: bool = True,
+    ) -> plt.Axes:
+        """Convenience wrapper to plot a transient directly from `self.tradb_path`."""
+        time_us, amp_mv = self.read_transient(trai)
+        plot_title = title or f"Transient Wave Plot: {name_figure} - Transient: {trai}"
+        target = resolve_save_target(figure_path, f"Transient_{name_figure}_{trai}.pdf")
 
-            e.g. Transient Wave Plot: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        time_graph : int or float, optional
-            Time in µs up to which the graph is desired.
-        title : str, optional
-            Title of the figure. The default is None.
-        x_label : str, optional
-            Label for the x-axis. The default is 'Time [µs]'.
-        y_label : str, optional
-            Label for the y-axis. The default is 'Amplitude [mV]'.
-        width : int or float, optional
-            Width of the figure in millimeters. The default is 90.
-        height : int or float, optional
-            Height of the figure in millimeters. The default is 60.
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
+        return plot_signal(
+            time_us=time_us,
+            amp_mv=amp_mv,
+            figure_path=target,
+            time_graph=time_graph,
+            signal_offset_us=self.signal_offset_us,
+            sampling_rate=self.sampling_rate,
+            title=plot_title,
+            x_label=x_label,
+            y_label=y_label,
+            figsize=figsize,
+            ax=ax,
+            save=save,
+            show=show,
+        )
 
-            e.g. Transient_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the transient signal in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Plot the transient
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        figsize_inches = (width / 25.4, height / 25.4)
-        plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
-
-        if time_graph is None:
-            plt.plot(time, amp, linewidth=0.6)
-        else:
-            points = int(time_graph * self.sampling_rate + 1)
-            plt.plot(
-                time[self.desfase : points], amp[self.desfase : points], linewidth=0.6
-            )
-            plt.ylim(
-                bottom=min(amp[self.desfase : points]) * 1.6,
-                top=max(amp[self.desfase : points]) * 1.6,
-            )
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
-        plt.grid(linewidth=0.3, color=".25")
-        if title is None:
-            plt.title(f"Transient Wave Plot: {name_figure} - Transient: {trai}")
-        else:
-            plt.title(title)
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Transient_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-    def plot_segmentation(self, trai, name_figure, figure_path, guardar=False):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title.
-
-            e.g. Segmentation: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
-
-            e.g. Segmentation_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the segmentation and FFT in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Read amplitude and time
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        # Fourier transform calculation
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
-
-        # Create segments
-        seg_total = np.zeros(
-            (self.N_seg, self.N_samp)
-        )  # Array that will store the amplitude values in each segment
-
-        for i in x:
-            seg_total[i] = amp[
-                int(i * self.N_samp / 2) + self.desfase : int((i / 2 + 1) * self.N_samp)
-                + self.desfase
-            ]
-
-        # Apply Hamming windows to each segment
-        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
-
-        # Calculate FFT of the segment matrix
-        amp_fft = fft(
-            seg_t_window
-        )  # Calculate the Fourier transform of the segment matrix
-        amp_fft = np.abs(
-            amp_fft
-        )  # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part)
-
-        # Select the range of interest frequencies
-        amp_fft_rango = amp_fft[
-            :, self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the amplitude values in the established frequency range
-
-        # Multiple plots in one figure
-        fig, axs = plt.subplots(2, self.N_seg, figsize=(15, 7.5))
-        plt.suptitle(f"Segmentation: {name_figure} - Transient: {trai}", fontsize=14)
-        plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
-
-        # Maximum and minimum for axes
-        seg_t_window_max = np.amax(abs(seg_t_window))
-        amp_fft_max = np.amax(amp_fft_rango)
-
-        for j in x:
-            # Time domain
-            axs[0, j].grid(linewidth=0.3, color=".25")
-            axs[0, j].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
-            axs[0, j].plot(
-                time[
-                    int(j * self.N_samp / 2) + self.desfase : int(
-                        (j / 2 + 1) * self.N_samp
-                    )
-                    + self.desfase
-                ],
-                seg_t_window[j],
-            )
-            axs[0, j].set_xlabel("Time [µs]")
-            axs[0, 0].set_ylabel("Amplitude [mV]")
-            axs[0, j].set_title(f"Segment: {j + 1}")
-
-            # FFT
-            axs[1, j].grid(linewidth=0.3, color=".25")
-            axs[1, j].set_ylim(0, amp_fft_max * 1.1)
-            axs[1, j].plot(self.freq_fft_rango, amp_fft_rango[j][: self.N_samp // 2])
-
-            # Vertical line in the peak frequency
-            peak_index = np.argmax(amp_fft_rango[j])
-            peak_freq = self.freq_fft_rango[peak_index]
-            y_max = np.amax(amp_fft_rango[j]) * 2 / (amp_fft_max * 1.1)
-            axs[1, j].axvline(
-                x=peak_freq, ymax=y_max, color="red", linestyle="--", label="f_peak"
-            )
-
-            # Vertical line in the Centroid frequency
-            centroid_freq = np.sum(amp_fft_rango[j] * self.freq_fft_rango) / np.sum(
-                amp_fft_rango[j]
-            )
-            y_max_c = 0.8 * y_max
-            axs[1, j].axvline(
-                x=centroid_freq,
-                ymax=y_max_c,
-                color="green",
-                linestyle=":",
-                label="f_centroid",
-            )
-
-            axs[1, j].set_xlabel("Frequency [kHz]")
-            axs[1, 0].set_ylabel("FFT-Magnitude [mV]")
-            axs[1, j].legend()
-
-        # Add a single border around all subplots
-        fig.patch.set_edgecolor("black")
-        fig.patch.set_linewidth(1)
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-    def plot_segmentation_1(
+    def plot_segmentation(
         self,
-        trai,
-        name_figure,
-        figure_path,
-        title=None,
-        width=90,
-        height=120,
-        guardar=False,
-    ):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title
-
-            e.g. Segmentation: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        title : str, optional
-            Title of the figure, if left as default it will be Segmentation:
-            {name_figure} - Transient: {trai}. The default is None
-        width : int or float, optional
-            Width of the figure in millimeters. The default is 90
-        height : int or float, optional
-            Height of the figure in millimeters. The default is 120
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
-
-            e.g. Segmentation_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the segmentation (with a single segment) and FFT in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Read amplitude and time
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        # Fourier transform calculation
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
-
-        # Create segments
-        seg_total = np.zeros(
-            (self.N_seg, self.N_samp)
-        )  # Array that will store the amplitude values in each segment
-
-        for i in x:
-            seg_total[i] = amp[
-                int(i * self.N_samp / 2) + self.desfase : int((i / 2 + 1) * self.N_samp)
-                + self.desfase
-            ]
-
-        # Apply Hamming windows to each segment
-        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
-
-        # Calculate FFT of the segment matrix
-        amp_fft = fft(
-            seg_t_window
-        )  # Calculate the Fourier transform of the segment matrix
-        amp_fft = np.abs(
-            amp_fft
-        )  # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part)
-
-        # Select the range of interest frequencies
-        amp_fft_rango = amp_fft[
-            :, self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the amplitude values in the established frequency range
-
-        # Multiple plots in one figure
-        figsize_inches = (width / 25.4, height / 25.4)
-        _, axs = plt.subplots(
-            2, self.N_seg, figsize=figsize_inches, dpi=300, tight_layout=True
-        )
-        if title is None:
-            plt.suptitle(
-                f"Segmentation: {name_figure} - Transient: {trai}", fontsize=10
-            )
-        else:
-            plt.suptitle(title, fontsize=10)
-        plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
-
-        # Maximum and minimum for axes
-        seg_t_window_max = np.amax(abs(seg_t_window))
-        amp_fft_max = np.amax(amp_fft_rango)
-
-        # Time domain
-        axs[0].grid(linewidth=0.3, color=".25")
-        axs[0].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
-        axs[0].plot(
-            time[
-                int(0 * self.N_samp / 2) + self.desfase : int((0 / 2 + 1) * self.N_samp)
-                + self.desfase
-            ],
-            seg_t_window[0],
-            linewidth=1,
-        )
-        axs[0].set_xlabel("Time [µs]")
-        axs[0].set_ylabel("Amplitude [mV]")
-        axs[0].set_title(f"Segment: {0 + 1}")
-
-        # FFT
-        axs[1].grid(linewidth=0.3, color=".25")
-        axs[1].set_ylim(0, amp_fft_max * 1.1)
-        axs[1].plot(
-            self.freq_fft_rango, amp_fft_rango[0][: self.N_samp // 2], linewidth=1
+        trai: int,
+        name_figure: str,
+        figure_path: str | Path | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        save: bool = False,
+        show: bool = True,
+    ) -> np.ndarray:
+        """Convenience wrapper to plot segmentation + FFT directly from `self.tradb_path`."""
+        time_us, amp_mv = self.read_transient(trai)
+        plot_title = title or f"Segmentation: {name_figure} - Transient: {trai}"
+        target = resolve_save_target(
+            figure_path, f"Segmentation_{name_figure}_{trai}.pdf"
         )
 
-        # Vertical line in the peak frequency
-        peak_index = np.argmax(amp_fft_rango[0])
-        peak_freq = self.freq_fft_rango[peak_index]
-        y_max = np.amax(amp_fft_rango[0]) * 2 / (amp_fft_max * 1.1)
-        axs[1].axvline(
-            x=peak_freq, ymax=y_max, color="red", linestyle="--", label="f_peak"
+        return plot_segmentation(
+            time_us=time_us,
+            amp_mv=amp_mv,
+            sampling_rate=self.sampling_rate,
+            lower_freq=self.lower_freq,
+            upper_freq=self.upper_freq,
+            n_samp=self.N_samp,
+            n_seg=self.N_seg,
+            signal_offset_us=self.signal_offset_us,
+            figure_path=target,
+            title=plot_title,
+            figsize=figsize,
+            save=save,
+            show=show,
         )
 
-        # Vertical line in the Centroid frequency
-        centroid_freq = np.sum(amp_fft_rango[0] * self.freq_fft_rango) / np.sum(
-            amp_fft_rango[0]
-        )
-        y_max_c = 0.8 * y_max
-        axs[1].axvline(
-            x=centroid_freq,
-            ymax=y_max_c,
-            color="green",
-            linestyle=":",
-            label="f_centroid",
-        )
 
-        axs[1].set_xlabel("Frequency [kHz]")
-        axs[1].set_ylabel("FFT-Magnitude [mV]")
-        axs[1].legend()
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-
-def unir_df(*dataframes):
+def load_transient_wave(
+    tradb_path: str | Path,
+    trai: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Parameters
-    ----------
-    *dataframes : DataFrame
-        DataFrames to concatenate.
+    Read a single transient from a Vallen `.tradb` file.
 
     Returns
     -------
-    concatenated_df : DataFrame
-        Returns a single concatenated DataFrame.
-
+    time_us : np.ndarray
+        Time vector in microseconds [µs].
+    amp_mv : np.ndarray
+        Signal amplitude in millivolts [mV].
     """
-    # Concatenate DataFrames vertically
-    concatenated_df = pd.concat(dataframes, axis=0, ignore_index=True)
-    return concatenated_df
+    tradb = vae.io.TraDatabase(str(tradb_path))
+    amp_v, time_s = tradb.read_wave(trai, time_axis=True)
+    return time_s * 1e6, amp_v * 1e3
+
+
+def load_transient_csv(
+    csv_path: str | Path,
+    time_col: str | int = 0,
+    amp_col: str | int = 1,
+    time_scale: float = 1.0,
+    amp_scale: float = 1.0,
+    sep: str = ",",
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Load a transient waveform from a `.csv` file.
+
+    Parameters
+    ----------
+    csv_path : str or Path
+        Path to the CSV file.
+    time_col, amp_col : str or int, default=(0, 1)
+        Column names or positional indices for time and amplitude.
+    time_scale, amp_scale : float, default=1.0
+        Multiplicative unit conversion factors (e.g., `1e6` for s -> µs, `1e3` for V -> mV).
+    sep : str, default=","
+        CSV delimiter.
+
+    Returns
+    -------
+    time_us : np.ndarray
+    amp_mv : np.ndarray
+    """
+    df = pd.read_csv(csv_path, sep=sep)
+    t = (
+        df[time_col].to_numpy()
+        if isinstance(time_col, str)
+        else df.iloc[:, time_col].to_numpy()
+    )
+    a = (
+        df[amp_col].to_numpy()
+        if isinstance(amp_col, str)
+        else df.iloc[:, amp_col].to_numpy()
+    )
+    return t * time_scale, a * amp_scale
+
+
+def compute_segmented_fft(
+    amp_mv: np.ndarray,
+    sampling_rate: float,
+    n_samp: int = 1024,
+    n_seg: int = 1,
+    lower_freq: float = 100.0,
+    upper_freq: float = 900.0,
+    signal_offset_us: float = 0.0,
+) -> dict[str, np.ndarray]:
+    """
+    Segment a waveform with 50% overlap, apply a Hamming window, and compute FFT spectra.
+
+    Parameters
+    ----------
+    amp_mv : np.ndarray
+        Waveform amplitude in mV.
+    sampling_rate : float
+        Sampling frequency in MHz (samples/µs).
+    n_samp : int
+        Samples per segment (power of 2).
+    n_seg : int
+        Number of 50%-overlapping segments.
+    lower_freq, upper_freq : float
+        Frequency band of interest in kHz.
+    signal_offset_us : float
+        Start offset in µs.
+
+    Returns
+    -------
+    dict with keys:
+        `seg_indices`, `seg_windowed`, `freq_range`, `amp_fft_range`,
+        `peak_freq`, `centroid_freq`.
+    """
+    offset_pts = int(signal_offset_us * sampling_rate)
+    res_freq = sampling_rate * 1000.0 / n_samp  # kHz
+    time_samp = 1.0 / sampling_rate  # µs
+
+    lower_idx = int(lower_freq // res_freq)
+    upper_idx = int(upper_freq // res_freq + 1)
+
+    window = hamming(n_samp)
+    freq_fft = (fftfreq(n_samp, time_samp * 1e-6) / 1000.0)[: n_samp // 2]
+    freq_range = freq_fft[lower_idx : upper_idx + 1]
+
+    seg_total = np.zeros((n_seg, n_samp))
+    seg_indices: list[tuple[int, int]] = []
+
+    for i in range(n_seg):
+        start = int(i * n_samp / 2) + offset_pts
+        end = int((i / 2 + 1) * n_samp) + offset_pts
+        seg_total[i] = amp_mv[start:end]
+        seg_indices.append((start, end))
+
+    seg_windowed = seg_total * window
+    amp_fft = np.abs(fft(seg_windowed))
+    amp_fft_range = amp_fft[:, lower_idx : upper_idx + 1]
+
+    peak_freq = np.zeros(n_seg)
+    centroid_freq = np.zeros(n_seg)
+
+    for i in range(n_seg):
+        peak_idx = int(np.argmax(amp_fft_range[i]))
+        peak_freq[i] = freq_range[peak_idx]
+        centroid_freq[i] = np.sum(amp_fft_range[i] * freq_range) / np.sum(
+            amp_fft_range[i]
+        )
+
+    return {
+        "seg_indices": np.array(seg_indices),
+        "seg_windowed": seg_windowed,
+        "freq_range": freq_range,
+        "amp_fft_range": amp_fft_range,
+        "peak_freq": peak_freq,
+        "centroid_freq": centroid_freq,
+    }
+
+
+# =============================================================================
+# Standalone Plotting Functions (mylib-compatible)
+# =============================================================================
+def plot_signal(
+    time_us: np.ndarray,
+    amp_mv: np.ndarray,
+    figure_path: str | Path | None = None,
+    time_graph: float | None = None,
+    signal_offset_us: float = 0.0,
+    sampling_rate: float | None = None,
+    title: str | None = "Transient Wave Plot",
+    subtitle: str | None = None,
+    x_label: str = "Time [µs]",
+    y_label: str = "Amplitude [mV]",
+    figsize: tuple[float, float] = IMG_SIZE,
+    ax: plt.Axes | None = None,
+    i: int = 1,
+    n_col: int = 1,
+    save: bool = False,
+    show: bool = True,
+) -> plt.Axes:
+    """
+    Plot and optionally save a time-domain transient waveform.
+    `figsize` is specified in millimeters `(width, height)`.
+    """
+    primary_color = get_active_palette(1)[0]
+
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
+        if title is not None:
+            ax.set_title(title)
+        ax.set_xlabel(x_label)
+    else:
+        fig = ax.get_figure()
+        ax.set_xlabel(f"{x_label}\n({string.ascii_lowercase[i - 1]})")
+        if subtitle is not None:
+            ax.set_title(subtitle)
+        elif title is not None:
+            ax.set_title(title)
+
+    if time_graph is None:
+        ax.plot(time_us, amp_mv, color=primary_color, linewidth=0.6)
+    else:
+        if sampling_rate is not None:
+            start_idx = int(signal_offset_us * sampling_rate)
+            end_idx = int(time_graph * sampling_rate + 1)
+            t_slice = time_us[start_idx:end_idx]
+            a_slice = amp_mv[start_idx:end_idx]
+        else:
+            mask = (time_us >= signal_offset_us) & (time_us <= time_graph)
+            t_slice = time_us[mask]
+            a_slice = amp_mv[mask]
+
+        ax.plot(t_slice, a_slice, color=primary_color, linewidth=0.6)
+        if a_slice.size > 0:
+            ax.set_ylim(bottom=a_slice.min() * 1.6, top=a_slice.max() * 1.6)
+
+    if (i - 1) % n_col == 0:
+        ax.set_ylabel(y_label)
+    else:
+        ax.set_ylabel("")
+
+    ax.grid(True, linestyle="-", alpha=0.7)
+    ax.set_axisbelow(True)
+
+    if save:
+        default_name = f"{title or 'Transient'}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
+
+    if show:
+        plt.show()
+    if own_fig:
+        plt.close(fig)
+
+    return ax
+
+
+def plot_segmentation(
+    time_us: np.ndarray,
+    amp_mv: np.ndarray,
+    sampling_rate: float,
+    lower_freq: float = 100.0,
+    upper_freq: float = 900.0,
+    n_samp: int = 1024,
+    n_seg: int = 1,
+    signal_offset_us: float = 0.0,
+    figure_path: str | Path | None = None,
+    title: str | None = "Signal Segmentation & FFT",
+    figsize: tuple[float, float] | None = None,
+    save: bool = False,
+    show: bool = True,
+) -> np.ndarray:
+    """
+    Plot windowed time-domain segments (top row) and their FFT magnitude spectra
+    with `f_peak` and `f_centroid` markers (bottom row).
+
+    Works identically for `n_seg == 1` and `n_seg > 1`.
+    `figsize` is specified in millimeters `(width, height)`.
+    """
+    if figsize is None:
+        figsize = (90 * n_seg, 110)
+
+    dsp = compute_segmented_fft(
+        amp_mv=amp_mv,
+        sampling_rate=sampling_rate,
+        n_samp=n_samp,
+        n_seg=n_seg,
+        lower_freq=lower_freq,
+        upper_freq=upper_freq,
+        signal_offset_us=signal_offset_us,
+    )
+
+    seg_indices = dsp["seg_indices"]
+    seg_windowed = dsp["seg_windowed"]
+    freq_range = dsp["freq_range"]
+    amp_fft_range = dsp["amp_fft_range"]
+    peak_freq = dsp["peak_freq"]
+    centroid_freq = dsp["centroid_freq"]
+
+    palette = get_active_palette(3)
+    sig_color, peak_color, centroid_color = palette[0], palette[1], palette[2]
+
+    fig, axs = plt.subplots(
+        2,
+        n_seg,
+        figsize=img_size_inches(figsize),
+        squeeze=False,
+    )
+    if title is not None:
+        fig.suptitle(title)
+
+    seg_t_window_max = np.amax(np.abs(seg_windowed))
+    amp_fft_max = np.amax(amp_fft_range)
+
+    for j in range(n_seg):
+        start, end = seg_indices[j]
+
+        # Row 0: Windowed time-domain segment
+        ax_time = axs[0, j]
+        ax_time.plot(
+            time_us[start:end], seg_windowed[j], color=sig_color, linewidth=0.8
+        )
+        ax_time.set_ylim(-1.1 * seg_t_window_max, 1.1 * seg_t_window_max)
+        ax_time.set_xlabel("Time [µs]")
+        if j == 0:
+            ax_time.set_ylabel("Amplitude [mV]")
+        ax_time.set_title(f"Segment {j + 1}")
+        ax_time.grid(True, linestyle="-", alpha=0.7)
+        ax_time.set_axisbelow(True)
+
+        # Row 1: FFT spectrum + Peak & Centroid frequencies
+        ax_fft = axs[1, j]
+        ax_fft.plot(freq_range, amp_fft_range[j], color=sig_color, linewidth=0.8)
+        ax_fft.set_ylim(0, amp_fft_max * 1.1)
+
+        y_max = np.amax(amp_fft_range[j]) / (amp_fft_max * 1.1)
+        ax_fft.axvline(
+            x=peak_freq[j],
+            ymax=min(y_max * 1.05, 1.0),
+            color=peak_color,
+            linestyle="--",
+            linewidth=1.0,
+            label=f"$f_{{peak}}$ ({peak_freq[j]:.0f} kHz)",
+        )
+        ax_fft.axvline(
+            x=centroid_freq[j],
+            ymax=min(y_max * 0.85, 1.0),
+            color=centroid_color,
+            linestyle=":",
+            linewidth=1.0,
+            label=f"$f_{{centroid}}$ ({centroid_freq[j]:.0f} kHz)",
+        )
+
+        ax_fft.set_xlabel("Frequency [kHz]")
+        if j == 0:
+            ax_fft.set_ylabel("FFT Magnitude [mV]")
+        ax_fft.legend(loc="upper right")
+        ax_fft.grid(True, linestyle="-", alpha=0.7)
+        ax_fft.set_axisbelow(True)
+
+    if save:
+        default_name = f"{title or 'Segmentation'}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
+
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    return axs
 
 
 def train_test_set(
@@ -1230,214 +1035,116 @@ def forest_clf_hyper(X_train, X_test, y_train, y_test, selected_features=None):
     return y_train_pred, y_test_pred, best_features, best_model
 
 
-def conf_matrix(
-    y, y_pred, name_figure, figure_path, width=90, height=60, guardar=False
-):
-    """
-    Parameters
-    ----------
-    y : series or array
-        True classes of the dataset.
-    y_pred : series or array
-        Predicted classes by the model.
-    name_figure : str
-        Name of the class that appears in the figure title.
-
-        e.g. Confusion matrix - {name_figure}
-    figure_path : str
-        Directory to save the figure.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Confusion matrix {name_figure}.pdf
-    Returns
-    -------
-    Plots and (saves) the confusion matrix in pdf format.
-
-    """
-    # Plot the confusion matrix
-    figsize_inches = (width / 25.4, height / 25.4)
-    _, axs = plt.subplots(
-        nrows=1, ncols=2, figsize=figsize_inches, dpi=300, tight_layout=True
-    )
-    plt.subplots_adjust(wspace=0.4)
-    plt.rc("font", size=10)
-    ConfusionMatrixDisplay.from_predictions(y, y_pred, ax=axs[0])
-    axs[0].set_title("By element")
-    plt.rc("font", size=10)
-    ConfusionMatrixDisplay.from_predictions(
-        y, y_pred, ax=axs[1], normalize="true", values_format=".0%"
-    )
-    axs[1].set_title("Normalized by row")
-    plt.suptitle(f"Confusion matrix - {name_figure}", fontsize=14)
-
-    # Save the image in figure_path
-    if guardar:
-        figure_filename = f"Confusion matrix {name_figure}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-    plt.show()
-
-
 def plot_tsne(
     X,
     y,
-    figure_path,
+    figure_path=None,
     title="t-SNE Scatter Plot",
     x_label="t-SNE Dimension 1",
     y_label="t-SNE Dimension 2",
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     selected_features=None,
-    guardar=False,
+    save: bool = False,
+    show: bool = True,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    figure_path : str
-        Directory to save the figure.
-    title : str, optional
-        Title of the figure. The default is 't-SNE Scatter Plot'.
-    x_label : str, optional
-        Label for the x-axis. The default is 't-SNE Dimension 1'.
-    y_label : str, optional
-        Label for the y-axis. The default is 't-SNE Dimension 2'.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    selected_features : list, optional
-        Names of the features to train the model. The default is None.
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. t-SNE_{name_figure}.pdf
-
-    Returns
-    -------
-    Plots and (saves) the dimensionality reduction with class labels and markers in pdf format.
-
+    Plot and optionally save a 2D t-SNE scatter plot with class labels and markers.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X = X[selected_features]
 
     tsne = TSNE(n_components=2, init="random", learning_rate="auto", random_state=42)
     X_reduced = tsne.fit_transform(X)
 
-    # Create a DataFrame for easy use with Seaborn
     tsne_df = pd.DataFrame(X_reduced, columns=[f"t-SNE_{i + 1}" for i in range(2)])
+    y_series = pd.Series(y, name="Labels").reset_index(drop=True)
+    tsne_df["Labels"] = y_series
 
-    y = pd.Series(y, name="Labels")
-    y.index = tsne_df.index
-    tsne_df["Labels"] = y
+    label_order = list(pd.unique(tsne_df["Labels"]))
+    n_labels = len(label_order)
+    markers = {
+        label: MARKER_LIST[idx % len(MARKER_LIST)]
+        for idx, label in enumerate(label_order)
+    }
+    palette = get_active_palette(n_labels)
 
-    # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+    fig, ax = plt.subplots(figsize=img_size_inches(figsize))
 
-    # Create a figure
-    figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
-
-    # Use Seaborn scatter plot with hue and style parameters
     sns.scatterplot(
         x="t-SNE_1",
         y="t-SNE_2",
         hue="Labels",
         style="Labels",
+        hue_order=label_order,
+        style_order=label_order,
         data=tsne_df,
-        palette=sns.color_palette(),
+        palette=palette,
         markers=markers,
+        ax=ax,
     )
 
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.grid()
-    plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_title(title)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.grid(True)
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
-    if guardar:
-        figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+    if save:
+        save_fig(fig, resolve_save_target(figure_path, f"{title}.pdf"))
 
-    plt.show()
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    return ax
 
 
 def plot_histogram(
-    X, y, figure_path, width=90, height=60, bins=30, feature_to_save="", guardar=False
+    X,
+    y,
+    figure_path=None,
+    figsize: tuple[float, float] = IMG_SIZE,
+    bins: int = 30,
+    feature_to_save: str = "",
+    save: bool = False,
+    show: bool = True,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    figure_path : str
-        Directory to save the figure.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    bins : int, optional
-        Number of bins for the histogram. The default is 30.
-    feature_to_save : str, optional
-        Feature to save its histogram. The default is ''.
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Histogram_{feature_to_save}.pdf
-
-    Returns
-    -------
-    Plots all feature histograms and (saves) only 'feature_to_save' in pdf format.
-
+    Plot feature histograms grouped by class and optionally save `feature_to_save`.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Directory and filename to save the image
-    figure_filename = f"Histogram_{feature_to_save}.pdf"
-    figure_path_name = os.path.join(figure_path, figure_filename)
+    class_labels = list(pd.unique(y))
+    palette = get_active_palette(len(class_labels))
 
-    # Iterate over each column
     for feature in X.columns:
-        # Set up the figure and axis
-        figsize_inches = (width / 25.4, height / 25.4)
-        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
-        # Set the number of bins for the histogram
-        bins = 30
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
 
-        # Plot the histogram for each class
-        class_labels = y.unique()
-        for class_label in class_labels:
+        for class_label, color in zip(class_labels, palette):
             feat_to_plot = X[y == class_label][feature]
             ax.hist(
-                feat_to_plot, bins=bins, alpha=0.6, label=class_label, edgecolor="black"
+                feat_to_plot,
+                bins=bins,
+                alpha=0.6,
+                label=class_label,
+                color=color,
+                edgecolor="black",
             )
 
-        # Add labels and a title
         ax.set_xlabel("Feature Value")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram - {feature}")
-
-        # Add a legend
         ax.legend()
 
-        # Save the image in figure_path
-        if guardar and (feature == feature_to_save):
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        if save and (feature == feature_to_save):
+            save_fig(
+                fig,
+                resolve_save_target(figure_path, f"Histogram_{feature_to_save}.pdf"),
+            )
 
-        # Display the plot
-        plt.show()
+        if show:
+            plt.show()
+        plt.close(fig)
 
 
 def plot_feat_vs_feat(
@@ -1445,68 +1152,23 @@ def plot_feat_vs_feat(
     y,
     feat_x,
     feat_y,
-    figure_path="Feat_vs_Feat.png",
+    fig_path="Feat_vs_Feat.png",
     title=None,
     subtitle=None,
     x_label=None,
     y_label=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
-    n_row=1,
     save=False,
     show=False,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    feat_1 : str
-        Name of feature 1 to plot.
-    feat_2 : str
-        Name of feature 2 to plot.
-    figure_path : str
-        Directory to save the figure.
-    title : str or list, optional
-        Title of the figure, if left as default it will be {feat_1} vs {feat_2}.
-        The default is None.
-    subtitle : str or list, optional
-        Subtitle of the figure, if left as default it will be {feat_1} vs {feat_2}.
-        The default is None.
-    x_label : str, optional
-        Label for the x-axis. The default is None.
-    y_label : str, optional
-        Label for the y-axis. The default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    ax : axes, optional
-        Axes subplot. The default is None.
-    i : int, optional
-        Counter to plot each subplot. The default is 1.
-    n_col : int, optional
-        Number of columns. The default is 1.
-    n_row : int, optional
-        Number of rows. The default is 1.
-    save : boolean, optional
-        "True" to save the image. The default is False.
-    show : boolean, optional
-        "True" to show the image. The default is False.
-        e.g. Feat_vs_Feat_{feat_1}_{feat_2}.pdf
-
-    Returns
-    -------
-    Plots and (saves) a scatter plot of two features with labels and markers in pdf format.
-
+    Plot and optionally save a scatter plot of two features with class labels and markers.
+    `figsize` is specified in millimeters `(width, height)`.
     """
     y = pd.Series(y, name="Labels")
-    # Rename 'Labels' column in y if it already exists in X
     if "Labels" in X.columns:
         X = X.drop(["Labels"], axis=1)
 
@@ -1515,41 +1177,23 @@ def plot_feat_vs_feat(
     label_order = list(pd.unique(data["Labels"]))
     n_labels = len(label_order)
 
-    # Define custom markers for each class
     markers = {
-        label: MARKER_LIST[i % len(MARKER_LIST)] for i, label in enumerate(label_order)
+        label: MARKER_LIST[idx % len(MARKER_LIST)]
+        for idx, label in enumerate(label_order)
     }
-    # Create a scatter plot
-    figsize_inches = (width / 25.4, height / 25.4)
+    palette = get_active_palette(n_labels)
 
-    # If there is just one plot and set the title
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
-        if title is None:
-            ax.set_title(f"{feat_x} vs {feat_y}")
-        else:
-            ax.set_title(title)
-        if x_label is None:
-            ax.set_xlabel(feat_x)
-        else:
-            ax.set_xlabel(x_label)
-
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
+        ax.set_title(f"{feat_x} vs {feat_y}" if title is None else title)
+        ax.set_xlabel(feat_x if x_label is None else x_label)
     else:
-        if x_label is None:
-            ax.set_xlabel(f"{feat_x}\n(" + string.ascii_lowercase[i - 1] + ")")
-        else:
-            ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(f"{feat_x} vs {feat_y}")
-    if n_labels > 10:
-        palette = sns.color_palette("tab20", n_colors=n_labels)
-    else:
-        palette = sns.color_palette("tab10", n_colors=n_labels)
+        fig = ax.get_figure()
+        base_xlabel = feat_x if x_label is None else x_label
+        ax.set_xlabel(f"{base_xlabel}\n({string.ascii_lowercase[i - 1]})")
+        ax.set_title(subtitle if subtitle is not None else f"{feat_x} vs {feat_y}")
 
-    # Create the plot
     sns.scatterplot(
         x=feat_x,
         y=feat_y,
@@ -1564,25 +1208,18 @@ def plot_feat_vs_feat(
         legend=True,
     )
 
-    # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
-        if y_label is None:
-            ax.set_ylabel(feat_y)
-        else:
-            ax.set_ylabel(y_label)
+        ax.set_ylabel(feat_y if y_label is None else y_label)
     else:
         ax.set_ylabel("")
 
-    # Logarithmic scale if you choose energy
     if feat_x == "energy":
         ax.set_xscale("log")
-
     if feat_y == "energy":
         ax.set_yscale("log")
 
-    # Activate the grid
-    ax.grid()
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.grid(True)
+    ax.set_axisbelow(True)
 
     if n_labels > 6:
         ax.legend(
@@ -1590,34 +1227,85 @@ def plot_feat_vs_feat(
             bbox_to_anchor=(1.02, 1),
             loc="upper left",
             borderaxespad=0,
-            fontsize=7,
         )
+        if own_fig:
+            fig.subplots_adjust(right=0.72)
 
-    fig = ax.get_figure()
-    fig.subplots_adjust(right=0.72)
-
-    # Save the image in figure_path
     if save:
-        fig_format = figure_path.name.split(".")[-1]
-        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+        save_fig(fig, fig_path)
     if show:
         plt.show()
-
-    plt.close()
+    if own_fig:
+        plt.close(fig)
 
     return ax
 
 
+def resolve_feature_columns(
+    data: pd.DataFrame,
+    feature_columns: Sequence[str],
+    n_seg: int | None = None,
+) -> list[str]:
+    """
+    Resolve base feature names against `data.columns` for both `N_seg == 1`
+    and segmented (`N_seg > 1`) DataFrames.
+
+    - If a name already exists in `data.columns` (e.g., `"energy"` or `"peak_freq"`
+      when `N_seg == 1`, or an explicit `"peak_freq_2"`), it is kept as-is.
+    - Otherwise, it expands to matching segmented columns (`f"{col}_{seg}"`).
+    """
+    resolved: list[str] = []
+    missing: list[str] = []
+
+    for col in feature_columns:
+        if col in data.columns:
+            resolved.append(col)
+            continue
+
+        if n_seg is not None and n_seg > 1:
+            seg_cols = [
+                f"{col}_{seg}"
+                for seg in range(1, n_seg + 1)
+                if f"{col}_{seg}" in data.columns
+            ]
+        else:
+            pattern = re.compile(rf"^{re.escape(col)}_(\d+)$")
+            matches = [
+                (int(m.group(1)), c)
+                for c in data.columns
+                if (m := pattern.match(c))
+            ]
+            seg_cols = [c for _, c in sorted(matches, key=lambda item: item[0])]
+
+        if seg_cols:
+            resolved.extend(seg_cols)
+        else:
+            missing.append(col)
+
+    if missing:
+        raise KeyError(f"Feature column(s) not found in DataFrame: {missing}")
+
+    # Preserve order while removing any accidental duplicates
+    return list(dict.fromkeys(resolved))
+
+
 def select_significant_indices(
-    data,
-    label_column,
-    feature_columns,
-    max_points=20,
-):
+    data: pd.DataFrame,
+    label_column: str,
+    feature_columns: Sequence[str],
+    max_points: int = 20,
+    n_seg: int | None = None,
+) -> list:
+    """
+    Select the top `max_points` most significant (highest mean |robust z-score|)
+    row indices per class in `label_column`, supporting both `N_seg == 1` and
+    segmented (`N_seg > 1`) feature columns.
+    """
+    resolved_cols = resolve_feature_columns(data, feature_columns, n_seg=n_seg)
     selected_indices = []
 
     for _, group in data.groupby(label_column, sort=False):
-        values = group[feature_columns].apply(pd.to_numeric, errors="coerce")
+        values = group[resolved_cols].apply(pd.to_numeric, errors="coerce")
         values = values.dropna(how="all")
 
         if values.empty:

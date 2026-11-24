@@ -18,10 +18,12 @@ from utils.paths import (
 DEFAULT_CONFIG_SUBDIR = PARAMETERS_DIR / "example_data"
 DEFAULT_CONFIG_NAME = "trial_1.json"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_SUBDIR / DEFAULT_CONFIG_NAME
+DEFAULT_DATA_DIR = DATASETS_DIR / "example_data" / "data"
 
 
 __all__ = [
     "DEFAULT_CONFIG_PATH",
+    "DEFAULT_DATA_DIR",
     "get_fft_paths",
     "parse_config_args",
 ]
