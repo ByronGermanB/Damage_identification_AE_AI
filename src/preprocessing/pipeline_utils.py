@@ -23,7 +23,7 @@ DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_SUBDIR / DEFAULT_CONFIG_NAME
 
 
 PARAM_COLUMNS = [
-    "fs",
+    "sampling_rate",
     "threshold_dbae",
     "pre_trigger_us",
     "smoothing_us",

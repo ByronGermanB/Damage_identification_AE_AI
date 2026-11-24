@@ -39,7 +39,7 @@ def main(
 
     dataset_name = str(config["dataset_name"])
     test_id = str(config["test_id"])
-    fs = float(config.get("fs", 5e6))
+    sampling_rate = float(config.get("sampling_rate", 5.0))
 
     trai_list, expected_segments = _extract_trais_and_expectations(config)
     if not trai_list:
@@ -79,7 +79,7 @@ def main(
         expected_segments=expected_segments,
         save_valid_only=save_valid_only,
         test_id=test_id,
-        fs=fs,
+        sampling_rate=sampling_rate,
         img_format=img_format,
         figsize=figsize_mm,
         save=save_figures,

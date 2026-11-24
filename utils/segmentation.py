@@ -35,21 +35,21 @@ def dbae_to_mV(dbae: float) -> float:
 
 def compute_smoothed_envelope(
     waveform: npt.NDArray[np.floating],
-    fs: float = 5e6,
+    sampling_rate: float = 5.0,
     smoothing_us: float = 80.0,
 ) -> npt.NDArray[np.float64]:
     """
     Compute the zero-phase smoothed Hilbert envelope [mV] of a transient signal.
     Parameters:
     - waveform: 1D array of transient signal amplitudes [mV].
-    - fs: Sampling frequency [Hz].
+    - sampling_rate: Sampling frequency [MHz].
     - smoothing_us: Smoothing window width [µs] for the uniform filter.
 
     Returns:
     - smooth_env: 1D array of the smoothed Hilbert envelope [mV].
     """
 
-    dt_us = 1e6 / fs
+    dt_us = 1 / sampling_rate
     smooth_samples = max(1, round(smoothing_us / dt_us))
     analytic_env = np.abs(hilbert(waveform))
     return uniform_filter1d(
@@ -91,7 +91,7 @@ def _refine_arrival_onset(
 
 def segment_merged_hits(
     waveform: npt.NDArray[np.floating],
-    fs: float = 5e6,
+    sampling_rate: float = 5.0,
     threshold_dbae: float = 30.0,
     pre_trigger_us: float = 40.0,
     smoothing_us: float = 100.0,
@@ -110,9 +110,11 @@ def segment_merged_hits(
         return []
 
     # 1. Compute zero-phase smoothed Hilbert envelope [mV]
-    dt_us = 1e6 / fs
+    dt_us = 1 / sampling_rate
     threshold_mV = dbae_to_mV(threshold_dbae)
-    smooth_env = compute_smoothed_envelope(waveform, fs=fs, smoothing_us=smoothing_us)
+    smooth_env = compute_smoothed_envelope(
+        waveform, sampling_rate=sampling_rate, smoothing_us=smoothing_us
+    )
 
     # 2. Detect candidate peaks using both height and prominence to reject coda ripples
     min_dist_samples = max(1, round(min_separation_us / dt_us))
@@ -221,8 +223,8 @@ def _format_segmentation_report(
     test_id: str | None = None,
 ) -> str:
     """Format a plain-text report summarizing parameters and extracted sub-hits."""
-    fs = float(params.get("fs", 5e6))
-    dt_us = 1e6 / fs
+    sampling_rate = float(params.get("sampling_rate", 5.0))
+    dt_us = 1 / sampling_rate
     lines = [
         "=" * 72,
         "SUB-HIT SEGMENTATION REPORT",
@@ -294,14 +296,14 @@ def plot_subhit_segmentation(
 
     fig_path = Path(figure_path)
     time_us = time * 1e6
-    fs = float(params.get("fs", 5e6))
+    sampling_rate = float(params.get("sampling_rate", 5.0))
     smoothing_us = float(params.get("smoothing_us", 80.0))
     threshold_dbae = float(params.get("threshold_dbae", 45.0))
     threshold_mV = dbae_to_mV(threshold_dbae)
 
     if smooth_env is None:
         smooth_env = compute_smoothed_envelope(
-            waveform, fs=fs, smoothing_us=smoothing_us
+            waveform, sampling_rate=sampling_rate, smoothing_us=smoothing_us
         )
 
     fig, axs = plt.subplots(
@@ -518,7 +520,7 @@ def run_segmentation_grid_search(
     expected_segments: list[int] | None = None,
     save_valid_only: bool = False,
     test_id: str = "",
-    fs: float = 5e6,
+    sampling_rate: float = 5.0,
     img_format: str = "png",
     show_title: bool = True,
     show_subplot_titles: bool = True,
@@ -555,13 +557,13 @@ def run_segmentation_grid_search(
     keys = list(param_grid.keys())
     combinations = list(itertools.product(*(param_grid[k] for k in keys)))
     summary_rows: list[dict[str, Any]] = []
-    dt_us = 1e6 / fs
+    dt_us = 1 / sampling_rate
 
     t_seg_total = 0.0
     t_plot_total = 0.0
 
     for combo_idx, values in enumerate(combinations, start=1):
-        params = {"fs": fs, **dict(zip(keys, values))}
+        params = {"sampling_rate": sampling_rate, **dict(zip(keys, values))}
 
         combo_evals: list[tuple[int, list[SubHitSegment], list[float]]] = []
         with profiler.section("Envelope & segmentation"):
@@ -594,7 +596,7 @@ def run_segmentation_grid_search(
                 with profiler.section("Plot & export reports"):
                     smooth_env = compute_smoothed_envelope(
                         waveform,
-                        fs=fs,
+                        sampling_rate=sampling_rate,
                         smoothing_us=float(params.get("smoothing_us", 80.0)),
                     )
                     plot_subhit_segmentation(
@@ -649,7 +651,7 @@ def run_segmentation_grid_search(
             summary_df=summary_df,
             expected_map=expected_map,
             report_path=valid_report_path,
-            param_keys=["fs", *keys],
+            param_keys=["sampling_rate", *keys],
             test_id=test_id,
         )
         print(
