@@ -7,10 +7,7 @@ from typing import Any
 from mylib import (  # type: ignore
     parse_config_args as _mylib_parse_config_args,
 )
-from mylib import (  # type: ignore
-    resolve_path,
-    save_config,
-)
+from mylib import resolve_path  # type: ignore
 
 from utils.paths import (
     DATASETS_DIR,
@@ -41,8 +38,6 @@ __all__ = [
     "DEFAULT_CONFIG_PATH",
     "get_segmentation_paths",
     "parse_config_args",
-    "resolve_path",
-    "save_config",
 ]
 
 
