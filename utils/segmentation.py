@@ -94,11 +94,11 @@ def segment_merged_hits(
     fs: float = 5e6,
     threshold_dbae: float = 30.0,
     pre_trigger_us: float = 40.0,
-    smoothing_us: float = 80.0,
-    min_separation_us: float = 250.0,
-    min_prominence_ratio: float = 0.20,
-    valley_decay_ratio: float = 0.30,
-    min_secondary_ratio: float = 0.15,
+    smoothing_us: float = 100.0,
+    min_separation_us: float = 300.0,
+    min_prominence_ratio: float = 0.25,
+    valley_decay_ratio: float = 0.35,
+    min_secondary_ratio: float = 0.10,
     onset_rise_fraction: float = 0.10,
 ) -> list[SubHitSegment]:
     """
@@ -435,7 +435,7 @@ def _write_valid_combos_report(
         combo_scores.append((matches, -abs_error, str(combo_id)))
 
         if matches == len(expected_map) and len(by_trai) == len(expected_map):
-            valid_combos.append(str(combo_id))
+            valid_combos.append(combo_id)
 
     total_combos = summary_df["combo_id"].nunique()
     lines = [
@@ -562,7 +562,6 @@ def run_segmentation_grid_search(
 
     for combo_idx, values in enumerate(combinations, start=1):
         params = {"fs": fs, **dict(zip(keys, values))}
-        combo_tag = f"combo_{combo_idx:03d}"
 
         combo_evals: list[tuple[int, list[SubHitSegment], list[float]]] = []
         with profiler.section("Envelope & segmentation"):
@@ -587,7 +586,7 @@ def run_segmentation_grid_search(
         for trai, segments, durations_us in combo_evals:
             waveform, time = waveforms[trai]
             prefix = f"{test_id}_" if test_id else ""
-            stem = f"{prefix}trai_{trai}_{combo_tag}"
+            stem = f"{prefix}trai_{trai}_{combo_idx}"
             fig_name = f"{stem}.{img_format}"
             fig_path = fig_dir / fig_name
 
@@ -618,7 +617,7 @@ def run_segmentation_grid_search(
                 t_plot_total += profiler._times["Plot & export reports"]
 
             row: dict[str, Any] = {
-                "combo_id": combo_tag,
+                "combo_id": combo_idx,
                 "test_id": test_id,
                 "trai": trai,
                 "n_segments": len(segments),
