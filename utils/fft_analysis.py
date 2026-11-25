@@ -78,7 +78,6 @@ class Features:
         N_samp: int,
         N_seg: int,
         signal_offset: float,
-        load_offset: float = 0,
         force: pd.DataFrame | None = None,
         segmentation_params: dict[str, Any] | None = None,
         sub_signal_offset_us: float = 0.0,
@@ -100,8 +99,6 @@ class Features:
             Total number of overlapping segments to analyze.
         signal_offset : float
             Start offset in microseconds [µs] depending on pretrigger.
-        load_offset : float, default=0
-            Offset between AE and MTS time bases [s].
         force : DataFrame, optional
             MTS force data for automatic time alignment.
         """
@@ -113,7 +110,6 @@ class Features:
         self.N_seg = N_seg
         self.signal_offset_us = signal_offset
         self.signal_offset = int(signal_offset * sampling_rate)
-        self.load_offset = load_offset
         self.force = force
 
         for item in os.listdir(self.path):
@@ -128,7 +124,6 @@ class Features:
 
         self.lower_freq_index = int(self.lower_freq // self.res_freq)
         self.upper_freq_index = int(self.upper_freq // self.res_freq + 1)
-        self.N_feat_seg = 9
 
         self.window = hamming(self.N_samp)
         self.freq_fft = (fftfreq(self.N_samp, self.time_samp * 1e-6) / 1000.0)[
@@ -218,12 +213,12 @@ class Features:
         threshold_mv = threshold_V * 1e3
         no_saturation = 10 ** (94 / 20 - 6)
 
+        # Counts over threshold
         mask = (
             (df_hits["channel"] >= 1)
             & (df_hits["amplitude"] >= threshold_V)
             & (df_hits["amplitude"] <= no_saturation)
             & (df_hits["trai"] >= min_trai)
-            & (df_hits["counts"] >= counts)
         )
         if max_trai is not None:
             mask &= df_hits["trai"] <= max_trai
@@ -234,10 +229,6 @@ class Features:
                 f"[WARNING] No transients found for label '{label}' with the given filtering criteria."
             )
             return pd.DataFrame()
-
-        # trai = df_hits_filtro["trai"].to_numpy()
-        # N_trai = trai.size
-        # v_features_total = np.zeros((N_trai, self.N_seg * self.N_feat_seg))
 
         n_bins = len(self.freq_fft_rango)
         bin_edges = [int(n_bins * k / 6) for k in range(7)]
@@ -250,6 +241,12 @@ class Features:
             amp_v, _ = tradb.read_wave(trans, time_axis=False)
             amp_mv = amp_v * 1e3
             total_sq_energy = float(np.sum(amp_mv**2))
+
+            # Count filter with the actual threshold
+            above = abs(amp_mv) >= threshold_mv
+            sub_counts = int(np.sum(above[1:] & ~above[:-1]) + int(above[0]))
+            if sub_counts < counts:
+                continue
 
             if self.segmentation_params is not None:
                 segments = segment_merged_hits(
@@ -275,7 +272,7 @@ class Features:
                         continue
 
                     # Count positive threshold crossings in this sub-hit
-                    above = sub_amp >= threshold_mv
+                    above = abs(sub_amp) >= threshold_mv
                     sub_counts = int(np.sum(above[1:] & ~above[:-1]) + int(above[0]))
                     if sub_counts < counts:
                         continue
@@ -288,7 +285,7 @@ class Features:
                     energy_ratio = (
                         float(np.sum(sub_amp**2)) / total_sq_energy
                         if total_sq_energy > 0
-                        else 1.0
+                        else 0.0
                     )
                     sub_time_s = float(hit.time) + (
                         seg.onset_idx * self.time_samp * 1e-6
@@ -366,14 +363,11 @@ class Features:
         if self.force is not None:
             load_offset = df_meta["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
         else:
-            load_offset = self.load_offset
+            load_offset = 0
 
         df_meta["time"] = df_meta["time"] - load_offset
-        df_meta["time_norm"] = df_meta["time"] / df_meta["time"].max()
-
-        # df_label = pd.DataFrame({"label": [label] * N_trai})
-        # df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
-        # df_total["test_id"] = test_id
+        max_t = df_meta["time"].max()
+        df_meta["time_norm"] = df_meta["time"] / max_t if max_t != 0 else 0.0
 
         return pd.concat([df_features, df_meta], axis=1)
 

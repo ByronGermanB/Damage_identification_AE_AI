@@ -79,6 +79,37 @@ def _find_preceding_valley(
     return idx
 
 
+def _find_onset_with_threshold_fallback(
+    waveform: npt.NDArray[np.floating],
+    smooth_env: npt.NDArray[np.float64],
+    valley_idx: int,
+    peak_idx: int,
+    threshold_mv: float,
+    rise_fraction: float = 0.10,
+) -> int:
+    """Use first threshold crossing in [valley_idx, peak_idx], falling back to refined onset."""
+    if peak_idx <= valley_idx:
+        return max(0, min(peak_idx, valley_idx))
+
+    search_slice = np.abs(waveform[valley_idx : peak_idx + 1])
+    if search_slice.size == 0:
+        return valley_idx
+
+    crossings = np.flatnonzero(search_slice >= threshold_mv)
+    if crossings.size > 0:
+        onset_idx = valley_idx + int(crossings[0])
+    else:
+        onset_idx = _refine_arrival_onset(
+            waveform=waveform,
+            smooth_env=smooth_env,
+            valley_idx=valley_idx,
+            peak_idx=peak_idx,
+            rise_fraction=rise_fraction,
+        )
+
+    return min(onset_idx, peak_idx)
+
+
 def _refine_arrival_onset(
     waveform: npt.NDArray[np.floating],
     smooth_env: npt.NDArray[np.float64],
@@ -184,8 +215,16 @@ def segment_merged_hits(
     first_peak = valid_peaks[0]
     if first_peak * dt_us > (pre_trigger_us + min_separation_us):
         initial_valley = _find_preceding_valley(smooth_env, first_peak)
-        first_onset = _refine_arrival_onset(
-            waveform, smooth_env, initial_valley, first_peak, onset_rise_fraction
+        # first_onset = _refine_arrival_onset(
+        #     waveform, smooth_env, initial_valley, first_peak, onset_rise_fraction
+        # )
+        first_onset = _find_onset_with_threshold_fallback(
+            waveform,
+            smooth_env,
+            initial_valley,
+            first_peak,
+            threshold_mV,
+            onset_rise_fraction,
         )
     else:
         first_onset = min(pre_trigger_samples, first_peak)
@@ -196,8 +235,16 @@ def segment_merged_hits(
     # Subsequent bursts: clamp pre-trigger at the preceding valley to avoid tail leakage
     for idx, valley_idx in enumerate(split_valleys):
         next_peak = valid_peaks[idx + 1]
-        next_onset = _refine_arrival_onset(
-            waveform, smooth_env, valley_idx, next_peak, onset_rise_fraction
+        # next_onset = _refine_arrival_onset(
+        #     waveform, smooth_env, valley_idx, next_peak, onset_rise_fraction
+        # )
+        next_onset = _find_onset_with_threshold_fallback(
+            waveform,
+            smooth_env,
+            valley_idx,
+            next_peak,
+            threshold_mV,
+            onset_rise_fraction,
         )
         onsets.append(next_onset)
         starts.append(max(valley_idx, next_onset - pre_trigger_samples))
