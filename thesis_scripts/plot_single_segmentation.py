@@ -7,12 +7,10 @@ import pandas as pd
 import vallenae as vae
 from mylib import configure_plots, load_config, parse_config_args  # type: ignore
 
-from src.preprocessing.pipeline_utils import (
-    PARAM_COLUMNS,
-    get_segmentation_paths,
-)
+from src.preprocessing.pipeline_utils import get_segmentation_paths
 from thesis_scripts.thesis_utils import DEFAULT_CONFIG_DIR
 from utils.segmentation import (
+    PARAM_COLUMNS,
     compute_smoothed_envelope,
     plot_subhit_segmentation,
     segment_merged_hits,
@@ -50,7 +48,7 @@ def main(
     combo_id: str | None = config.get("combo_id", None)
 
     manual_params: dict[str, Any] = {
-        "fs": 5e6,
+        "sampling_rate": 5e6,
         "threshold_dbae": 30.0,
         "pre_trigger_us": 40.0,
         "smoothing_us": 100.0,
@@ -74,9 +72,9 @@ def main(
     amp_v, time = tradb.read_wave(trai, time_axis=True)
     waveform = amp_v * 1e3
 
-    fs = float(params.get("fs", 5e6))
+    sampling_rate = float(params.get("sampling_rate", 5.0))
     smooth_env = compute_smoothed_envelope(
-        waveform, fs=fs, smoothing_us=float(params.get("smoothing_us", 100.0))
+        waveform, sampling_rate=sampling_rate, smoothing_us=float(params.get("smoothing_us", 100.0))
     )
     segments = segment_merged_hits(waveform=waveform, **params)
 
