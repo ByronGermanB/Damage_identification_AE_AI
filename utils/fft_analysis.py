@@ -14,6 +14,7 @@ import re
 import string
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 # Import necessary libraries
 import matplotlib.pyplot as plt
@@ -58,6 +59,8 @@ from sklearn.model_selection import (
 # Data processing and normalization
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler, StandardScaler
 
+from utils.segmentation import SubHitSegment, segment_merged_hits
+
 configure_plots(font="IBM Plex Sans")
 
 # =============================================================================
@@ -77,6 +80,8 @@ class Features:
         signal_offset: float,
         load_offset: float = 0,
         force: pd.DataFrame | None = None,
+        segmentation_params: dict[str, Any] | None = None,
+        sub_signal_offset_us: float = 0.0,
     ):
         """
         Parameters
@@ -132,6 +137,64 @@ class Features:
         self.freq_fft_rango = self.freq_fft[
             self.lower_freq_index : self.upper_freq_index + 1
         ]
+        self.segmentation_params = segmentation_params
+        self.sub_signal_offset = int(sub_signal_offset_us * sampling_rate)
+
+    def _extract_fft_vector(
+        self,
+        waveform_mv: np.ndarray,
+        offset_pts: int,
+        bin_edges: list[int],
+    ) -> np.ndarray:
+        """Compute the 1D spectral feature vector (`9 * N_seg`) for one waveform or sub-hit."""
+        min_required = int(((self.N_seg - 1) / 2 + 1) * self.N_samp) + offset_pts
+        if waveform_mv.size < min_required:
+            waveform_mv = np.pad(waveform_mv, (0, min_required - waveform_mv.size))
+
+        seg_total = np.zeros((self.N_seg, self.N_samp))
+        for i in range(self.N_seg):
+            start = int(i * self.N_samp / 2 + offset_pts)
+            end = int((i / 2 + 1) * self.N_samp + offset_pts)
+            seg_total[i] = waveform_mv[start:end]
+
+        amp_fft = np.abs(fft(seg_total * self.window))
+        amp_fft_rango = amp_fft[:, self.lower_freq_index : self.upper_freq_index + 1]
+
+        peak_freq = np.zeros(self.N_seg)
+        centroid_freq = np.zeros(self.N_seg)
+        part_powers = np.zeros((6, self.N_seg))
+
+        for i in range(self.N_seg):
+            spectrum = amp_fft_rango[i]
+            spec_sum = np.sum(spectrum)
+            if spec_sum > 0:
+                peak_freq[i] = self.freq_fft_rango[np.argmax(spectrum)]
+                centroid_freq[i] = np.sum(spectrum * self.freq_fft_rango) / spec_sum
+
+            power_spec = spectrum**2
+            denominator = np.sum(power_spec)
+            if denominator > 0:
+                for band in range(6):
+                    part_powers[band, i] = (
+                        np.sum(power_spec[bin_edges[band] : bin_edges[band + 1]])
+                        * 100.0
+                        / denominator
+                    )
+
+        w_peak_freq = (peak_freq * centroid_freq) ** 0.5
+        return np.hstack(
+            (
+                peak_freq,
+                w_peak_freq,
+                centroid_freq,
+                part_powers[0],
+                part_powers[1],
+                part_powers[2],
+                part_powers[3],
+                part_powers[4],
+                part_powers[5],
+            )
+        )
 
     def read_transient(self, trai: int) -> tuple[np.ndarray, np.ndarray]:
         """Load `(time_us, amp_mv)` for a given `trai` from `self.tradb_path`."""
@@ -152,6 +215,7 @@ class Features:
         df_hits = pridb.read_hits()
 
         threshold_V = 10 ** (threshold / 20 - 6)
+        threshold_mv = threshold_V * 1e3
         no_saturation = 10 ** (94 / 20 - 6)
 
         mask = (
@@ -171,68 +235,113 @@ class Features:
             )
             return pd.DataFrame()
 
-        trai = df_hits_filtro["trai"].to_numpy()
-        N_trai = trai.size
-        v_features_total = np.zeros((N_trai, self.N_seg * self.N_feat_seg))
+        # trai = df_hits_filtro["trai"].to_numpy()
+        # N_trai = trai.size
+        # v_features_total = np.zeros((N_trai, self.N_seg * self.N_feat_seg))
 
         n_bins = len(self.freq_fft_rango)
         bin_edges = [int(n_bins * k / 6) for k in range(7)]
 
-        for N_iter, trans in enumerate(trai):
-            amp, _ = tradb.read_wave(trans, time_axis=False)
-            amp *= 1e3  # mV
+        feature_rows: list[np.ndarray] = []
+        meta_rows: list[dict[str, Any]] = []
 
-            seg_total = np.zeros((self.N_seg, self.N_samp))
-            for i in range(self.N_seg):
-                seg_total[i] = amp[
-                    int(i * self.N_samp / 2 + self.signal_offset) : int(
-                        (i / 2 + 1) * self.N_samp + self.signal_offset
-                    )
-                ]
+        for hit in df_hits_filtro.itertuples():
+            trans = int(hit.trai)
+            amp_v, _ = tradb.read_wave(trans, time_axis=False)
+            amp_mv = amp_v * 1e3
+            total_sq_energy = float(np.sum(amp_mv**2))
 
-            amp_fft = np.abs(fft(seg_total * self.window))
-            amp_fft_rango = amp_fft[
-                :, self.lower_freq_index : self.upper_freq_index + 1
-            ]
-
-            peak_freq = np.zeros(self.N_seg)
-            centroid_freq = np.zeros(self.N_seg)
-            part_powers = np.zeros((6, self.N_seg))
-
-            for i in range(self.N_seg):
-                spectrum = amp_fft_rango[i]
-                peak_freq[i] = self.freq_fft_rango[np.argmax(spectrum)]
-                centroid_freq[i] = np.sum(spectrum * self.freq_fft_rango) / np.sum(
-                    spectrum
+            if self.segmentation_params is not None:
+                segments = segment_merged_hits(
+                    waveform=amp_mv,
+                    **self.segmentation_params,
                 )
 
-                power_spec = spectrum**2
-                denominator = np.sum(power_spec)
-                for band in range(6):
-                    part_powers[band, i] = (
-                        np.sum(power_spec[bin_edges[band] : bin_edges[band + 1]])
-                        * 100.0
-                        / denominator
+                # Fallback to single full segment if no peak crossed the segmentation threshold
+                if not segments:
+                    segments = [
+                        SubHitSegment(
+                            sub_trai=1,
+                            start_idx=0,
+                            end_idx=len(amp_mv),
+                            onset_idx=0,
+                            peak_idx=int(np.argmax(np.abs(amp_mv))),
+                        )
+                    ]
+
+                for seg in segments:
+                    sub_amp = amp_mv[seg.start_idx : seg.end_idx]
+                    if sub_amp.size == 0:
+                        continue
+
+                    # Count positive threshold crossings in this sub-hit
+                    above = sub_amp >= threshold_mv
+                    sub_counts = int(np.sum(above[1:] & ~above[:-1]) + int(above[0]))
+                    if sub_counts < counts:
+                        continue
+
+                    peak_mv = float(np.max(np.abs(sub_amp)))
+                    if peak_mv <= 0:
+                        continue
+
+                    sub_amp_dbae = 20.0 * (np.log10(peak_mv * 1e-3) + 6.0)
+                    energy_ratio = (
+                        float(np.sum(sub_amp**2)) / total_sq_energy
+                        if total_sq_energy > 0
+                        else 1.0
+                    )
+                    sub_time_s = float(hit.time) + (
+                        seg.onset_idx * self.time_samp * 1e-6
+                    )
+                    sub_rise_us = max(
+                        0.0, (seg.peak_idx - seg.onset_idx) * self.time_samp
                     )
 
-            w_peak_freq = (peak_freq * centroid_freq) ** 0.5
+                    feat_vec = self._extract_fft_vector(
+                        waveform_mv=sub_amp,
+                        offset_pts=self.sub_signal_offset,
+                        bin_edges=bin_edges,
+                    )
+                    feature_rows.append(feat_vec)
+                    meta_rows.append(
+                        {
+                            "rise_time": sub_rise_us,
+                            "time": sub_time_s,
+                            "amplitude": sub_amp_dbae,
+                            "energy": float(hit.energy) * energy_ratio,
+                            "counts": sub_counts,
+                            "label": label,
+                            "trai": trans,
+                            "sub_trai": int(seg.sub_trai),
+                            "hit_id": f"{trans}_{seg.sub_trai}",
+                            "test_id": test_id,
+                        }
+                    )
 
-            v_features = np.hstack(
-                (
-                    peak_freq,
-                    w_peak_freq,
-                    centroid_freq,
-                    part_powers[0],
-                    part_powers[1],
-                    part_powers[2],
-                    part_powers[3],
-                    part_powers[4],
-                    part_powers[5],
+            else:
+                feat_vec = self._extract_fft_vector(
+                    waveform_mv=amp_mv,
+                    offset_pts=self.signal_offset,
+                    bin_edges=bin_edges,
                 )
-            )
-            v_features_total[N_iter] = v_features.reshape(
-                1, self.N_feat_seg * self.N_seg
-            )
+                feature_rows.append(feat_vec)
+                meta_rows.append(
+                    {
+                        "rise_time": float(hit.rise_time),
+                        "time": float(hit.time),
+                        "amplitude": 20.0 * (np.log10(float(hit.amplitude)) + 6.0),
+                        "energy": float(hit.energy),
+                        "counts": int(hit.counts),
+                        "label": label,
+                        "trai": trans,
+                        "sub_trai": 1,
+                        "hit_id": f"{trans}_1",
+                        "test_id": test_id,
+                    }
+                )
+
+        if not feature_rows:
+            return pd.DataFrame()
 
         base_features = [
             "peak_freq",
@@ -251,29 +360,22 @@ class Features:
             ]
         )
 
-        df_features = pd.DataFrame(v_features_total, columns=name_feature)
-        df_trai = pd.DataFrame(trai, columns=["trai"])
-
-        df_time = (
-            df_hits_filtro[["rise_time", "time", "amplitude", "energy", "counts"]]
-            .reset_index()
-            .drop(columns=["set_id"], errors="ignore")
-        )
-        df_time["amplitude"] = 20 * (np.log10(df_time["amplitude"]) + 6)
+        df_features = pd.DataFrame(np.vstack(feature_rows), columns=name_feature)
+        df_meta = pd.DataFrame(meta_rows)
 
         if self.force is not None:
-            load_offset = df_time["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
+            load_offset = df_meta["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
         else:
             load_offset = self.load_offset
 
-        df_time["time"] = df_time["time"] - load_offset
-        df_time["time_norm"] = df_time["time"] / df_time["time"].max()
+        df_meta["time"] = df_meta["time"] - load_offset
+        df_meta["time_norm"] = df_meta["time"] / df_meta["time"].max()
 
-        df_label = pd.DataFrame({"label": [label] * N_trai})
-        df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
-        df_total["test_id"] = test_id
+        # df_label = pd.DataFrame({"label": [label] * N_trai})
+        # df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
+        # df_total["test_id"] = test_id
 
-        return df_total
+        return pd.concat([df_features, df_meta], axis=1)
 
     def plot_signal(
         self,
@@ -1271,9 +1373,7 @@ def resolve_feature_columns(
         else:
             pattern = re.compile(rf"^{re.escape(col)}_(\d+)$")
             matches = [
-                (int(m.group(1)), c)
-                for c in data.columns
-                if (m := pattern.match(c))
+                (int(m.group(1)), c) for c in data.columns if (m := pattern.match(c))
             ]
             seg_cols = [c for _, c in sorted(matches, key=lambda item: item[0])]
 

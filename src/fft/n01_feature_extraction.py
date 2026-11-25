@@ -19,6 +19,7 @@ from utils.fft_analysis import (
 )
 from utils.force_mts import force_data
 from utils.paths import PROJECT_ROOT
+from utils.segmentation import load_segmentation_params
 
 configure_plots(font="IBM Plex Sans")
 
@@ -29,6 +30,8 @@ def extract_campaign_features(
     parameters: dict[str, Any],
     trai_limits: dict[str, Any],
     force_cfg: dict[str, Any],
+    segmentation_params: dict[str, Any] | None = None,
+    sub_signal_offset_us: float = 0.0,
 ) -> tuple[pd.DataFrame, pd.DataFrame | None]:
     """Run heavy .pridb/.tradb FFT feature extraction and MTS force loading."""
     if files == "all":
@@ -67,6 +70,8 @@ def extract_campaign_features(
             signal_offset=parameters.get("signal_offset", 200),
             load_offset=parameters.get("load_offset", 0),
             force=data_force_i if force_cfg.get("force_data", False) else None,
+            segmentation_params=segmentation_params,
+            sub_signal_offset_us=sub_signal_offset_us,
         )
 
         df = features.feature_extr(
@@ -102,6 +107,14 @@ def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
     extraction_cfg = config["extraction"]
     data_dir = Path(extraction_cfg.get("data_dir") or DEFAULT_DATA_DIR)
 
+    seg_cfg = extraction_cfg.get("segmentation", {})
+    segmentation_params = load_segmentation_params(
+        seg_cfg=seg_cfg,
+        dataset_name=config["dataset_name"],
+    )
+    if segmentation_params is not None:
+        print(f"[INFO] Sub-hit segmentation enabled: {segmentation_params}")
+    
     # 1st run: computes and caches to .cache/ ([CACHE MISS])
     # Subsequent runs: loads instantly from disk ([CACHE HIT]) while tweaking plots
     data, data_force = extract_campaign_features(
@@ -110,6 +123,8 @@ def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
         parameters=extraction_cfg["parameters"],
         trai_limits=extraction_cfg.get("trai_limits", {}),
         force_cfg=extraction_cfg.get("force", {}),
+        segmentation_params=segmentation_params,
+        sub_signal_offset_us=float(seg_cfg.get("sub_signal_offset_us", 0.0)), 
     )
 
     data.to_csv(paths["features_path"], index=False)

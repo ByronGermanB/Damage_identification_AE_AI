@@ -1,5 +1,5 @@
 
-## File: `CNN_accuracy.py`
+## File: `backup_results\scripts\CNN_accuracy.py`
 ```python
 import os
 
@@ -78,7 +78,7 @@ with open(results_file, "w") as f:
 
 ```
 
-## File: `CNN_predictions.py`
+## File: `backup_results\scripts\CNN_predictions.py`
 ```python
 # -*- coding: utf-8 -*-
 """
@@ -327,7 +327,7 @@ for i, ax in enumerate(axes.flat, start=1):
 plt.show()
 ```
 
-## File: `CNN_training.py`
+## File: `backup_results\scripts\CNN_training.py`
 ```python
 import os
 
@@ -701,7 +701,7 @@ print('Model "%s"' % model_name, "saved")
 
 ```
 
-## File: `data_visualization.py`
+## File: `backup_results\scripts\data_visualization.py`
 ```python
 # -*- coding: utf-8 -*-
 """
@@ -795,7 +795,7 @@ plot_feat_vs_feat(data_90, y_90, "time_norm", "w_peak_freq_1", figure_path)
 
 ```
 
-## File: `dataset_generator.py`
+## File: `backup_results\scripts\dataset_generator.py`
 ```python
 """
 Created on Mon Dec 11 12:48:58 2023
@@ -1371,7 +1371,7 @@ force_df.to_csv(os.path.join(dataset_path, "Datos_MTS.csv"), index=False)
 
 ```
 
-## File: `feature_distribution.py`
+## File: `backup_results\scripts\feature_distribution.py`
 ```python
 # Dataframes
 import os
@@ -1465,7 +1465,7 @@ plt.show()
 print("Feature vs Time plot generated successfully.")
 ```
 
-## File: `Generate_cwt_images.py`
+## File: `backup_results\scripts\Generate_cwt_images.py`
 ```python
 import os
 
@@ -1782,15 +1782,7 @@ eaf.save_image_pred(cwt_imageQ, dims, "6_TQ", images_dir, set_name)
 
 ```
 
-## File: `layout.py`
-```python
-from mylib import ProjectLayout
-
-layout = ProjectLayout(["src", "models", "results", "utils"]) # manual list
-
-```
-
-## File: `load_time_difference.py`
+## File: `backup_results\scripts\load_time_difference.py`
 ```python
 # -*- coding: utf-8 -*-
 """
@@ -1842,7 +1834,7 @@ print(f"File saved as: {file_name}")
 
 ```
 
-## File: `Predictions.py`
+## File: `backup_results\scripts\Predictions.py`
 ```python
 # -*- coding: utf-8 -*-
 """
@@ -2065,872 +2057,83 @@ for i, ax in enumerate(axes.flat, start=1):
 plt.show()
 ```
 
-## File: `save_md.py`
+## File: `backup_results\scripts\transient.py`
 ```python
-from pathlib import Path
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan 30 15:31:23 2024
 
-with open("project_code_AE.md", "w", encoding="utf-8") as salida:
-    for root in sorted(Path(".").rglob("*.py")):
-        if ".venv" in root.parts or "venv" in root.parts:
-            continue
-        salida.write(f"\n## File: `{root}`\n```python\n")
-        salida.write(root.read_text(encoding="utf-8"))
-        salida.write("\n```\n")
-```
+@author: bbarmac
+"""
 
-## File: `setup.py`
-```python
-from setuptools import find_packages, setup
+# =============================================================================
+# Import necessary libraries
+# =============================================================================
+# Directories
+import os
 
-setup(
-    name="ae_damage_id",  
-    version="0.1",
-    packages=find_packages(),
-    install_requires=[
-        "vallenae==0.11.0",
-        "seaborn==0.13.2",
-        "scikit-learn==1.6.1",
-        "scipy==1.11.3",
-        "scikit-image==0.25.2",
-        "tensorflow==2.19.0"
-    ],
+# Functions for feature extraction
+from utils.analysis_AE import Features
+
+# =============================================================================
+# Initial data
+# =============================================================================
+# Current directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Directory with AE data
+EA_path = os.path.join(script_dir, "Datos_EA")
+# Directory to save images
+figure_path = os.path.join(script_dir, "Figures")
+os.makedirs(figure_path, exist_ok=True)
+
+# Directory for reading AE data
+test_id = "MINA_P0_90_2"
+data = os.path.join(EA_path, test_id)
+
+# Constants
+lower_freq = 0  # Lower frequency limit in kHz
+upper_freq = 900  # Upper frequency limit in kHz
+sampling_rate = 5.0  # Data acquisition frequency per second in MHz
+N_samp = 1024  # Number of samples (data points) in each segment
+N_seg = 1  # Number of segments (if changed, column names must be changed)
+desfase = 200  # The offset ranges from [0 to pretrigger*sampling rate] [0-250]
+
+# Filtering values
+umbral = 36
+counts = 5
+
+# =============================================================================
+# Feature extraction
+# =============================================================================
+# Class initialization
+trail = Features(
+    data, lower_freq, upper_freq, sampling_rate, N_samp, N_seg, desfase, desfase_carga=0
+)
+trail_df = trail.feature_extr(umbral, counts, clase="[trial]", test_id=test_id)
+
+trai = 3
+trail.plot_signal(
+    trai=trai,
+    name_figure="PLB",
+    time_graph=260,
+    figure_path=figure_path,
+    width=90,
+    height=70,
+    guardar=False,
+)
+trail.plot_segmentation_1(
+    trai=trai,
+    name_figure="PLB",
+    figure_path=figure_path,
+    width=90,
+    height=125,
+    guardar=False,
 )
 
 ```
 
-## File: `src\fft\analyze_unsupervised.py`
-```python
-import json
-from itertools import combinations
-from pathlib import Path
-
-import numpy as np
-from joblib import load
-
-from utils.unsupervised_functions import (
-    plot_cluster_feat,
-    plot_cluster_tsne,
-    plot_kmeans_per_k,
-)
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "analyze_unsupervised.json"
-
-
-def main(config_name: str) -> None:
-    """
-    Main function for analyzing unsupervised models.
-    """
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-    dataset_name = config["dataset_name"]
-    trial_name = config["trial_name"]
-    data_trial_name = config.get("data_trial_name", trial_name)
-    show_plots = config["plots"]["show"]
-    save_plots = config["plots"]["save"]
-    format_plots = config["plots"]["format"]
-
-    # Directories
-    TRIALS_DIR = Path("results") / dataset_name / "models" / "trials" / trial_name
-    FIGURES_DIR = Path("figures") / dataset_name / trial_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    DATASETS_DIR = Path("datasets") / dataset_name
-    DATA_PATH = (
-        DATASETS_DIR / "trial_data" / data_trial_name / "preprocessed_data.joblib"
-    )
-
-    # Import datasets
-    X_original, X, _, X_reduced, _ = load(DATA_PATH).values()
-    print(f'Preprocessed data loaded from: "{DATA_PATH}"')
-
-    # =============================================================================
-    # K-means by k
-    # =============================================================================
-
-    kmeans_models_path = TRIALS_DIR / "kmeans_models.joblib"
-    k_means_results_path = TRIALS_DIR / "kmeans_results.joblib"
-    if kmeans_models_path.exists():
-        kmeans_models = load(kmeans_models_path)
-        k_means_results = load(k_means_results_path)
-        k_means_fig_dir = FIGURES_DIR / "kmeans"
-        k_means_fig_dir.mkdir(parents=True, exist_ok=True)
-
-        # # plot k-means results
-        print("[INFO] Plotting K-means results...")
-        print("[INFO] Plotting silhouette scores...")
-        plot_kmeans_per_k(
-            X=X,
-            kmeans_per_k=kmeans_models,
-            silhouette_scores=k_means_results["silhouette_scores"],
-            figure_path=k_means_fig_dir / f"silhouette_scores.{format_plots}",
-            save=save_plots,
-            show=show_plots,
-        )
-
-        for model in kmeans_models:
-            print(
-                f"[INFO] Plotting K-means cluster in t-SNE for k={model.n_clusters}..."
-            )
-            plot_cluster_tsne(
-                labels=model.labels_,
-                X_reduced=X_reduced,
-                figure_path=k_means_fig_dir
-                / f"tsne_kmeans_k_{model.n_clusters}.{format_plots}",
-                save=save_plots,
-                show=show_plots,
-            )
-
-            for feature_x, feature_y in combinations(X_original.columns, 2):
-                figure_path = (
-                    k_means_fig_dir
-                    / f"k{model.n_clusters}_{feature_x}_vs_{feature_y}.{format_plots}"
-                )
-                print(f"[INFO] Plotting K-means cluster {feature_x} and {feature_y}...")
-                plot_cluster_feat(
-                    labels=model.labels_,
-                    X=X_original,
-                    feat_x=feature_x,
-                    feat_y=feature_y,
-                    figure_path=figure_path,
-                    save=save_plots,
-                    show=show_plots,
-                )
-
-    # =============================================================================
-    # DBSCAN
-    # =============================================================================
-    dbscan_models_path = TRIALS_DIR / "dbscan_models.joblib"
-    dbscan_models = load(dbscan_models_path)
-    dbscan_fig_dir = FIGURES_DIR / "dbscan"
-    dbscan_fig_dir.mkdir(parents=True, exist_ok=True)
-
-    for model in dbscan_models:
-        eps = model.eps
-        min_samples = model.min_samples
-
-        k = len(np.unique(model.labels_)) - (1 if -1 in model.labels_ else 0)
-
-        print(
-            f"[INFO] Plotting DBSCAN cluster in t-SNE for eps={eps}, min_samples={min_samples}, k={k}..."
-        )
-        plot_cluster_tsne(
-            labels=model.labels_,
-            X_reduced=X_reduced,
-            figure_path=dbscan_fig_dir
-            / f"tsne_k_{k}_eps_{eps}_min_samples_{min_samples}.{format_plots}",
-            save=save_plots,
-            show=show_plots,
-        )
-
-        for feature_x, feature_y in combinations(X_original.columns, 2):
-            print(f"[INFO] Plotting DBSCAN cluster {feature_x} and {feature_y}...")
-            figure_path = (
-                dbscan_fig_dir
-                / f"k{k}_eps_{eps}_min_samples_{min_samples}_{feature_x}_vs_{feature_y}.{format_plots}"
-            )
-            plot_cluster_feat(
-                labels=model.labels_,
-                X=X_original,
-                feat_x=feature_x,
-                feat_y=feature_y,
-                figure_path=figure_path,
-                save=save_plots,
-                show=show_plots,
-            )
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\fft\feature_extraction.py`
-```python
-import json
-from itertools import combinations
-from pathlib import Path
-
-import pandas as pd
-
-from utils.fft_analysis import Features, plot_feat_vs_feat, select_significant_indices
-from utils.force_mts import force_data
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "feature_extraction_1.json"
-
-
-def main(config_name: str) -> None:
-    """
-    Main function for feature extraction.
-    """
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-    dataset_name = config["dataset_name"]
-
-    # Directories
-    EA_DATA_DIR = Path(config["EA_DATA_DIR"])
-    DATASET_DIR = Path("datasets") / dataset_name
-    DATASET_DIR.mkdir(parents=True, exist_ok=True)
-
-    FIGURES_DIR = Path("figures") / dataset_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-    if config["files"] == "all":
-        pri_dirs = [
-            path.parent for path in EA_DATA_DIR.glob("**/*.pridb") if path.is_file()
-        ]
-    else:
-        pri_dirs = [EA_DATA_DIR / file for file in config["files"]]
-
-    pri_names = [path.stem for path in pri_dirs]
-    print(f"[INFO] Found {len(pri_dirs)} .pridb files in {EA_DATA_DIR}")
-
-    # =============================================================================
-    # Object initialization
-    # =============================================================================
-    parameters = config["parameters"]
-    min_trais = config["min_trais"]
-    if min_trais is None:
-        min_trais = [1 for _ in range(len(pri_dirs))]
-
-    max_trais = config["max_trais"]
-    if max_trais is None:
-        max_trais = [None for _ in range(len(pri_dirs))]
-
-    dfs = []
-    force_dfs = []
-
-    for pri_dir, pri_name in zip(pri_dirs, pri_names):
-        print(f"[INFO] Processing {pri_name}...")
-
-        # Force data saving if specified in the configuration
-        if config["force"].get("force_data", False):
-            data_force_i = force_data(
-                path=pri_dir,
-                section=config["force"].get("section", None),
-                test_id=pri_name,
-            )
-        force_dfs.append(data_force_i)
-
-        features = Features(
-            path=pri_dir,
-            lower_freq=parameters["lower_freq"],
-            upper_freq=parameters["upper_freq"],
-            sampling_rate=parameters["sampling_rate"],
-            N_samp=parameters["N_samp"],
-            N_seg=parameters["N_seg"],
-            desfase=parameters["desfase"],
-            desfase_carga=parameters.get("desfase_carga", 0),
-            force=data_force_i if config["force"].get("force_data", False) else None,
-        )
-
-        df = features.feature_extr(
-            threshold=parameters["threshold"],
-            counts=parameters["counts"],
-            label=pri_name,
-            test_id=pri_name,
-            max_trai=max_trais[pri_names.index(pri_name)],
-            min_trai=min_trais[pri_names.index(pri_name)],
-        )
-        if df.empty:
-            continue  # Skip to the next pri_dir if no transients were found
-        dfs.append(df)
-
-    # Merge all the individual DataFrames into a single DataFrame
-    data = pd.concat(dfs, ignore_index=True)
-    data["label"] = 0
-    data.to_csv(DATASET_DIR / config.get("output_name", "features.csv"), index=False)
-    print("[INFO] Feature extraction completed. Data saved to CSV.")
-
-    # Force data
-    if config["force"].get("force_data", False):
-        data_force = pd.concat(force_dfs, ignore_index=True)
-        data_force.to_csv(
-            DATASET_DIR / config.get("force_output_name", "force_data.csv"), index=False
-        )
-
-    # Saving feat vs feat images
-    features_to_plot = config["plots"].get("features_to_plot", [])
-
-    if config["plots"].get("save_feat_vs_feat_images", False):
-        print("[INFO] Saving Feature vs Feature images...")
-
-        width, height = config["plots"].get("fig_size", [90, 60])
-        format_plot = config["plots"].get("format", "png")
-
-        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
-        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
-
-        label_column = "test_id" if config["plots"].get("labeled", False) else "label"
-
-        if config["plots"].get("reduced_points", False):
-            selected_indices = select_significant_indices(
-                data=data,
-                label_column=label_column,
-                feature_columns=features_to_plot,
-                max_points=config["plots"].get("max_points", 20),
-            )
-            data = data.loc[selected_indices].copy()
-
-        y = data[label_column]
-
-        for feature_x, feature_y in combinations(features_to_plot, 2):
-            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
-
-            plot_feat_vs_feat(
-                X=data,
-                y=y,
-                feat_x=feature_x,
-                feat_y=feature_y,
-                figure_path=figure_path,
-                width=width,
-                height=height,
-                save=True,
-            )
-
-        print("[INFO] Feature vs Feature images saved.")
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\fft\feature_visualiztion.py`
-```python
-import json
-from itertools import combinations
-from pathlib import Path
-
-import pandas as pd
-
-from utils.fft_analysis import plot_feat_vs_feat, select_significant_indices
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "feature_extraction_1.json"
-
-
-def main(config_name: str) -> None:
-    """
-    Main function for feature visualization.
-    """
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-    dataset_name = config["dataset_name"]
-    output_name = config.get("output_name", "features.csv")
-
-    # Directories
-    DATASET_DIR = Path("datasets") / dataset_name
-
-    FIGURES_DIR = Path("figures") / dataset_name
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-    DATA_PATH = DATASET_DIR / output_name
-
-    # Read the datasets
-    data = pd.read_csv(DATA_PATH)
-
-    # Saving feat vs feat images
-    features_to_plot = [
-        "peak_freq",
-        "w_peak_freq",
-        "centroid_freq",
-        "p_power_1",
-        "p_power_2",
-        "p_power_3",
-        "p_power_4",
-        "p_power_5",
-        "p_power_6",
-        "energy",
-    ]
-
-    if config["plots"].get("save_feat_vs_feat_images", False):
-        print("[INFO] Saving Feature vs Feature images...")
-        format_plot = config["plots"].get("format", "png")
-        width, height = config["plots"].get("fig_size", [90, 60])
-
-        feat_vs_feat_dir = FIGURES_DIR / "feat_vs_feat"
-        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
-
-        label_column = "test_id" if config["plots"].get("labeled", False) else "label"
-
-        if config["plots"].get("reduced_points", False):
-            selected_indices = select_significant_indices(
-                data=data,
-                label_column=label_column,
-                feature_columns=features_to_plot,
-                max_points=config["plots"].get("max_points", 20),
-            )
-            data = data.loc[selected_indices].copy()
-
-        y = data[label_column]
-
-        for feature_x, feature_y in combinations(features_to_plot, 2):
-            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
-
-            plot_feat_vs_feat(
-                X=data,
-                y=y,
-                feat_x=feature_x,
-                feat_y=feature_y,
-                figure_path=figure_path,
-                width=width,
-                height=height,
-                save=True,
-            )
-
-        print("[INFO] Feature vs Feature images saved.")
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\fft\results_visualization.py`
-```python
-import json
-from itertools import combinations
-from pathlib import Path
-
-import pandas as pd
-from joblib import load
-
-from utils.force_mts import limit_finder, plot_stress_hits_cluster
-from utils.unsupervised_functions import plot_cluster_test_id, plot_cluster_tsne
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "results_visualization.json"
-
-
-def main(config_name: str) -> None:
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-        dataset_name = config["dataset_name"]
-        model_name = config["model_name"]
-        data_tsne_path = config["data_tsne_path"]
-        plots_config = config["plots"]
-        show_plots = plots_config.get("show", False)
-        save_plots = plots_config.get("save", False)
-        format_plots = plots_config.get("format", "png")
-        fig_size = plots_config.get("fig_size", [90, 60])
-        use_log_scale = plots_config.get("use_log_scale", False)
-        width, height = fig_size
-
-        # Directories
-        MODELS_DIR = Path("results") / dataset_name / "models" / model_name
-        FIGURES_DIR = Path("figures") / dataset_name / model_name
-        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Import data
-    data_path = MODELS_DIR / "data_labeled.csv"
-    data = pd.read_csv(data_path)
-    data["Count"] = 1
-
-    # force data
-    force_path = Path("datasets") / dataset_name / "force_data.csv"
-    force = pd.read_csv(force_path)
-
-    # plots
-    features_to_plot = plots_config.get("features_to_plot", [])
-
-    # feat vs feat test id
-    if plots_config.get("feat_vs_feat_test_id", False):
-        print("[INFO] Plotting Feature vs Feature Test ID images...")
-
-        feat_vs_feat_test_id_dir = FIGURES_DIR / "feat_vs_feat_test_id"
-        feat_vs_feat_test_id_dir.mkdir(parents=True, exist_ok=True)
-
-        for feature_x, feature_y in combinations(features_to_plot, 2):
-            for test_id in data["test_id"].unique():
-                fig_dir = feat_vs_feat_test_id_dir / test_id
-                fig_dir.mkdir(parents=True, exist_ok=True)
-
-                figure_path = (
-                    fig_dir
-                    / f"{feature_x}_vs_{feature_y}_test_{test_id}.{format_plots}"
-                )
-
-                plot_cluster_test_id(
-                    data=data,
-                    test_id=test_id,
-                    feat_x=feature_x,
-                    feat_y=feature_y,
-                    title=f"Test ID {test_id}: {feature_x} vs {feature_y}",
-                    figure_path=figure_path,
-                    width=width,
-                    height=height,
-                    show=show_plots,
-                    save=save_plots,
-                )
-
-    # Hits vs Stress for each test_id
-    if plots_config.get("hits_vs_stress", False):
-        print("[INFO] Plotting Hits vs Stress images...")
-
-        hits_vs_stress_dir = FIGURES_DIR / "hits_vs_stress"
-        hits_vs_stress_dir.mkdir(parents=True, exist_ok=True)
-
-        if plots_config.get("use_limit_finder", False):
-            limits = limit_finder(data, force)
-        else:
-            limits = None
-
-        for test_id in data["test_id"].unique():
-            fig_dir = hits_vs_stress_dir / test_id
-            fig_dir.mkdir(parents=True, exist_ok=True)
-
-            figure_path = fig_dir / f"hits_vs_stress_test_{test_id}.{format_plots}"
-
-            plot_stress_hits_cluster(
-                data=data,
-                force=force,
-                test_id=test_id,
-                limits=limits,
-                use_log_scale=use_log_scale,
-                figure_path=figure_path,
-                width=width,
-                height=height,
-                show=show_plots,
-                save=save_plots,
-            )
-
-    # hits vs stress per label
-    if plots_config.get("hits_per_label", False):
-        print("[INFO] Plotting Hits vs Stress per label images...")
-
-        for test_id in data["test_id"].unique():
-            test_data = data[data["test_id"] == test_id]
-            fig_dir = hits_vs_stress_dir / test_id
-            fig_dir.mkdir(parents=True, exist_ok=True)
-
-            for label in test_data["label"].unique():
-                figure_path = (
-                    fig_dir
-                    / f"hits_vs_stress_test_{test_id}_label_{label}.{format_plots}"
-                )
-
-                plot_stress_hits_cluster(
-                    data=test_data[test_data["label"] == label],
-                    force=force,
-                    test_id=test_id,
-                    limits=limits,
-                    use_log_scale=use_log_scale,
-                    figure_path=figure_path,
-                    width=width,
-                    height=height,
-                    show=show_plots,
-                    save=save_plots,
-                )
-
-    # tsne clustering
-    if plots_config.get("tsne_clustering", False):
-        print("[INFO] Plotting t-SNE clustering...")
-
-        tsne_dir = FIGURES_DIR / "tsne_clustering"
-        tsne_dir.mkdir(parents=True, exist_ok=True)
-
-        figure_path = tsne_dir / f"t-SNE_Clustering.{format_plots}"
-
-        _, _, _, X_reduced, _ = load(data_tsne_path).values()
-        print(f'Preprocessed data loaded from: "{data_tsne_path}"')
-
-        plot_cluster_tsne(
-            labels=data["label"],
-            X_reduced=X_reduced,
-            figure_path=figure_path,
-            width=width,
-            height=height,
-            show=show_plots,
-            save=save_plots,
-        )
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\fft\select_model.py`
-```python
-import json
-from pathlib import Path
-
-import pandas as pd
-from joblib import dump, load
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "select_model.json"
-
-
-def main(config_name: str) -> None:
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-        dataset_name = config["dataset_name"]
-        trial_name = config["trial_name"]
-        trial_config_name = config["trial_config_name"]
-        model_type = config["model"]["model_type"]
-        output_model_name = config["model"]["output_model_name"]
-        index = config["model"]["index"]
-
-    # Directories
-    TRIALS_DIR = Path("results") / dataset_name / "models" / "trials" / trial_name
-    MODELS_DIR = Path("results") / dataset_name / "models" / output_model_name
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Import trial
-    trial_path = TRIALS_DIR / f"{model_type}_models.joblib"
-    trial_results_path = TRIALS_DIR / f"{model_type}_results.joblib"
-
-    models = load(trial_path)
-    selected_model = models[index]
-    results = load(trial_results_path)
-    selected_results = results[index]
-
-    trial_config_path = CONFIG_DIR / trial_config_name
-    with trial_config_path.open("r", encoding="utf-8") as file:
-        trial_config = json.load(file)
-
-        feat_data_name = trial_config["feat_data_name"]
-
-    DATA_PATH = Path("datasets") / dataset_name / feat_data_name
-    data = pd.read_csv(DATA_PATH)
-    data["label"] = selected_model.labels_
-
-    data.to_csv(MODELS_DIR / "data_labeled.csv", index=False)
-    print("[INFO] Data labeled and saved.")
-
-    # Save the selected model and results
-    selected_model_path = MODELS_DIR / f"{output_model_name}.joblib"
-    selected_results_path = MODELS_DIR / f"{output_model_name}_results.joblib"
-    selected_results_txt_path = MODELS_DIR / f"{output_model_name}_results.txt"
-
-    dump(selected_model, selected_model_path)
-    dump(selected_results, selected_results_path)
-    selected_results_txt_path.write_text(
-        "\n".join(f"{key}: {value}" for key, value in selected_results.items()),
-        encoding="utf-8",
-    )
-
-    print(f"[INFO] Selected model saved to: {selected_model_path}")
-    print(f"[INFO] Selected results saved to: {selected_results_path}")
-    print(f"[INFO] Selected results text saved to: {selected_results_txt_path}")
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\fft\train_unsupervised.py`
-```python
-import io
-import json
-import sys
-from pathlib import Path
-
-import numpy as np
-import pandas as pd
-from joblib import dump, load
-from mylib.utils.time_report import Profiler  # type: ignore
-
-# Functions for dataset splitting
-from utils.fft_analysis import train_test_set
-
-# Functions for DBSCAN model
-from utils.unsupervised_functions import (
-    grid_search_dbscan,
-    kmeans_per_k,
-    tsne,
-)
-
-CONFIG_DIR = Path("parameters") / "arcan"
-config_name = "dbscan_trial_2.json"
-
-
-class _OutputTee:
-    """Send printed output to both the console and a text buffer."""
-
-    def __init__(self, console, buffer):
-        self.console = console
-        self.buffer = buffer
-
-    def write(self, text):
-        self.console.write(text)
-        self.buffer.write(text)
-
-    def flush(self):
-        self.console.flush()
-        self.buffer.flush()
-
-
-def main(config_name: str) -> None:
-    """
-    Ex
-    """
-    timer = Profiler()
-    original_stdout = sys.stdout
-    output_buffer = io.StringIO()
-    sys.stdout = _OutputTee(original_stdout, output_buffer)
-    config_path = CONFIG_DIR / config_name
-
-    with config_path.open("r", encoding="utf-8") as file:
-        config = json.load(file)
-
-    dataset_name = config["dataset_name"]
-    show_plots = config["plots"]["show"]
-    save_plots = config["plots"]["save"]
-    format_plot = config["plots"].get("format", "png")
-    save_data = config.get("save_data", False)
-
-    models_dir = (
-        Path("results") / dataset_name / "models" / "trials" / config["trial_name"]
-    )
-    models_dir.mkdir(parents=True, exist_ok=True)
-
-    # Directories
-    FIGURES_DIR = Path("figures") / dataset_name / config["trial_name"]
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    DATASETS_DIR = Path("datasets") / dataset_name
-    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Import datasets
-    if config.get("saved_data_path", None) is not None:
-        DATA_PATH = Path(config["saved_data_path"])
-        X_original, X, y, X_reduced, hits = load(DATA_PATH).values()
-
-    else:
-        DATA_PATH = DATASETS_DIR / config["feat_data_name"]
-        data = pd.read_csv(DATA_PATH)
-
-        # Separate features and labels
-        X_original, X, y, hits = train_test_set(
-            data,
-            normalization=config.get("normalization", "log-std"),
-            columns_to_transform=config.get("columns_to_transform", ["energy"]),
-            features=config.get("features", None),
-            split=False,
-        )  # Normalization: log-std or std
-
-        if config.get("use_tsne", False):
-            with timer.section("TSNE"):
-                # T-SNE
-                X_reduced = tsne(
-                    X,
-                    FIGURES_DIR / f"t-SNE Visualization.{format_plot}",
-                    show=show_plots,
-                    save=save_plots,
-                )
-        else:
-            X_reduced = X
-
-    if save_data:
-        data_saving_path = (
-            DATASETS_DIR
-            / "trial_data"
-            / config["trial_name"]
-            / "preprocessed_data.joblib"
-        )
-        data_saving_path.parent.mkdir(parents=True, exist_ok=True)
-
-        dump(
-            {
-                "X_original": X_original,
-                "X": X,
-                "y": y,
-                "X_reduced": X_reduced,
-                "hits": hits,
-            },
-            data_saving_path,
-        )
-        print(f'Preprocessed data saved at: "{data_saving_path}"')
-
-    # =============================================================================
-    # K-means by k
-    # =============================================================================
-    if config.get("use_kmeans", False):
-        with timer.section("K-means"):
-            print("[INFO] Performing K-means clustering...")
-            k_max = config["dbscan"]["k_max"]
-            kmeans_models, silhouette_scores, dbi_kmeans = kmeans_per_k(
-                X_reduced, k_max
-            )
-            kmeans_results = {
-                "silhouette_scores": silhouette_scores,
-                "dbi_kmeans": dbi_kmeans,
-            }
-
-    # =============================================================================
-    # DBSCAN
-    # =============================================================================
-    with timer.section("DBSCAN"):
-
-        # Parameters for DBSCAN
-        epsilon_values = config["dbscan"]["epsilon_values"]
-        min_samples_limits = config["dbscan"]["min_samples_limits"]
-        min_samples_num = config["dbscan"]["min_samples_num"]
-
-        min_samples_values = np.linspace(
-            min_samples_limits[0], min_samples_limits[1], min_samples_num, dtype=int
-        )
-
-        target_clusters = [k for k in range(2, k_max + 1) ]
-        dbscan_models, results = grid_search_dbscan(
-            X_reduced, target_clusters, epsilon_values, min_samples_values
-        )
-
-    with timer.section("Saving results"):
-        # Save the DBSCAN models and results
-        dbscan_models_path = models_dir / config["saving_names"]["dbscan_models"]
-        dbscan_results_path = models_dir / config["saving_names"]["dbscan_results"]
-
-        dump(dbscan_models, dbscan_models_path)
-        dump(results, dbscan_results_path)
-
-        print(f'DBSCAN models saved at: "{dbscan_models_path}"')
-        print(f'DBSCAN results saved at: "{dbscan_results_path}"')
-
-        # Save the K-means models and results if used
-        if config.get("use_kmeans", False):
-            kmeans_models_path = models_dir / config["saving_names"]["kmeans_models"]
-            kmeans_results_path = models_dir / config["saving_names"]["kmeans_results"]
-
-            dump(kmeans_models, kmeans_models_path)
-            dump(kmeans_results, kmeans_results_path)
-
-            print(f'K-means models saved at: "{kmeans_models_path}"')
-            print(f'K-means results saved at: "{kmeans_results_path}"')
-
-        # Save everything printed during the run while keeping console output.
-        sys.stdout = original_stdout
-        report_path = models_dir / "training_output.txt"
-        report_path.write_text(output_buffer.getvalue(), encoding="utf-8")
-        print(f'Results printed during training saved at: "{report_path}"')
-
-    timer.report()
-
-
-if __name__ == "__main__":
-    main(config_name)
-
-```
-
-## File: `src\unsupervised_model.py`
+## File: `backup_results\scripts\unsupervised_model.py`
 ```python
 """
 Created on Mon Dec 11 12:18:58 2023
@@ -3274,80 +2477,1697 @@ hits_filtered.to_csv("hits_filtered.csv", index=False)
 
 ```
 
-## File: `transient.py`
+## File: `layout.py`
 ```python
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 30 15:31:23 2024
+from mylib import ProjectLayout  #type: ignore
 
-@author: bbarmac
-"""
+layout = ProjectLayout(["src", "parameters", "results", "utils", "datasets", "figures"]) # manual list
 
-# =============================================================================
-# Import necessary libraries
-# =============================================================================
-# Directories
-import os
+```
 
-# Functions for feature extraction
-from utils.analysis_AE import Features
+## File: `save_md.py`
+```python
+from pathlib import Path
 
-# =============================================================================
-# Initial data
-# =============================================================================
-# Current directory
-script_dir = os.path.dirname(os.path.abspath(__file__))
+with open("project_code_AE.md", "w", encoding="utf-8") as salida:
+    for root in sorted(Path(".").rglob("*.py")):
+        if ".venv" in root.parts or "venv" in root.parts:
+            continue
+        salida.write(f"\n## File: `{root}`\n```python\n")
+        salida.write(root.read_text(encoding="utf-8"))
+        salida.write("\n```\n")
+```
 
-# Directory with AE data
-EA_path = os.path.join(script_dir, "Datos_EA")
-# Directory to save images
-figure_path = os.path.join(script_dir, "Figures")
-os.makedirs(figure_path, exist_ok=True)
+## File: `setup.py`
+```python
+from setuptools import find_packages, setup
 
-# Directory for reading AE data
-test_id = "MINA_P0_90_2"
-data = os.path.join(EA_path, test_id)
-
-# Constants
-lower_freq = 0  # Lower frequency limit in kHz
-upper_freq = 900  # Upper frequency limit in kHz
-sampling_rate = 5.0  # Data acquisition frequency per second in MHz
-N_samp = 1024  # Number of samples (data points) in each segment
-N_seg = 1  # Number of segments (if changed, column names must be changed)
-desfase = 200  # The offset ranges from [0 to pretrigger*sampling rate] [0-250]
-
-# Filtering values
-umbral = 36
-counts = 5
-
-# =============================================================================
-# Feature extraction
-# =============================================================================
-# Class initialization
-trail = Features(
-    data, lower_freq, upper_freq, sampling_rate, N_samp, N_seg, desfase, desfase_carga=0
-)
-trail_df = trail.feature_extr(umbral, counts, clase="[trial]", test_id=test_id)
-
-trai = 3
-trail.plot_signal(
-    trai=trai,
-    name_figure="PLB",
-    time_graph=260,
-    figure_path=figure_path,
-    width=90,
-    height=70,
-    guardar=False,
-)
-trail.plot_segmentation_1(
-    trai=trai,
-    name_figure="PLB",
-    figure_path=figure_path,
-    width=90,
-    height=125,
-    guardar=False,
+setup(
+    name="ae_damage_id",  
+    version="0.1",
+    packages=find_packages(),
+    install_requires=[
+        "vallenae==0.11.0",
+        "seaborn==0.13.2",
+        "scikit-learn==1.6.1",
+        "scipy==1.11.3",
+        "scikit-image==0.25.2",
+        "tensorflow==2.19.0"
+    ],
 )
 
+```
+
+## File: `src\fft\analyze_unsupervised.py`
+```python
+import json
+from itertools import combinations
+
+import numpy as np
+from joblib import load
+
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
+from utils.unsupervised_functions import (
+    plot_cluster_feat,
+    plot_cluster_tsne,
+    plot_kmeans_per_k,
+)
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
+config_name = "analyze_unsupervised.json"
+
+
+def main(config_name: str) -> None:
+    """
+    Main function for analyzing unsupervised models.
+    """
+    config_path = CONFIG_DIR / config_name
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    dataset_name = config["dataset_name"]
+    trial_name = config["trial_name"]
+    data_trial_name = config.get("data_trial_name", trial_name)
+    show_plots = config["plots"]["show"]
+    save_plots = config["plots"]["save"]
+    format_plots = config["plots"]["format"]
+
+    # Directories
+    TRIALS_DIR = RESULTS_DIR / dataset_name / "models" / "trials" / trial_name
+    FIG_DIR = FIGURES_DIR / dataset_name / trial_name
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = DATASETS_DIR / dataset_name
+    DATA_PATH = (
+        DATA_DIR / "trial_data" / data_trial_name / "preprocessed_data.joblib"
+    )
+
+    # Import datasets
+    X_original, X, _, X_reduced, _ = load(DATA_PATH).values()
+    print(f'Preprocessed data loaded from: "{DATA_PATH}"')
+
+    # =============================================================================
+    # K-means by k
+    # =============================================================================
+
+    kmeans_models_path = TRIALS_DIR / "kmeans_models.joblib"
+    k_means_results_path = TRIALS_DIR / "kmeans_results.joblib"
+    if kmeans_models_path.exists():
+        kmeans_models = load(kmeans_models_path)
+        k_means_results = load(k_means_results_path)
+        k_means_fig_dir = FIG_DIR / "kmeans"
+        k_means_fig_dir.mkdir(parents=True, exist_ok=True)
+
+        # # plot k-means results
+        print("[INFO] Plotting K-means results...")
+        print("[INFO] Plotting silhouette scores...")
+        plot_kmeans_per_k(
+            X=X,
+            kmeans_per_k=kmeans_models,
+            silhouette_scores=k_means_results["silhouette_scores"],
+            figure_path=k_means_fig_dir / f"silhouette_scores.{format_plots}",
+            save=save_plots,
+            show=show_plots,
+        )
+
+        for model in kmeans_models:
+            print(
+                f"[INFO] Plotting K-means cluster in t-SNE for k={model.n_clusters}..."
+            )
+            plot_cluster_tsne(
+                labels=model.labels_,
+                X_reduced=X_reduced,
+                figure_path=k_means_fig_dir
+                / f"tsne_kmeans_k_{model.n_clusters}.{format_plots}",
+                save=save_plots,
+                show=show_plots,
+            )
+
+            for feature_x, feature_y in combinations(X_original.columns, 2):
+                figure_path = (
+                    k_means_fig_dir
+                    / f"k{model.n_clusters}_{feature_x}_vs_{feature_y}.{format_plots}"
+                )
+                print(f"[INFO] Plotting K-means cluster {feature_x} and {feature_y}...")
+                plot_cluster_feat(
+                    labels=model.labels_,
+                    X=X_original,
+                    feat_x=feature_x,
+                    feat_y=feature_y,
+                    figure_path=figure_path,
+                    save=save_plots,
+                    show=show_plots,
+                )
+
+    # =============================================================================
+    # DBSCAN
+    # =============================================================================
+    dbscan_models_path = TRIALS_DIR / "dbscan_models.joblib"
+    dbscan_models = load(dbscan_models_path)
+    dbscan_fig_dir = FIG_DIR / "dbscan"
+    dbscan_fig_dir.mkdir(parents=True, exist_ok=True)
+
+    for model in dbscan_models:
+        eps = model.eps
+        min_samples = model.min_samples
+
+        k = len(np.unique(model.labels_)) - (1 if -1 in model.labels_ else 0)
+
+        print(
+            f"[INFO] Plotting DBSCAN cluster in t-SNE for eps={eps}, min_samples={min_samples}, k={k}..."
+        )
+        plot_cluster_tsne(
+            labels=model.labels_,
+            X_reduced=X_reduced,
+            figure_path=dbscan_fig_dir
+            / f"tsne_k_{k}_eps_{eps}_min_samples_{min_samples}.{format_plots}",
+            save=save_plots,
+            show=show_plots,
+        )
+
+        for feature_x, feature_y in combinations(X_original.columns, 2):
+            print(f"[INFO] Plotting DBSCAN cluster {feature_x} and {feature_y}...")
+            figure_path = (
+                dbscan_fig_dir
+                / f"k{k}_eps_{eps}_min_samples_{min_samples}_{feature_x}_vs_{feature_y}.{format_plots}"
+            )
+            plot_cluster_feat(
+                labels=model.labels_,
+                X=X_original,
+                feat_x=feature_x,
+                feat_y=feature_y,
+                figure_path=figure_path,
+                save=save_plots,
+                show=show_plots,
+            )
+
+
+if __name__ == "__main__":
+    main(config_name)
+
+```
+
+## File: `src\fft\feature_visualiztion.py`
+```python
+import json
+from itertools import combinations
+
+import pandas as pd
+
+from utils.fft_analysis import plot_feat_vs_feat, select_significant_indices
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
+config_name = "feature_extraction_1.json"
+
+
+def main(config_name: str) -> None:
+    """
+    Main function for feature visualization.
+    """
+    config_path = CONFIG_DIR / config_name
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    dataset_name = config["dataset_name"]
+    output_name = config.get("output_name", "features.csv")
+
+    # Directories
+    DATA_DIR = DATASETS_DIR / dataset_name
+
+    FIG_DIR = FIGURES_DIR / dataset_name
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+
+    DATA_PATH = DATA_DIR / output_name
+
+    # Read the datasets
+    data = pd.read_csv(DATA_PATH)
+
+    # Saving feat vs feat images
+    features_to_plot = [
+        "peak_freq",
+        "w_peak_freq",
+        "centroid_freq",
+        "p_power_1",
+        "p_power_2",
+        "p_power_3",
+        "p_power_4",
+        "p_power_5",
+        "p_power_6",
+        "energy",
+    ]
+
+    if config["plots"].get("save_feat_vs_feat_images", False):
+        print("[INFO] Saving Feature vs Feature images...")
+        format_plot = config["plots"].get("format", "png")
+        width, height = config["plots"].get("fig_size", [90, 60])
+
+        feat_vs_feat_dir = FIG_DIR / "feat_vs_feat"
+        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
+
+        label_column = "test_id" if config["plots"].get("labeled", False) else "label"
+
+        if config["plots"].get("reduced_points", False):
+            selected_indices = select_significant_indices(
+                data=data,
+                label_column=label_column,
+                feature_columns=features_to_plot,
+                max_points=config["plots"].get("max_points", 20),
+            )
+            data = data.loc[selected_indices].copy()
+
+        y = data[label_column]
+
+        for feature_x, feature_y in combinations(features_to_plot, 2):
+            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{format_plot}"
+
+            plot_feat_vs_feat(
+                X=data,
+                y=y,
+                feat_x=feature_x,
+                feat_y=feature_y,
+                figure_path=figure_path,
+                width=width,
+                height=height,
+                save=True,
+            )
+
+        print("[INFO] Feature vs Feature images saved.")
+
+
+if __name__ == "__main__":
+    main(config_name)
+
+```
+
+## File: `src\fft\n01_feature_extraction.py`
+```python
+from itertools import combinations
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+from mylib import configure_cache_dir, configure_plots, disk_cache, load_config  # type: ignore
+
+from src.fft.pipeline_utils import (
+    DEFAULT_CONFIG_PATH,
+    DEFAULT_DATA_DIR,
+    get_fft_paths,
+    parse_config_args,
+)
+from utils.fft_analysis import (
+    Features,
+    plot_feat_vs_feat,
+    resolve_feature_columns,
+    select_significant_indices,
+)
+from utils.force_mts import force_data
+from utils.paths import PROJECT_ROOT
+from utils.segmentation import load_segmentation_params
+
+configure_plots(font="IBM Plex Sans")
+
+@disk_cache()
+def extract_campaign_features(
+    data_dir: Path,
+    files: str | list[str],
+    parameters: dict[str, Any],
+    trai_limits: dict[str, Any],
+    force_cfg: dict[str, Any],
+    segmentation_params: dict[str, Any] | None = None,
+    sub_signal_offset_us: float = 0.0,
+) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+    """Run heavy .pridb/.tradb FFT feature extraction and MTS force loading."""
+    if files == "all":
+        pri_dirs = [
+            path.parent for path in data_dir.glob("**/*.pridb") if path.is_file()
+        ]
+    else:
+        pri_dirs = [data_dir / file for file in files]
+
+    pri_names = [path.stem for path in pri_dirs]
+    print(f"[INFO] Found {len(pri_dirs)} .pridb files in {data_dir}")
+
+    dfs: list[pd.DataFrame] = []
+    force_dfs: list[pd.DataFrame] = []
+    force_enabled = force_cfg.get("enabled", False)
+
+    for pri_dir, pri_name in zip(pri_dirs, pri_names):
+        print(f"[INFO] Processing {pri_name}...")
+
+        data_force_i = None
+        if force_enabled:
+            data_force_i = force_data(
+                path=pri_dir,
+                section=force_cfg.get("section", None),
+                test_id=pri_name,
+            )
+            force_dfs.append(data_force_i)
+
+        features = Features(
+            path=pri_dir,
+            lower_freq=parameters.get("lower_freq", 100),
+            upper_freq=parameters.get("upper_freq", 900),
+            sampling_rate=parameters.get("sampling_rate", 5e6),
+            N_samp=parameters.get("N_samp", 1024),
+            N_seg=parameters.get("N_seg", 1),
+            signal_offset=parameters.get("signal_offset", 200),
+            load_offset=parameters.get("load_offset", 0),
+            force=data_force_i if force_cfg.get("force_data", False) else None,
+            segmentation_params=segmentation_params,
+            sub_signal_offset_us=sub_signal_offset_us,
+        )
+
+        df = features.feature_extr(
+            threshold=parameters["threshold"],
+            counts=parameters["counts"],
+            label=pri_name,
+            test_id=pri_name,
+            min_trai=trai_limits.get(pri_name, {}).get("min_trai", 1),
+            max_trai=trai_limits.get(pri_name, {}).get("max_trai", None),
+        )
+        if df.empty:
+            continue
+        dfs.append(df)
+
+    data = pd.concat(dfs, ignore_index=True)
+    data["label"] = 0
+
+    data_force = (
+        pd.concat(force_dfs, ignore_index=True)
+        if force_enabled and force_dfs
+        else None
+    )
+    return data, data_force
+
+
+def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
+    """Main function for feature extraction."""
+    configure_cache_dir(PROJECT_ROOT / ".cache")
+
+    config = load_config(config_arg, return_path=False)
+    paths = get_fft_paths(config, create=True)
+
+    extraction_cfg = config["extraction"]
+    data_dir = Path(extraction_cfg.get("data_dir") or DEFAULT_DATA_DIR)
+
+    seg_cfg = extraction_cfg.get("segmentation", {})
+    segmentation_params = load_segmentation_params(
+        seg_cfg=seg_cfg,
+        dataset_name=config["dataset_name"],
+    )
+    if segmentation_params is not None:
+        print(f"[INFO] Sub-hit segmentation enabled: {segmentation_params}")
+    
+    # 1st run: computes and caches to .cache/ ([CACHE MISS])
+    # Subsequent runs: loads instantly from disk ([CACHE HIT]) while tweaking plots
+    data, data_force = extract_campaign_features(
+        data_dir=data_dir,
+        files=extraction_cfg["files"],
+        parameters=extraction_cfg["parameters"],
+        trai_limits=extraction_cfg.get("trai_limits", {}),
+        force_cfg=extraction_cfg.get("force", {}),
+        segmentation_params=segmentation_params,
+        sub_signal_offset_us=float(seg_cfg.get("sub_signal_offset_us", 0.0)), 
+    )
+
+    data.to_csv(paths["features_path"], index=False)
+    print("[INFO] Feature extraction completed. Data saved to CSV.")
+
+    if data_force is not None:
+        data_force.to_csv(paths["force_data_path"], index=False)
+
+    # Visualization block (runs fresh every time without re-extracting features)
+    plot_cfg = config["feature_visualization"]
+    if plot_cfg.get("enabled", False):
+        features_to_plot = plot_cfg.get("features_to_plot", [])
+        print("[INFO] Saving Feature vs Feature images...")
+
+        feat_vs_feat_dir = paths["trial_figures_dir"] / "feat_vs_feat"
+        feat_vs_feat_dir.mkdir(parents=True, exist_ok=True)
+
+        label_column = "test_id" if plot_cfg.get("labeled", False) else "label"
+        plot_data = data
+        resolved_features = resolve_feature_columns(plot_data, features_to_plot)
+
+        if plot_cfg.get("reduced_points", False):
+            selected_indices = select_significant_indices(
+                data=plot_data,
+                label_column=label_column,
+                feature_columns=resolved_features,
+                max_points=plot_cfg.get("max_points", 20),
+            )
+            plot_data = plot_data.loc[selected_indices].copy()
+
+        y = plot_data[label_column]
+        img_format = plot_cfg.get("img_format", "png")
+
+        for feature_x, feature_y in combinations(resolved_features, 2):
+            figure_path = feat_vs_feat_dir / f"{feature_x}_vs_{feature_y}.{img_format}"
+
+            plot_feat_vs_feat(
+                X=plot_data,
+                y=y,
+                feat_x=feature_x,
+                feat_y=feature_y,
+                fig_path=figure_path,
+                figsize=plot_cfg.get("figsize", (90, 60)),
+                save=True,
+            )
+
+        print("[INFO] Feature vs Feature images saved.")
+
+
+if __name__ == "__main__":
+    args = parse_config_args(
+        "Stage 1: Extract fft features from all the AE tests in an experimental campaign."
+    )
+    main(config_arg=args.config)
+```
+
+## File: `src\fft\pipeline_utils.py`
+```python
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from typing import Any
+
+from mylib import (  # type: ignore
+    parse_config_args as _mylib_parse_config_args,
+)
+
+from utils.paths import (
+    DATASETS_DIR,
+    FIGURES_DIR,
+    PARAMETERS_DIR,
+    RESULTS_DIR,
+)
+
+DEFAULT_CONFIG_SUBDIR = PARAMETERS_DIR / "example_data"
+DEFAULT_CONFIG_NAME = "trial_1.json"
+DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_SUBDIR / DEFAULT_CONFIG_NAME
+DEFAULT_DATA_DIR = DATASETS_DIR / "example_data" / "data"
+
+
+__all__ = [
+    "DEFAULT_CONFIG_PATH",
+    "DEFAULT_DATA_DIR",
+    "get_fft_paths",
+    "parse_config_args",
+]
+
+
+def get_fft_paths(
+    config: dict[str, Any],
+    create: bool = True,
+) -> dict[str, Path]:
+    """Build standard dataset, trial, model, and figure paths for a config."""
+    dataset_name = config["dataset_name"]
+    trial_name = config["trial_name"]
+
+    dataset_dir = DATASETS_DIR / dataset_name / trial_name
+    trial_results_dir = RESULTS_DIR / dataset_name / "models" / "trials" / trial_name
+    trial_figures_dir = FIGURES_DIR / dataset_name / trial_name
+    features_path = dataset_dir / "features.csv"
+    force_data_path = dataset_dir / "force_data.csv"
+    preprocessed_data_path = dataset_dir / "preprocessed_data.joblib"
+
+    if create:
+        for directory in (dataset_dir, trial_results_dir, trial_figures_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "dataset_dir": dataset_dir,
+        "trial_dir": trial_results_dir,
+        "trial_figures_dir": trial_figures_dir,
+        "features_path": features_path,
+        "force_data_path": force_data_path,
+        "preprocessed_data_path": preprocessed_data_path,
+    }
+
+
+def parse_config_args(
+    description: str,
+) -> argparse.Namespace:
+    """Parse `-c` / `--config` (defaulting to `DEFAULT_CONFIG_PATH`) ."""
+
+    return _mylib_parse_config_args(
+        description=description,
+        default_config=DEFAULT_CONFIG_PATH,
+    )
+
+```
+
+## File: `src\fft\results_visualization.py`
+```python
+import json
+from itertools import combinations
+from pathlib import Path
+
+import pandas as pd
+from joblib import load
+
+from utils.force_mts import limit_finder, plot_stress_hits_cluster
+from utils.paths import FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
+from utils.unsupervised_functions import plot_cluster_test_id, plot_cluster_tsne
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
+config_name = "results_visualization.json"
+
+
+def main(config_name: str) -> None:
+    config_path = CONFIG_DIR / config_name
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+        dataset_name = config["dataset_name"]
+        model_name = config["model_name"]
+        data_tsne_path = config["data_tsne_path"]
+        plots_config = config["plots"]
+        show_plots = plots_config.get("show", False)
+        save_plots = plots_config.get("save", False)
+        format_plots = plots_config.get("format", "png")
+        fig_size = plots_config.get("fig_size", [90, 60])
+        use_log_scale = plots_config.get("use_log_scale", False)
+        width, height = fig_size
+
+        # Directories
+        MODELS_DIR = RESULTS_DIR / dataset_name / "models" / model_name
+        FIG_DIR = FIGURES_DIR / dataset_name / model_name
+        FIG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Import data
+    data_path = MODELS_DIR / "data_labeled.csv"
+    data = pd.read_csv(data_path)
+    data["Count"] = 1
+
+    # force data
+    force_path = Path("datasets") / dataset_name / "force_data.csv"
+    force = pd.read_csv(force_path)
+
+    # plots
+    features_to_plot = plots_config.get("features_to_plot", [])
+
+    # feat vs feat test id
+    if plots_config.get("feat_vs_feat_test_id", False):
+        print("[INFO] Plotting Feature vs Feature Test ID images...")
+
+        feat_vs_feat_test_id_dir = FIG_DIR / "feat_vs_feat_test_id"
+        feat_vs_feat_test_id_dir.mkdir(parents=True, exist_ok=True)
+
+        for feature_x, feature_y in combinations(features_to_plot, 2):
+            for test_id in data["test_id"].unique():
+                fig_dir = feat_vs_feat_test_id_dir / test_id
+                fig_dir.mkdir(parents=True, exist_ok=True)
+
+                figure_path = (
+                    fig_dir
+                    / f"{feature_x}_vs_{feature_y}_test_{test_id}.{format_plots}"
+                )
+
+                plot_cluster_test_id(
+                    data=data,
+                    test_id=test_id,
+                    feat_x=feature_x,
+                    feat_y=feature_y,
+                    title=f"Test ID {test_id}: {feature_x} vs {feature_y}",
+                    figure_path=figure_path,
+                    width=width,
+                    height=height,
+                    show=show_plots,
+                    save=save_plots,
+                )
+
+    # Hits vs Stress for each test_id
+    if plots_config.get("hits_vs_stress", False):
+        print("[INFO] Plotting Hits vs Stress images...")
+
+        hits_vs_stress_dir = FIG_DIR / "hits_vs_stress"
+        hits_vs_stress_dir.mkdir(parents=True, exist_ok=True)
+
+        if plots_config.get("use_limit_finder", False):
+            limits = limit_finder(data, force)
+        else:
+            limits = None
+
+        for test_id in data["test_id"].unique():
+            fig_dir = hits_vs_stress_dir / test_id
+            fig_dir.mkdir(parents=True, exist_ok=True)
+
+            figure_path = fig_dir / f"hits_vs_stress_test_{test_id}.{format_plots}"
+
+            plot_stress_hits_cluster(
+                data=data,
+                force=force,
+                test_id=test_id,
+                limits=limits,
+                use_log_scale=use_log_scale,
+                figure_path=figure_path,
+                width=width,
+                height=height,
+                show=show_plots,
+                save=save_plots,
+            )
+
+    # hits vs stress per label
+    if plots_config.get("hits_per_label", False):
+        print("[INFO] Plotting Hits vs Stress per label images...")
+
+        for test_id in data["test_id"].unique():
+            test_data = data[data["test_id"] == test_id]
+            fig_dir = hits_vs_stress_dir / test_id
+            fig_dir.mkdir(parents=True, exist_ok=True)
+
+            for label in test_data["label"].unique():
+                figure_path = (
+                    fig_dir
+                    / f"hits_vs_stress_test_{test_id}_label_{label}.{format_plots}"
+                )
+
+                plot_stress_hits_cluster(
+                    data=test_data[test_data["label"] == label],
+                    force=force,
+                    test_id=test_id,
+                    limits=limits,
+                    use_log_scale=use_log_scale,
+                    figure_path=figure_path,
+                    width=width,
+                    height=height,
+                    show=show_plots,
+                    save=save_plots,
+                )
+
+    # tsne clustering
+    if plots_config.get("tsne_clustering", False):
+        print("[INFO] Plotting t-SNE clustering...")
+
+        tsne_dir = FIG_DIR / "tsne_clustering"
+        tsne_dir.mkdir(parents=True, exist_ok=True)
+
+        figure_path = tsne_dir / f"t-SNE_Clustering.{format_plots}"
+
+        _, _, _, X_reduced, _ = load(data_tsne_path).values()
+        print(f'Preprocessed data loaded from: "{data_tsne_path}"')
+
+        plot_cluster_tsne(
+            labels=data["label"],
+            X_reduced=X_reduced,
+            figure_path=figure_path,
+            width=width,
+            height=height,
+            show=show_plots,
+            save=save_plots,
+        )
+
+
+if __name__ == "__main__":
+    main(config_name)
+
+```
+
+## File: `src\fft\select_model.py`
+```python
+import json
+
+import pandas as pd
+from joblib import dump, load
+
+from utils.paths import DATASETS_DIR, PARAMETERS_DIR, RESULTS_DIR
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
+config_name = "select_model.json"
+
+
+def main(config_name: str) -> None:
+    config_path = CONFIG_DIR / config_name
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+        dataset_name = config["dataset_name"]
+        trial_name = config["trial_name"]
+        trial_config_name = config["trial_config_name"]
+        model_type = config["model"]["model_type"]
+        output_model_name = config["model"]["output_model_name"]
+        index = config["model"]["index"]
+
+    # Directories
+    TRIALS_DIR = RESULTS_DIR / dataset_name / "models" / "trials" / trial_name
+    MODELS_DIR = RESULTS_DIR / dataset_name / "models" / output_model_name
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Import trial
+    trial_path = TRIALS_DIR / f"{model_type}_models.joblib"
+    trial_results_path = TRIALS_DIR / f"{model_type}_results.joblib"
+
+    models = load(trial_path)
+    selected_model = models[index]
+    results = load(trial_results_path)
+    selected_results = results[index]
+
+    trial_config_path = CONFIG_DIR / trial_config_name
+    with trial_config_path.open("r", encoding="utf-8") as file:
+        trial_config = json.load(file)
+
+        feat_data_name = trial_config["feat_data_name"]
+
+    DATA_PATH = DATASETS_DIR / dataset_name / feat_data_name
+    data = pd.read_csv(DATA_PATH)
+    data["label"] = selected_model.labels_
+
+    data.to_csv(MODELS_DIR / "data_labeled.csv", index=False)
+    print("[INFO] Data labeled and saved.")
+
+    # Save the selected model and results
+    selected_model_path = MODELS_DIR / f"{output_model_name}.joblib"
+    selected_results_path = MODELS_DIR / f"{output_model_name}_results.joblib"
+    selected_results_txt_path = MODELS_DIR / f"{output_model_name}_results.txt"
+
+    dump(selected_model, selected_model_path)
+    dump(selected_results, selected_results_path)
+    selected_results_txt_path.write_text(
+        "\n".join(f"{key}: {value}" for key, value in selected_results.items()),
+        encoding="utf-8",
+    )
+
+    print(f"[INFO] Selected model saved to: {selected_model_path}")
+    print(f"[INFO] Selected results saved to: {selected_results_path}")
+    print(f"[INFO] Selected results text saved to: {selected_results_txt_path}")
+
+
+if __name__ == "__main__":
+    main(config_name)
+
+```
+
+## File: `src\fft\train_unsupervised.py`
+```python
+import io
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from joblib import dump, load
+from mylib.utils.time_report import Profiler  # type: ignore
+
+# Functions for dataset splitting
+from utils.fft_analysis import train_test_set
+from utils.paths import DATASETS_DIR, FIGURES_DIR, PARAMETERS_DIR, RESULTS_DIR
+
+# Functions for DBSCAN model
+from utils.unsupervised_functions import (
+    grid_search_dbscan,
+    kmeans_per_k,
+    tsne,
+)
+
+CONFIG_DIR = PARAMETERS_DIR / "arcan"
+config_name = "dbscan_trial_2.json"
+
+
+class _OutputTee:
+    """Send printed output to both the console and a text buffer."""
+
+    def __init__(self, console, buffer):
+        self.console = console
+        self.buffer = buffer
+
+    def write(self, text):
+        self.console.write(text)
+        self.buffer.write(text)
+
+    def flush(self):
+        self.console.flush()
+        self.buffer.flush()
+
+
+def main(config_name: str) -> None:
+    """
+    Ex
+    """
+    timer = Profiler()
+    original_stdout = sys.stdout
+    output_buffer = io.StringIO()
+    sys.stdout = _OutputTee(original_stdout, output_buffer)
+    config_path = CONFIG_DIR / config_name
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    dataset_name = config["dataset_name"]
+    show_plots = config["plots"]["show"]
+    save_plots = config["plots"]["save"]
+    format_plot = config["plots"].get("format", "png")
+    save_data = config.get("save_data", False)
+
+    models_dir = (
+        RESULTS_DIR / dataset_name / "models" / "trials" / config["trial_name"]
+    )
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    # Directories
+    FIG_DIR = FIGURES_DIR / dataset_name / config["trial_name"]
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR = DATASETS_DIR / dataset_name
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Import datasets
+    if config.get("saved_data_path", None) is not None:
+        DATA_PATH = Path(config["saved_data_path"])
+        X_original, X, y, X_reduced, hits = load(DATA_PATH).values()
+
+    else:
+        DATA_PATH = DATA_DIR / config["feat_data_name"]
+        data = pd.read_csv(DATA_PATH)
+
+        # Separate features and labels
+        X_original, X, y, hits = train_test_set(
+            data,
+            normalization=config.get("normalization", "log-std"),
+            columns_to_transform=config.get("columns_to_transform", ["energy"]),
+            features=config.get("features", None),
+            split=False,
+        )  # Normalization: log-std or std
+
+        if config.get("use_tsne", False):
+            with timer.section("TSNE"):
+                # T-SNE
+                X_reduced = tsne(
+                    X,
+                    FIG_DIR / f"t-SNE Visualization.{format_plot}",
+                    show=show_plots,
+                    save=save_plots,
+                )
+        else:
+            X_reduced = X
+
+    if save_data:
+        data_saving_path = (
+            DATA_DIR
+            / "trial_data"
+            / config["trial_name"]
+            / "preprocessed_data.joblib"
+        )
+        data_saving_path.parent.mkdir(parents=True, exist_ok=True)
+
+        dump(
+            {
+                "X_original": X_original,
+                "X": X,
+                "y": y,
+                "X_reduced": X_reduced,
+                "hits": hits,
+            },
+            data_saving_path,
+        )
+        print(f'Preprocessed data saved at: "{data_saving_path}"')
+
+    # =============================================================================
+    # K-means by k
+    # =============================================================================
+    if config.get("use_kmeans", False):
+        with timer.section("K-means"):
+            print("[INFO] Performing K-means clustering...")
+            k_max = config["dbscan"]["k_max"]
+            kmeans_models, silhouette_scores, dbi_kmeans = kmeans_per_k(
+                X_reduced, k_max
+            )
+            kmeans_results = {
+                "silhouette_scores": silhouette_scores,
+                "dbi_kmeans": dbi_kmeans,
+            }
+
+    # =============================================================================
+    # DBSCAN
+    # =============================================================================
+    with timer.section("DBSCAN"):
+
+        # Parameters for DBSCAN
+        epsilon_values = config["dbscan"]["epsilon_values"]
+        min_samples_limits = config["dbscan"]["min_samples_limits"]
+        min_samples_num = config["dbscan"]["min_samples_num"]
+
+        min_samples_values = np.linspace(
+            min_samples_limits[0], min_samples_limits[1], min_samples_num, dtype=int
+        )
+
+        target_clusters = [k for k in range(2, k_max + 1) ]
+        dbscan_models, results = grid_search_dbscan(
+            X_reduced, target_clusters, epsilon_values, min_samples_values
+        )
+
+    with timer.section("Saving results"):
+        # Save the DBSCAN models and results
+        dbscan_models_path = models_dir / config["saving_names"]["dbscan_models"]
+        dbscan_results_path = models_dir / config["saving_names"]["dbscan_results"]
+
+        dump(dbscan_models, dbscan_models_path)
+        dump(results, dbscan_results_path)
+
+        print(f'DBSCAN models saved at: "{dbscan_models_path}"')
+        print(f'DBSCAN results saved at: "{dbscan_results_path}"')
+
+        # Save the K-means models and results if used
+        if config.get("use_kmeans", False):
+            kmeans_models_path = models_dir / config["saving_names"]["kmeans_models"]
+            kmeans_results_path = models_dir / config["saving_names"]["kmeans_results"]
+
+            dump(kmeans_models, kmeans_models_path)
+            dump(kmeans_results, kmeans_results_path)
+
+            print(f'K-means models saved at: "{kmeans_models_path}"')
+            print(f'K-means results saved at: "{kmeans_results_path}"')
+
+        # Save everything printed during the run while keeping console output.
+        sys.stdout = original_stdout
+        report_path = models_dir / "training_output.txt"
+        report_path.write_text(output_buffer.getvalue(), encoding="utf-8")
+        print(f'Results printed during training saved at: "{report_path}"')
+
+    timer.report()
+
+
+if __name__ == "__main__":
+    main(config_name)
+
+```
+
+## File: `src\preprocessing\n01_select_waveforms.py`
+```python
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
+import numpy as np
+import vallenae as vae
+from matplotlib.widgets import Button, Slider, TextBox
+from mylib import load_config, save_config  # type: ignore
+
+from src.preprocessing.pipeline_utils import (
+    DEFAULT_CONFIG_PATH,
+    get_segmentation_paths,
+    parse_config_args,
+)
+from utils.segmentation import dbae_to_mV
+
+
+def _discover_trais(
+    tradb_path: Path,
+    min_amp_dbae: float = 36.0,
+    min_counts: int = 5,
+    max_trai: int | None = None,
+) -> list[int]:
+    """Return sorted valid TRAIs using `.pridb` metadata when available, else `.tradb`."""
+    pridb_path = tradb_path.with_suffix(".pridb")
+    if pridb_path.exists():
+        with vae.io.PriDatabase(pridb_path) as pridb:
+            hits = pridb.read_hits().reset_index(drop=True)
+
+        if not hits.empty and "trai" in hits.columns:
+            amp_dbae = 20.0 * np.log10(
+                np.maximum(hits["amplitude"].to_numpy(), 1e-12) / 1e-6
+            )
+            mask = (
+                (hits["trai"] > 0)
+                & (amp_dbae >= min_amp_dbae)
+                & (amp_dbae <= 94.0)
+                & (hits["counts"] >= min_counts)
+            )
+            if max_trai is not None:
+                mask &= hits["trai"] <= max_trai
+
+            trais = sorted(int(t) for t in hits.loc[mask, "trai"].dropna().unique())
+            if trais:
+                return trais
+
+    with sqlite3.connect(tradb_path) as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT trai FROM tr_data WHERE trai > 0 ORDER BY trai"
+        ).fetchall()
+    trais = [int(r[0]) for r in rows]
+    if max_trai is not None:
+        trais = [t for t in trais if t <= max_trai]
+    return trais
+
+
+class InteractiveWaveformSelector:
+    """Interactive Matplotlib browser to inspect AE transients and annotate sub-hits."""
+
+    def __init__(
+        self,
+        tradb_path: Path,
+        config_path: Path,
+        config: dict[str, Any],
+        test_id: str,
+        trais: list[int],
+        min_amp_dbae: float = 36.0,
+    ) -> None:
+        if not trais:
+            raise ValueError(f"No valid TRAIs found in {tradb_path}.")
+
+        self.tradb_path = tradb_path
+        self.config_path = config_path
+        self.config = config
+        self.test_id = test_id
+        self.trais = trais
+        self.current_idx = 0
+        self.min_amp_dbae = min_amp_dbae
+
+        self.tradb = vae.io.TraDatabase(self.tradb_path)
+        self.selections: dict[int, int] = {}
+        self.save_to_json()
+
+        self._build_ui()
+        self._update_plot()
+
+    def save_to_json(self) -> None:
+        """Persist annotated TRAIs into `self.config_path` via `mylib.save_config`."""
+        ordered_items = [
+            {"trai": trai, "expected_segments": self.selections[trai]}
+            for trai in sorted(self.selections)
+        ]
+        payload: dict[str, Any] = {
+            **self.config,
+            "test_id": self.test_id,
+            "tradb_path": self.config.get("tradb_path", None),
+            "selections": ordered_items,
+            "trai_list": [item["trai"] for item in ordered_items],
+            "expected_segments": [item["expected_segments"] for item in ordered_items],
+            "param_grid": self.config.get("param_grid"),
+            "grid_search": self.config.get(
+                "grid_search",
+                {
+                    "output_dir": None,
+                    "save_valid_only": True,
+                    "img_format": "png",
+                    "figsize_mm": [140, 90],
+                    "save_figures": True,
+                    "show_figures": False,
+                    "save_txt": True,
+                },
+            ),
+        }
+        self.config = payload
+        save_config(payload, self.config_path)
+
+    def _build_ui(self) -> None:
+        self.fig = plt.figure(figsize=(13.0, 7.2))
+        self.fig.canvas.manager.set_window_title(
+            f"AE Waveform Selector - {self.test_id}"
+        )
+
+        # Main waveform panel and right-hand selection summary panel
+        self.ax_wave = self.fig.add_axes([0.07, 0.25, 0.66, 0.65])
+        self.ax_summary = self.fig.add_axes([0.75, 0.25, 0.23, 0.65])
+        self.ax_summary.axis("off")
+
+        # Index scrubber slider
+        ax_slider = self.fig.add_axes([0.07, 0.15, 0.66, 0.03])
+        self.slider = Slider(
+            ax=ax_slider,
+            label="Index",
+            valmin=0,
+            valmax=max(0, len(self.trais) - 1),
+            valinit=0,
+            valstep=1,
+        )
+        self.slider.on_changed(self._on_slider_changed)
+
+        # Navigation & annotation controls
+        self.btn_prev = Button(self.fig.add_axes([0.07, 0.05, 0.08, 0.06]), "Prev (<-)")
+        self.btn_next = Button(self.fig.add_axes([0.16, 0.05, 0.08, 0.06]), "Next (->)")
+
+        self.txt_jump = TextBox(
+            self.fig.add_axes([0.31, 0.05, 0.08, 0.06]), "TRAI: ", initial=""
+        )
+
+        self.btn_seg2 = Button(
+            self.fig.add_axes([0.42, 0.05, 0.085, 0.06]), "Add: 2 segs", color="#e6f2ff"
+        )
+        self.btn_seg3 = Button(
+            self.fig.add_axes([0.515, 0.05, 0.085, 0.06]),
+            "Add: 3 segs",
+            color="#d9f2e6",
+        )
+        self.btn_seg4 = Button(
+            self.fig.add_axes([0.61, 0.05, 0.085, 0.06]), "Add: 4 segs", color="#fff2cc"
+        )
+        self.btn_seg5 = Button(
+            self.fig.add_axes([0.705, 0.05, 0.085, 0.06]),
+            "Add: 5 segs",
+            color="#ffe6cc",
+        )
+        self.btn_remove = Button(
+            self.fig.add_axes([0.80, 0.05, 0.085, 0.06]), "Remove", color="#ffd6d6"
+        )
+        self.btn_save = Button(
+            self.fig.add_axes([0.895, 0.05, 0.085, 0.06]), "Save JSON", color="#d4edda"
+        )
+
+        self.btn_prev.on_clicked(lambda _: self.step(-1))
+        self.btn_next.on_clicked(lambda _: self.step(1))
+        self.txt_jump.on_submit(self._on_jump_submit)
+        self.btn_seg2.on_clicked(lambda _: self.assign_segments(2))
+        self.btn_seg3.on_clicked(lambda _: self.assign_segments(3))
+        self.btn_seg4.on_clicked(lambda _: self.assign_segments(4))
+        self.btn_seg5.on_clicked(lambda _: self.assign_segments(5))
+        self.btn_remove.on_clicked(lambda _: self.remove_current())
+        self.btn_save.on_clicked(lambda _: self._manual_save())
+
+        self.fig.canvas.mpl_connect("key_press_event", self._on_key_press)
+        self.status_msg = (
+            "Ready. Use buttons or keys [2-5] to add TRAI, Left/Right to browse."
+        )
+
+    def _on_slider_changed(self, val: float) -> None:
+        new_idx = round(val)
+        if new_idx != self.current_idx:
+            self.current_idx = new_idx
+            self._update_plot()
+
+    def _on_jump_submit(self, text: str) -> None:
+        cleaned = text.strip()
+        if not cleaned.isdigit():
+            self.status_msg = f"Invalid TRAI input: '{text}'"
+            self._update_summary_panel()
+            return
+        target = int(cleaned)
+        if target in self.trais:
+            self.current_idx = self.trais.index(target)
+            self.slider.set_val(self.current_idx)
+            self.status_msg = f"Jumped to TRAI {target}."
+        else:
+            nearest_idx = int(np.argmin(np.abs(np.array(self.trais) - target)))
+            self.current_idx = nearest_idx
+            self.slider.set_val(self.current_idx)
+            self.status_msg = f"TRAI {target} not in filtered list; showing nearest TRAI {self.trais[nearest_idx]}."
+        self._update_plot()
+
+    def _on_key_press(self, event: Any) -> None:
+        if event.inaxes == self.txt_jump.ax:
+            return
+        if event.key == "left":
+            self.step(-1)
+        elif event.key == "right":
+            self.step(1)
+        elif event.key in {"2", "3", "4", "5"}:
+            self.assign_segments(int(event.key))
+        elif event.key in {"delete", "backspace"}:
+            self.remove_current()
+        elif event.key == "s":
+            self._manual_save()
+
+    def step(self, delta: int) -> None:
+        self.current_idx = (self.current_idx + delta) % len(self.trais)
+        self.slider.eventson = False
+        self.slider.set_val(self.current_idx)
+        self.slider.eventson = True
+        self._update_plot()
+
+    def assign_segments(self, n_segments: int) -> None:
+        trai = self.trais[self.current_idx]
+        self.selections[trai] = n_segments
+        self.save_to_json()
+        self.status_msg = (
+            f"Added TRAI {trai} -> {n_segments} segment(s) and saved to JSON."
+        )
+        self._update_plot()
+
+    def remove_current(self) -> None:
+        trai = self.trais[self.current_idx]
+        if trai in self.selections:
+            del self.selections[trai]
+            self.save_to_json()
+            self.status_msg = f"Removed TRAI {trai} from selection and updated JSON."
+        else:
+            self.status_msg = f"TRAI {trai} is not currently selected."
+        self._update_plot()
+
+    def _manual_save(self) -> None:
+        self.save_to_json()
+        self.status_msg = (
+            f"Saved {len(self.selections)} TRAIs to {self.config_path.name}."
+        )
+        self._update_summary_panel()
+
+    def _update_plot(self) -> None:
+        trai = self.trais[self.current_idx]
+        amp_v, time = self.tradb.read_wave(trai, time_axis=True)
+        waveform = amp_v * 1e3
+        time_us = time * 1e6
+
+        peak_mv = float(np.max(np.abs(waveform)))
+        peak_dbae = 20.0 * np.log10(max(peak_mv, 1e-9) * 1e3)
+        dur_us = float(time_us[-1] - time_us[0]) if time_us.size > 1 else 0.0
+
+        self.ax_wave.clear()
+        self.ax_wave.plot(
+            time_us, waveform, color="#2b5c8f", linewidth=0.65, label="Waveform [mV]"
+        )
+        self.ax_wave.axhline(
+            dbae_to_mV(self.min_amp_dbae),
+            color="crimson",
+            linestyle=":",
+            linewidth=0.8,
+            label=f"Ref. threshold ({self.min_amp_dbae:.0f} dBAE)",
+        )
+        
+        self.ax_wave.axhline(
+                - dbae_to_mV(self.min_amp_dbae),
+                color="crimson",
+                linestyle=":",
+                linewidth=0.8,
+            )
+
+        selected_tag = ""
+        if trai in self.selections:
+            selected_tag = f"  |  SELECTED: {self.selections[trai]} segment(s)"
+            self.ax_wave.set_facecolor("#f4fbf6")
+        else:
+            self.ax_wave.set_facecolor("white")
+
+        self.ax_wave.set_title(
+            f"{self.test_id}  |  TRAI {trai} ({self.current_idx + 1}/{len(self.trais)})  |  "
+            f"Peak: {peak_mv:.2f} mV ({peak_dbae:.1f} dBAE)  |  Dur: {dur_us:.1f} us{selected_tag}",
+            fontsize=10,
+            fontweight="bold",
+        )
+        self.ax_wave.set_xlabel("Time [us]")
+        self.ax_wave.set_ylabel("Amplitude [mV]")
+        self.ax_wave.grid(True, linestyle="-", linewidth=0.35, alpha=0.7)
+        self.ax_wave.legend(loc="upper right", fontsize=8)
+
+        self._update_summary_panel()
+        self.fig.canvas.draw_idle()
+
+    def _update_summary_panel(self) -> None:
+        self.ax_summary.clear()
+        self.ax_summary.axis("off")
+
+        lines = [
+            "SELECTED TRAIs",
+            "=" * 26,
+            f"Config JSON:\n{self.config_path.name}",
+            "-" * 26,
+        ]
+        if self.selections:
+            for trai in sorted(self.selections):
+                marker = ">> " if trai == self.trais[self.current_idx] else "   "
+                lines.append(
+                    f"{marker}TRAI {trai:<6} -> {self.selections[trai]} seg(s)"
+                )
+        else:
+            lines.append("  (No TRAIs selected yet)")
+
+        lines.extend(
+            [
+                "-" * 26,
+                "Shortcuts:",
+                "  Left/Right : Prev / Next",
+                "  2, 3, 4, 5 : Add N segments",
+                "  Backspace  : Remove TRAI",
+                "  S          : Save JSON",
+                "-" * 26,
+                f"Status:\n{self.status_msg}",
+            ]
+        )
+        self.ax_summary.text(
+            0.0,
+            1.0,
+            "\n".join(lines),
+            va="top",
+            ha="left",
+            fontsize=8.5,
+            family="monospace",
+        )
+
+    def show(self) -> None:
+        plt.show()
+
+
+def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
+    """Launch the interactive waveform selector driven by a JSON configuration file."""
+    config, cfg_path = load_config(config_arg, return_path=True)
+    paths = get_segmentation_paths(config, create=False)
+
+    test_id = str(config["test_id"])
+    selector_cfg = config.get("selector", {})
+
+    min_amp_dbae = float(selector_cfg.get("min_amp_dbae", 36.0))
+    min_counts = int(selector_cfg.get("min_counts", 5))
+    max_trai_raw = selector_cfg.get("max_trai", None)
+    max_trai = int(max_trai_raw) if max_trai_raw is not None else None
+
+    tradb_path = paths["tradb_path"]
+    if not tradb_path.exists():
+        raise FileNotFoundError(f"Transient database not found: {tradb_path}")
+
+    trais = _discover_trais(
+        tradb_path=tradb_path,
+        min_amp_dbae=min_amp_dbae,
+        min_counts=min_counts,
+        max_trai=max_trai,
+    )
+    print(f"[INFO] Loaded config from   : {cfg_path}")
+    print(f"[INFO] Loaded {len(trais)} candidate TRAIs from {tradb_path}")
+
+    selector = InteractiveWaveformSelector(
+        tradb_path=tradb_path,
+        config_path=cfg_path,
+        config=config,
+        test_id=test_id,
+        trais=trais,
+        min_amp_dbae=min_amp_dbae
+    )
+    selector.show()
+
+
+if __name__ == "__main__":
+    args = parse_config_args(
+        "Stage 1: Inspect AE transient waveforms and select example TRAIs."
+    )
+    main(config_arg=args.config)
+
+```
+
+## File: `src\preprocessing\n02_run_grid_search.py`
+```python
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from mylib import configure_plots, load_config, save_config  # type: ignore
+
+from src.preprocessing.pipeline_utils import (
+    DEFAULT_CONFIG_PATH,
+    get_segmentation_paths,
+    parse_config_args,
+)
+from utils.segmentation import run_segmentation_grid_search
+
+configure_plots(font="IBM Plex Sans")
+
+
+def _extract_trais_and_expectations(
+    config: dict[str, Any],
+) -> tuple[list[int], list[int]]:
+    """Read `(trai_list, expected_segments)` from `selections` or flat arrays."""
+    selections = config.get("selections")
+    if selections:
+        trai_list = [int(item["trai"]) for item in selections]
+        expected_segments = [int(item["expected_segments"]) for item in selections]
+        return trai_list, expected_segments
+
+    trai_list = [int(t) for t in config.get("trai_list", [])]
+    expected_segments = [int(e) for e in config.get("expected_segments", [])]
+    return trai_list, expected_segments
+
+
+def main(
+    config_arg: str | Path | None = DEFAULT_CONFIG_PATH,
+) -> None:
+    """Run the sub-hit segmentation grid search from a stage-01 selection JSON."""
+    config, cfg_path = load_config(config_arg, return_path=True)
+    paths = get_segmentation_paths(config, create=True)
+
+    dataset_name = str(config["dataset_name"])
+    test_id = str(config["test_id"])
+    sampling_rate = float(config.get("sampling_rate", 5.0))
+
+    trai_list, expected_segments = _extract_trais_and_expectations(config)
+    if not trai_list:
+        raise ValueError(
+            f"No TRAIs found in '{cfg_path}'. Run 01_select_waveforms.py first."
+        )
+
+    tradb_path = paths["tradb_path"]
+    if not tradb_path.exists():
+        raise FileNotFoundError(f"Transient database not found: {tradb_path}")
+
+    param_grid = config.get("param_grid")
+    if not param_grid:
+        raise ValueError(f"Missing 'param_grid' dictionary in '{cfg_path}'.")
+
+    gs_cfg = config.get("grid_search", {})
+    save_valid_only = bool(gs_cfg.get("save_valid_only", True))
+    img_format = str(gs_cfg.get("img_format", "png"))
+    figsize_mm = tuple(gs_cfg.get("figsize_mm", [140, 90]))
+    save_figures = bool(gs_cfg.get("save_figures", True))
+    show_figures = bool(gs_cfg.get("show_figures", False))
+    save_txt = bool(gs_cfg.get("save_txt", True))
+
+    print(f"[INFO] Loaded config from   : {cfg_path}")
+    print(f"[INFO] Dataset / Test ID    : {dataset_name} / {test_id}")
+    print(f"[INFO] TRAIs                : {trai_list}")
+    print(f"[INFO] Expected segments    : {expected_segments}")
+    print(f"[INFO] Figures directory    : {paths['figures_dir']}")
+    print(f"[INFO] Results directory    : {paths['results_dir']}")
+
+    summary_df = run_segmentation_grid_search(
+        tradb_path=tradb_path,
+        trai_list=trai_list,
+        param_grid=param_grid,
+        fig_dir=paths["figures_dir"],
+        results_dir=paths["results_dir"],
+        expected_segments=expected_segments,
+        save_valid_only=save_valid_only,
+        test_id=test_id,
+        sampling_rate=sampling_rate,
+        img_format=img_format,
+        figsize=figsize_mm,
+        save=save_figures,
+        show=show_figures,
+        save_txt=save_txt,
+    )
+
+    # Save an exact snapshot of the configuration used for reproducibility
+    save_config(config, paths["results_dir"] / "grid_search_config_used.json")
+    print(f"[INFO] Completed {len(summary_df)} total evaluations.")
+
+
+if __name__ == "__main__":
+    args = parse_config_args(
+        "Stage 2: Run sub-hit segmentation grid search from selected TRAIs JSON.",
+    )
+    main(
+        config_arg=args.config,
+    )
+
+```
+
+## File: `src\preprocessing\pipeline_utils.py`
+```python
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from typing import Any
+
+from mylib import (  # type: ignore
+    parse_config_args as _mylib_parse_config_args,
+)
+from mylib import resolve_path  # type: ignore
+
+from utils.paths import (
+    DATASETS_DIR,
+    EXAMPLE_TRADB,
+    FIGURES_DIR,
+    PARAMETERS_DIR,
+    RESULTS_DIR,
+)
+
+DEFAULT_CONFIG_SUBDIR = PARAMETERS_DIR / "example_data"
+DEFAULT_CONFIG_NAME = "segmentation.json"
+DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_SUBDIR / DEFAULT_CONFIG_NAME
+
+
+__all__ = [
+    "DEFAULT_CONFIG_PATH",
+    "get_segmentation_paths",
+    "parse_config_args",
+]
+
+
+def get_segmentation_paths(
+    config: dict[str, Any],
+    create: bool = True,
+) -> dict[str, Path]:
+    """Build (and optionally create) standard dataset, result, and figure paths."""
+    dataset_name = str(config["dataset_name"])
+    test_id = str(config["test_id"])
+
+    raw_tradb = config.get("tradb_path")
+    tradb_path = resolve_path(raw_tradb) if raw_tradb else EXAMPLE_TRADB
+
+    dataset_dir = DATASETS_DIR / dataset_name
+    results_dir = RESULTS_DIR / dataset_name / "segmentation" / test_id
+    figures_dir = FIGURES_DIR / dataset_name / "segmentation" / test_id
+
+    if create:
+        for directory in (dataset_dir, results_dir, figures_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+
+    return {
+        "tradb_path": tradb_path,
+        "dataset_dir": dataset_dir,
+        "results_dir": results_dir,
+        "figures_dir": figures_dir,
+    }
+
+
+def parse_config_args(
+    description: str,
+) -> argparse.Namespace:
+    """Parse `-c` / `--config` (defaulting to `DEFAULT_CONFIG_PATH`) ."""
+
+    return _mylib_parse_config_args(
+        description=description,
+        default_config=DEFAULT_CONFIG_PATH,
+    )
+
+```
+
+## File: `thesis_scripts\plot_single_segmentation.py`
+```python
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import vallenae as vae
+from mylib import configure_plots, load_config, parse_config_args  # type: ignore
+
+from src.preprocessing.pipeline_utils import get_segmentation_paths
+from thesis_scripts.thesis_utils import DEFAULT_CONFIG_DIR
+from utils.segmentation import (
+    PARAM_COLUMNS,
+    compute_smoothed_envelope,
+    plot_subhit_segmentation,
+    segment_merged_hits,
+)
+
+configure_plots(font="IBM Plex Sans")
+
+DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "single_segmentation.json"
+
+
+def load_combo_params(csv_path: str, test_id: str, combo_id: str) -> dict[str, Any]:
+    """Read a specific `combo_id` parameter row from `grid_search_summary.csv`."""
+    df = pd.read_csv(csv_path)
+    match = df[df["combo_id"] == combo_id]
+    if match.empty:
+        raise ValueError(f"Combo '{combo_id}' not found in {csv_path}.")
+
+    row = match.iloc[0]
+    return {
+        col: (row[col].item() if hasattr(row[col], "item") else row[col])
+        for col in PARAM_COLUMNS
+        if col in row and pd.notna(row[col])
+    }
+
+
+def main(
+    config_arg: str | Path | None = DEFAULT_CONFIG_PATH,
+) -> None:
+    config = load_config(config_arg, return_path=False)
+    paths = get_segmentation_paths(config, create=False)
+
+    # 1. Choose specimen, single TRAI, and output styling for the thesis
+    test_id = config["test_id"]
+    trai = config["trai"]
+    combo_id: str | None = config.get("combo_id", None)
+
+    manual_params: dict[str, Any] = {
+        "sampling_rate": 5e6,
+        "threshold_dbae": 30.0,
+        "pre_trigger_us": 40.0,
+        "smoothing_us": 100.0,
+        "min_separation_us": 300.0,
+        "min_prominence_ratio": 0.25,
+        "valley_decay_ratio": 0.35,
+        "min_secondary_ratio": 0.1,
+    }
+
+    # 2. Establish the parameters
+    csv_path = paths["results_dir"] / "grid_search_summary.csv"
+    params = (
+        load_combo_params(csv_path=csv_path, test_id=test_id, combo_id=combo_id)
+        if combo_id is not None
+        else manual_params
+    )
+
+    # 3. Load the single transient and segment it
+    tradb_path = paths["tradb_path"]
+    tradb = vae.io.TraDatabase(tradb_path)
+    amp_v, time = tradb.read_wave(trai, time_axis=True)
+    waveform = amp_v * 1e3
+
+    sampling_rate = float(params.get("sampling_rate", 5.0))
+    smooth_env = compute_smoothed_envelope(
+        waveform, sampling_rate=sampling_rate, smoothing_us=float(params.get("smoothing_us", 100.0))
+    )
+    segments = segment_merged_hits(waveform=waveform, **params)
+
+    # 4. Plot & save without main title (caption goes in LaTeX/Word)
+    plot_cfg = config["plot"]
+    img_format = plot_cfg.get("img_format", "pdf")
+    figsize = tuple(plot_cfg.get("figsize_mm", [120, 90]))
+    fig_path = paths["figures_dir"] / f"trai_{trai}_segmentation.{img_format}"
+    plot_subhit_segmentation(
+        waveform=waveform,
+        time=time,
+        segments=segments,
+        params=params,
+        figure_path=fig_path,
+        smooth_env=smooth_env,
+        trai=trai,
+        test_id=test_id,
+        show_title=plot_cfg.get("show_tile", False),
+        show_subplot_titles=plot_cfg.get("show_subplot_tiles", True),
+        legend_loc=plot_cfg.get("legend_loc", "lower right"),
+        figsize=figsize,
+        save=plot_cfg.get("save_figures", False),
+        show=plot_cfg.get("show_figures", True),
+        save_txt=False,
+    )
+
+
+if __name__ == "__main__":
+    args = parse_config_args(
+        description="Single Segmention: Run sub-hit segmentation from selected TRAI.",
+        default_config=DEFAULT_CONFIG_PATH,
+    )
+    main(
+        config_arg=args.config,
+    )
+
+```
+
+## File: `thesis_scripts\thesis_utils.py`
+```python
+from mylib import configure_plots  # type: ignore
+
+from utils.paths import (
+    PARAMETERS_DIR,
+)
+
+configure_plots(font="IBM Plex Sans")
+
+DEFAULT_CONFIG_DIR = PARAMETERS_DIR / "thesis_figures"
+
+__all__ = [
+    "DEFAULT_CONFIG_DIR"
+]
 ```
 
 ## File: `utils\__init__.py`
@@ -4315,15 +5135,27 @@ Created on Thu Nov 16 10:24:10 2023
 
 # Main libraries
 import os
+import re
 import string
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 # Import necessary libraries
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import vallenae as vae
+from mylib import (  # type: ignore
+    IMG_SIZE,
+    MARKER_LIST,
+    configure_plots,
+    get_active_palette,
+    img_size_inches,
+    resolve_save_target,
+    save_fig,
+)
 
 # Libraries for signal processing
 from scipy.fft import fft, fftfreq
@@ -4336,7 +5168,6 @@ from sklearn.feature_selection import RFECV
 # Feature visualization
 from sklearn.manifold import TSNE
 from sklearn.metrics import (
-    ConfusionMatrixDisplay,
     accuracy_score,
     f1_score,
     make_scorer,
@@ -4353,13 +5184,9 @@ from sklearn.model_selection import (
 # Data processing and normalization
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler, StandardScaler
 
-# Set font to Times New Roman and size to 8
-matplotlib.rcParams["font.family"] = "serif"
-matplotlib.rcParams["font.serif"] = "Times New Roman"
-matplotlib.rcParams["font.size"] = 8
-matplotlib.rcParams["figure.dpi"] = 150
+from utils.segmentation import SubHitSegment, segment_merged_hits
 
-MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+configure_plots(font="IBM Plex Sans")
 
 # =============================================================================
 # Feature extraction
@@ -4369,808 +5196,771 @@ MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
 class Features:
     def __init__(
         self,
-        path: str,
+        path: str | Path,
         lower_freq: float,
         upper_freq: float,
         sampling_rate: float,
         N_samp: int,
         N_seg: int,
-        desfase: int,
-        desfase_carga: int = 0,
-        force: pd.DataFrame = None,
+        signal_offset: float,
+        load_offset: float = 0,
+        force: pd.DataFrame | None = None,
+        segmentation_params: dict[str, Any] | None = None,
+        sub_signal_offset_us: float = 0.0,
     ):
         """
         Parameters
         ----------
-        path : str
-            Directory where the pri and tra files are located.
-        lower_freq : int, float
+        path : str or Path
+            Directory where the `.pridb` and `.tradb` files are located.
+        lower_freq : float
             Lower frequency limit in kHz.
-        upper_freq : int, float
+        upper_freq : float
             Upper frequency limit in kHz.
-        sampling_rate : int, float
+        sampling_rate : float
             Data acquisition frequency per second in MHz.
         N_samp : int
-            Number of samples (data points) in each segment for Fourier analysis (preferably a power of 2).
+            Number of samples in each segment for Fourier analysis (power of 2).
         N_seg : int
-            Total number of segments to analyze.
-        desfase : int
-            Index to start the signal from the beginning or with a positive offset, depending on the pretrigger.
-        desfase_carga : int
-            Offset of the time taken in AE and in MTS.
-
-        Returns
-        -------
-        Object initialized with values to apply extraction and plotting functions.
-
+            Total number of overlapping segments to analyze.
+        signal_offset : float
+            Start offset in microseconds [µs] depending on pretrigger.
+        load_offset : float, default=0
+            Offset between AE and MTS time bases [s].
+        force : DataFrame, optional
+            MTS force data for automatic time alignment.
         """
-        self.path = path
-        self.lower_freq = lower_freq  # Lower frequency limit in kHz
-        self.upper_freq = upper_freq  # Upper frequency limit in kHz
-        self.sampling_rate = (
-            sampling_rate  # Data acquisition frequency per second in MHz
-        )
-        self.N_samp = N_samp  # Number of samples (data points) in each segment
-        self.N_seg = N_seg  # Number of segments
-        self.desfase = desfase  # Depends on the pretrigger time, allows starting from
-        # the beginning of the signal or with a positive offset
-        self.desfase_carga = desfase_carga  # Offset of the time taken in AE and in MTS
-        self.force = force  # Force data for time alignment
+        self.path = Path(path)
+        self.lower_freq = lower_freq
+        self.upper_freq = upper_freq
+        self.sampling_rate = sampling_rate
+        self.N_samp = N_samp
+        self.N_seg = N_seg
+        self.signal_offset_us = signal_offset
+        self.signal_offset = int(signal_offset * sampling_rate)
+        self.load_offset = load_offset
+        self.force = force
 
-        # Open pri and tra files
-        files = os.listdir(self.path)
-        for item in files:
+        for item in os.listdir(self.path):
             if item.endswith(".tradb"):
-                self.tradb_path = os.path.join(self.path, item)
-
+                self.tradb_path = self.path / item
             elif item.endswith(".pridb"):
-                self.pridb_path = os.path.join(self.path, item)
+                self.pridb_path = self.path / item
 
-        # Calculate values
-        self.res_freq = sampling_rate * 1000 / N_samp  # Frequency resolution in kHz
-        self.time_samp = 1 / sampling_rate  # Sampling time in µs (microseconds)
-        self.time_seg = self.time_samp * N_samp  # Time of each segment in µs
+        self.res_freq = sampling_rate * 1000.0 / N_samp
+        self.time_samp = 1.0 / sampling_rate
+        self.time_seg = self.time_samp * N_samp
 
-        # Calculate frequency range indices
-        self.lower_freq_index = int(
-            self.lower_freq // self.res_freq
-        )  # Lower frequency index
-        self.upper_freq_index = int(
-            self.upper_freq // self.res_freq + 1
-        )  # Upper frequency index
-        self.N_feat_seg = 9  # Number of features per segment
+        self.lower_freq_index = int(self.lower_freq // self.res_freq)
+        self.upper_freq_index = int(self.upper_freq // self.res_freq + 1)
+        self.N_feat_seg = 9
 
-        # Values for FFT that are calculated only once
-        self.window = hamming(self.N_samp)  # Create the Hamming window
-        self.freq_fft = (fftfreq(self.N_samp, self.time_samp * 1e-6) / 1000)[
+        self.window = hamming(self.N_samp)
+        self.freq_fft = (fftfreq(self.N_samp, self.time_samp * 1e-6) / 1000.0)[
             : self.N_samp // 2
-        ]  # Positive frequency values of the FFT in kHz
+        ]
         self.freq_fft_rango = self.freq_fft[
             self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the frequency values
+        ]
+        self.segmentation_params = segmentation_params
+        self.sub_signal_offset = int(sub_signal_offset_us * sampling_rate)
+
+    def _extract_fft_vector(
+        self,
+        waveform_mv: np.ndarray,
+        offset_pts: int,
+        bin_edges: list[int],
+    ) -> np.ndarray:
+        """Compute the 1D spectral feature vector (`9 * N_seg`) for one waveform or sub-hit."""
+        min_required = int(((self.N_seg - 1) / 2 + 1) * self.N_samp) + offset_pts
+        if waveform_mv.size < min_required:
+            waveform_mv = np.pad(waveform_mv, (0, min_required - waveform_mv.size))
+
+        seg_total = np.zeros((self.N_seg, self.N_samp))
+        for i in range(self.N_seg):
+            start = int(i * self.N_samp / 2 + offset_pts)
+            end = int((i / 2 + 1) * self.N_samp + offset_pts)
+            seg_total[i] = waveform_mv[start:end]
+
+        amp_fft = np.abs(fft(seg_total * self.window))
+        amp_fft_rango = amp_fft[:, self.lower_freq_index : self.upper_freq_index + 1]
+
+        peak_freq = np.zeros(self.N_seg)
+        centroid_freq = np.zeros(self.N_seg)
+        part_powers = np.zeros((6, self.N_seg))
+
+        for i in range(self.N_seg):
+            spectrum = amp_fft_rango[i]
+            spec_sum = np.sum(spectrum)
+            if spec_sum > 0:
+                peak_freq[i] = self.freq_fft_rango[np.argmax(spectrum)]
+                centroid_freq[i] = np.sum(spectrum * self.freq_fft_rango) / spec_sum
+
+            power_spec = spectrum**2
+            denominator = np.sum(power_spec)
+            if denominator > 0:
+                for band in range(6):
+                    part_powers[band, i] = (
+                        np.sum(power_spec[bin_edges[band] : bin_edges[band + 1]])
+                        * 100.0
+                        / denominator
+                    )
+
+        w_peak_freq = (peak_freq * centroid_freq) ** 0.5
+        return np.hstack(
+            (
+                peak_freq,
+                w_peak_freq,
+                centroid_freq,
+                part_powers[0],
+                part_powers[1],
+                part_powers[2],
+                part_powers[3],
+                part_powers[4],
+                part_powers[5],
+            )
+        )
+
+    def read_transient(self, trai: int) -> tuple[np.ndarray, np.ndarray]:
+        """Load `(time_us, amp_mv)` for a given `trai` from `self.tradb_path`."""
+        return load_transient_wave(self.tradb_path, trai)
 
     def feature_extr(
-        self, threshold, counts, label, test_id, max_trai=None, min_trai=1
-    ):
-        """
+        self,
+        threshold: float,
+        counts: int,
+        label: int | str,
+        test_id: str,
+        max_trai: int | None = None,
+        min_trai: int = 1,
+    ) -> pd.DataFrame:
+        """Extract frequency and time-domain features for all filtered transients."""
+        pridb = vae.io.PriDatabase(str(self.pridb_path))
+        tradb = vae.io.TraDatabase(str(self.tradb_path))
+        df_hits = pridb.read_hits() 
 
-        Parameters
-        ----------
-        threshold : int
-            Threshold amplitude value for filtering.
-        counts : int
-            Minimum counts value for filtering.
-        label : int or str
-            Class to which the signal belongs.
-        test_id : str
-            Test code for later identification.
-        max_trai : int, optional
-            Maximum trai index to consider, if you want to exclude the break.
-            The default is None.
-        min_trai : int, optional
-            Minimum trai index to consider, if you want to exclude some erroneous
-            initial data. The default is 1.
+        threshold_V = 10 ** (threshold / 20 - 6)
+        threshold_mv = threshold_V * 1e3
+        no_saturation = 10 ** (94 / 20 - 6)
 
-        Returns
-        -------
-        df_total : DataFrame
-            DataFrame containing frequency features + rise time, classes, and trai number.
-
-        """
-
-        # Read files
-        pridb = vae.io.PriDatabase(self.pridb_path)
-        tradb = vae.io.TraDatabase(self.tradb_path)
-        df_hits = pridb.read_hits()  # Read the hits that have occurred
-
-        # Signal filtering (trai threshold and counts)
-        threshold_V = 10 ** (threshold / 20 - 6)  # Threshold in Volts
-        no_saturacion = 10 ** (94 / 20 - 6)
-
+        mask = (
+            (df_hits["channel"] >= 1)
+            & (df_hits["amplitude"] >= threshold_V)
+            & (df_hits["amplitude"] <= no_saturation)
+            & (df_hits["trai"] >= min_trai)
+            & (df_hits["counts"] >= counts)
+        )
         if max_trai is not None:
-            df_hits_filtro = df_hits[
-                (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= threshold_V)
-                & (df_hits["amplitude"] <= no_saturacion)
-                & (df_hits["trai"] >= min_trai)
-                & (df_hits["trai"] <= max_trai)
-                & (df_hits["counts"] >= counts)
-            ]  # Select only the values that meet the conditions
-        else:
-            df_hits_filtro = df_hits[
-                (df_hits["channel"] >= 1)
-                & (df_hits["amplitude"] >= threshold_V)
-                & (df_hits["amplitude"] <= no_saturacion)
-                & (df_hits["trai"] >= min_trai)
-                & (df_hits["counts"] >= counts)
-            ]  # Select only the values that meet the conditions
+            mask &= df_hits["trai"] <= max_trai
+
+        df_hits_filtro = df_hits[mask]
         if df_hits_filtro.empty:
             print(
                 f"[WARNING] No transients found for label '{label}' with the given filtering criteria."
             )
-            return (
-                pd.DataFrame()
-            )  # Return an empty DataFrame if no transients are found
+            return pd.DataFrame()
 
-        trai = df_hits_filtro[
-            "trai"
-        ].to_numpy()  # Extract the column with the TRAI values (transient indices)
-        N_trai = trai.size  # Total number of transients
+        # trai = df_hits_filtro["trai"].to_numpy()
+        # N_trai = trai.size
+        # v_features_total = np.zeros((N_trai, self.N_seg * self.N_feat_seg))
 
-        # Create matrix to store features
-        v_features_total = np.zeros(
-            (N_trai, self.N_seg * self.N_feat_seg)
-        )  # Array that will store the features in each iteration
+        n_bins = len(self.freq_fft_rango)
+        bin_edges = [int(n_bins * k / 6) for k in range(7)]
 
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
+        feature_rows: list[np.ndarray] = []
+        meta_rows: list[dict[str, Any]] = []
 
-        # Main for loop for each transient
-        for N_iter, trans in enumerate(trai):
-            amp, _ = tradb.read_wave(trans, time_axis=False)  # Read the i-th transient
+        for hit in df_hits_filtro.itertuples():
+            trans = int(hit.trai)
+            amp_v, _ = tradb.read_wave(trans, time_axis=False)
+            amp_mv = amp_v * 1e3
+            total_sq_energy = float(np.sum(amp_mv**2))
 
-            amp *= 1e3  # in mV   # The operator *= is updating the amplitude value
-            # -- amplitude = amplitude * 1e3
-            # The signal was in volts and is represented in mV
-            # This is the amplitude
-            # time = tiempo * 1e6  # for µs  # Similarly, the signal is stored in
-            # seconds and represented in µs
-
-            # Create the segments
-            seg_total = np.zeros(
-                (self.N_seg, self.N_samp)
-            )  # Array that will store the amplitude values in each segment
-
-            # For loop to apply the Fourier transform
-            for i in x:
-                seg_total[i] = amp[
-                    int(i * self.N_samp / 2) + self.desfase : int(
-                        (i / 2 + 1) * self.N_samp
-                    )
-                    + self.desfase
-                ]
-
-            # Apply Hamming windows to each segment
-            seg_t_window = (
-                seg_total * self.window
-            )  # Apply the window to the segment matrix
-
-            # Calculate FFT of the segment matrix
-            amp_fft = fft(
-                seg_t_window
-            )  # Calculate the Fourier transform of the segment matrix
-            amp_fft = np.abs(
-                amp_fft
-            )  # Calculate the amplitude modulus to not represent with its phase
-
-            # Select the range of interest frequencies
-            amp_fft_rango = amp_fft[
-                :, self.lower_freq_index : self.upper_freq_index + 1
-            ]  # Section the amplitude values in the established frequency range
-
-            # Initialize frequency feature vectors for each segment
-            peak_freq = np.zeros(
-                self.N_seg
-            )  # Store the peak frequencies of each segment
-            centroid_freq = np.zeros(
-                self.N_seg
-            )  # Store the centroid frequencies of each segment
-            part_power_1 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 1 of each segment
-            part_power_2 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 2 of each segment
-            part_power_3 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 3 of each segment
-            part_power_4 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 4 of each segment
-            part_power_5 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 5 of each segment
-            part_power_6 = np.zeros(
-                self.N_seg
-            )  # Store the total partial power 6 of each segment
-
-            # For loop to calculate features
-            for i in x:
-                # Peak frequency
-                peak_index = np.argmax(amp_fft_rango[i])
-                peak_freq[i] = self.freq_fft_rango[peak_index]
-
-                # Centroid frequency
-                centroid_freq[i] = np.sum(
-                    amp_fft_rango[i] * self.freq_fft_rango
-                ) / np.sum(amp_fft_rango[i])
-
-                # Partial Power 1 - 6
-                denominator = np.sum((amp_fft_rango[i]) ** 2)
-                part_power_1[i] = (
-                    np.sum(
-                        (amp_fft_rango[i, 0 : int(len(self.freq_fft_rango) * 1 / 6)])
-                        ** 2
-                    )
-                    * 100
-                    / denominator
+            if self.segmentation_params is not None:
+                segments = segment_merged_hits(
+                    waveform=amp_mv,
+                    **self.segmentation_params,
                 )
-                part_power_2[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 1 / 6) : int(
-                                    len(self.freq_fft_rango) * 2 / 6
-                                ),
-                            ]
+
+                # Fallback to single full segment if no peak crossed the segmentation threshold
+                if not segments:
+                    segments = [
+                        SubHitSegment(
+                            sub_trai=1,
+                            start_idx=0,
+                            end_idx=len(amp_mv),
+                            onset_idx=0,
+                            peak_idx=int(np.argmax(np.abs(amp_mv))),
                         )
-                        ** 2
+                    ]
+
+                for seg in segments:
+                    sub_amp = amp_mv[seg.start_idx : seg.end_idx]
+                    if sub_amp.size == 0:
+                        continue
+
+                    # Count positive threshold crossings in this sub-hit
+                    above = sub_amp >= threshold_mv
+                    sub_counts = int(np.sum(above[1:] & ~above[:-1]) + int(above[0]))
+                    if sub_counts < counts:
+                        continue
+
+                    peak_mv = float(np.max(np.abs(sub_amp)))
+                    if peak_mv <= 0:
+                        continue
+
+                    sub_amp_dbae = 20.0 * (np.log10(peak_mv * 1e-3) + 6.0)
+                    energy_ratio = (
+                        float(np.sum(sub_amp**2)) / total_sq_energy
+                        if total_sq_energy > 0
+                        else 1.0
                     )
-                    * 100
-                    / denominator
-                )
-                part_power_3[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 2 / 6) : int(
-                                    len(self.freq_fft_rango) * 3 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
+                    sub_time_s = float(hit.time) + (
+                        seg.onset_idx * self.time_samp * 1e-6
                     )
-                    * 100
-                    / denominator
-                )
-                part_power_4[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 3 / 6) : int(
-                                    len(self.freq_fft_rango) * 4 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
+                    sub_rise_us = max(
+                        0.0, (seg.peak_idx - seg.onset_idx) * self.time_samp
                     )
-                    * 100
-                    / denominator
-                )
-                part_power_5[i] = (
-                    np.sum(
-                        (
-                            amp_fft_rango[
-                                i,
-                                int(len(self.freq_fft_rango) * 4 / 6) : int(
-                                    len(self.freq_fft_rango) * 5 / 6
-                                ),
-                            ]
-                        )
-                        ** 2
+
+                    feat_vec = self._extract_fft_vector(
+                        waveform_mv=sub_amp,
+                        offset_pts=self.sub_signal_offset,
+                        bin_edges=bin_edges,
                     )
-                    * 100
-                    / denominator
-                )
-                part_power_6[i] = (
-                    np.sum(
-                        (amp_fft_rango[i, int(len(self.freq_fft_rango) * 5 / 6) :]) ** 2
+                    feature_rows.append(feat_vec)
+                    meta_rows.append(
+                        {
+                            "rise_time": sub_rise_us,
+                            "time": sub_time_s,
+                            "amplitude": sub_amp_dbae,
+                            "energy": float(hit.energy) * energy_ratio,
+                            "counts": sub_counts,
+                            "label": label,
+                            "trai": trans,
+                            "sub_trai": int(seg.sub_trai),
+                            "hit_id": f"{trans}_{seg.sub_trai}",
+                            "test_id": test_id,
+                        }
                     )
-                    * 100
-                    / denominator
+
+            else:
+                feat_vec = self._extract_fft_vector(
+                    waveform_mv=amp_mv,
+                    offset_pts=self.signal_offset,
+                    bin_edges=bin_edges,
+                )
+                feature_rows.append(feat_vec)
+                meta_rows.append(
+                    {
+                        "rise_time": float(hit.rise_time),
+                        "time": float(hit.time),
+                        "amplitude": 20.0 * (np.log10(float(hit.amplitude)) + 6.0),
+                        "energy": float(hit.energy),
+                        "counts": int(hit.counts),
+                        "label": label,
+                        "trai": trans,
+                        "sub_trai": 1,
+                        "hit_id": f"{trans}_1",
+                        "test_id": test_id,
+                    }
                 )
 
-            w_peak_freq = (peak_freq * centroid_freq) ** 0.5
-
-            # Feature vector
-            v_features = np.hstack(
-                (
-                    peak_freq,
-                    w_peak_freq,
-                    centroid_freq,
-                    part_power_1,
-                    part_power_2,
-                    part_power_3,
-                    part_power_4,
-                    part_power_5,
-                    part_power_6,
-                )
-            )  # Group the features
-            v_features = v_features.reshape(
-                1, self.N_feat_seg * self.N_seg
-            )  # Reshape the feature matrix into a single row vector
-            v_features_total[N_iter] = (
-                v_features  # Chain the values to each row of the matrix to create the feature matrix
-            )
-
-        # Feature names
-
-        if self.N_seg == 3:
-            name_feature = [
-                "peak_freq_1",
-                "peak_freq_2",
-                "peak_freq_3",
-                "w_peak_freq_1",
-                "w_peak_freq_2",
-                "w_peak_freq_3",
-                "centroid_freq_1",
-                "centroid_freq_2",
-                "centroid_freq_3",
-                "p_power_1_1",
-                "p_power_1_2",
-                "p_power_1_3",
-                "p_power_2_1",
-                "p_power_2_2",
-                "p_power_2_3",
-                "p_power_3_1",
-                "p_power_3_2",
-                "p_power_3_3",
-                "p_power_4_1",
-                "p_power_4_2",
-                "p_power_4_3",
-                "p_power_5_1",
-                "p_power_5_2",
-                "p_power_5_3",
-                "p_power_6_1",
-                "p_power_6_2",
-                "p_power_6_3",
-            ]  # Array that will store the feature names per segment
-
-        elif self.N_seg == 1:
-            name_feature = [
-                "peak_freq",
-                "w_peak_freq",
-                "centroid_freq",
-                "p_power_1",
-                "p_power_2",
-                "p_power_3",
-                "p_power_4",
-                "p_power_5",
-                "p_power_6",
-            ]  # Array that will store the feature names per segment
-
-        # Feature DataFrame
-        df_features = pd.DataFrame(v_features_total, columns=name_feature)
-
-        # Trai DataFrame
-        df_trai = pd.DataFrame(trai, columns=["trai"])
-
-        # Time and rise time DataFrame
-        df_time = (
-            df_hits_filtro[["rise_time", "time", "amplitude", "energy", "counts"]]
-            .reset_index()
-            .drop(["set_id"], axis=1)
-        )
-        df_time["amplitude"] = 20 * (np.log10(df_time["amplitude"]) + 6)
+        if not feature_rows:
+            return pd.DataFrame()
         
+        # for N_iter, trans in enumerate(trai):
+        #     amp, _ = tradb.read_wave(trans, time_axis=False)
+        #     amp *= 1e3  # mV
+
+        #     seg_total = np.zeros((self.N_seg, self.N_samp))
+        #     for i in range(self.N_seg):
+        #         seg_total[i] = amp[
+        #             int(i * self.N_samp / 2 + self.signal_offset) : int(
+        #                 (i / 2 + 1) * self.N_samp + self.signal_offset
+        #             )
+        #         ]
+
+        #     amp_fft = np.abs(fft(seg_total * self.window))
+        #     amp_fft_rango = amp_fft[
+        #         :, self.lower_freq_index : self.upper_freq_index + 1
+        #     ]
+
+        #     peak_freq = np.zeros(self.N_seg)
+        #     centroid_freq = np.zeros(self.N_seg)
+        #     part_powers = np.zeros((6, self.N_seg))
+
+        #     for i in range(self.N_seg):
+        #         spectrum = amp_fft_rango[i]
+        #         peak_freq[i] = self.freq_fft_rango[np.argmax(spectrum)]
+        #         centroid_freq[i] = np.sum(spectrum * self.freq_fft_rango) / np.sum(
+        #             spectrum
+        #         )
+
+        #         power_spec = spectrum**2
+        #         denominator = np.sum(power_spec)
+        #         for band in range(6):
+        #             part_powers[band, i] = (
+        #                 np.sum(power_spec[bin_edges[band] : bin_edges[band + 1]])
+        #                 * 100.0
+        #                 / denominator
+        #             )
+
+        #     w_peak_freq = (peak_freq * centroid_freq) ** 0.5
+
+        #     v_features = np.hstack(
+        #         (
+        #             peak_freq,
+        #             w_peak_freq,
+        #             centroid_freq,
+        #             part_powers[0],
+        #             part_powers[1],
+        #             part_powers[2],
+        #             part_powers[3],
+        #             part_powers[4],
+        #             part_powers[5],
+        #         )
+        #     )
+        #     v_features_total[N_iter] = v_features.reshape(
+        #         1, self.N_feat_seg * self.N_seg
+        #     )
+
+        base_features = [
+            "peak_freq",
+            "w_peak_freq",
+            "centroid_freq",
+            *(f"p_power_{k}" for k in range(1, 7)),
+        ]
+
+        name_feature = (
+            base_features
+            if self.N_seg == 1
+            else [
+                f"{feat}_{seg}"
+                for feat in base_features
+                for seg in range(1, self.N_seg + 1)
+            ]
+        )
+
+        df_features = pd.DataFrame(np.vstack(feature_rows), columns=name_feature)
+        df_meta = pd.DataFrame(meta_rows)
+
+        # df_time = (
+        #     df_hits_filtro[["rise_time", "time", "amplitude", "energy", "counts"]]
+        #     .reset_index()
+        #     .drop(columns=["set_id"], errors="ignore")
+        # )
+        # df_time["amplitude"] = 20 * (np.log10(df_time["amplitude"]) + 6)
+
         if self.force is not None:
-            desfase_carga = df_time["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
+            load_offset = df_meta["time"].iloc[-1] - self.force["Time [s]"].iloc[-1]
         else:
-            desfase_carga = self.desfase_carga
-        df_time["time"] = df_time["time"] - desfase_carga
-        df_time["time_norm"] = df_time["time"] / max(df_time["time"])
+            load_offset = self.load_offset
 
-        # Class DataFrame
-        df_label = pd.DataFrame({"label": [label] * N_trai})
+        df_meta["time"] = df_meta["time"] - load_offset
+        df_meta["time_norm"] = df_meta["time"] / df_meta["time"].max()
 
-        # Total DataFrame
-        df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
-        df_total["test_id"] = test_id
+        # df_label = pd.DataFrame({"label": [label] * N_trai})
+        # df_total = pd.concat([df_features, df_time, df_label, df_trai], axis=1)
+        # df_total["test_id"] = test_id
 
-        # The function returns the total DataFrame
-        return df_total
+        return pd.concat([df_features, df_meta], axis=1)
 
     def plot_signal(
         self,
-        trai,
-        name_figure,
-        figure_path,
-        time_graph=None,
-        title=None,
-        x_label="Time [µs]",
-        y_label="Amplitude [mV]",
-        width=90,
-        height=60,
-        guardar=False,
-    ):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title.
+        trai: int,
+        name_figure: str,
+        figure_path: str | Path | None = None,
+        time_graph: float | None = None,
+        title: str | None = None,
+        x_label: str = "Time [µs]",
+        y_label: str = "Amplitude [mV]",
+        figsize: tuple[float, float] = IMG_SIZE,
+        ax: plt.Axes | None = None,
+        save: bool = False,
+        show: bool = True,
+    ) -> plt.Axes:
+        """Convenience wrapper to plot a transient directly from `self.tradb_path`."""
+        time_us, amp_mv = self.read_transient(trai)
+        plot_title = title or f"Transient Wave Plot: {name_figure} - Transient: {trai}"
+        target = resolve_save_target(figure_path, f"Transient_{name_figure}_{trai}.pdf")
 
-            e.g. Transient Wave Plot: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        time_graph : int or float, optional
-            Time in µs up to which the graph is desired.
-        title : str, optional
-            Title of the figure. The default is None.
-        x_label : str, optional
-            Label for the x-axis. The default is 'Time [µs]'.
-        y_label : str, optional
-            Label for the y-axis. The default is 'Amplitude [mV]'.
-        width : int or float, optional
-            Width of the figure in millimeters. The default is 90.
-        height : int or float, optional
-            Height of the figure in millimeters. The default is 60.
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
+        return plot_signal(
+            time_us=time_us,
+            amp_mv=amp_mv,
+            figure_path=target,
+            time_graph=time_graph,
+            signal_offset_us=self.signal_offset_us,
+            sampling_rate=self.sampling_rate,
+            title=plot_title,
+            x_label=x_label,
+            y_label=y_label,
+            figsize=figsize,
+            ax=ax,
+            save=save,
+            show=show,
+        )
 
-            e.g. Transient_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the transient signal in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Plot the transient
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        figsize_inches = (width / 25.4, height / 25.4)
-        plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
-
-        if time_graph is None:
-            plt.plot(time, amp, linewidth=0.6)
-        else:
-            points = int(time_graph * self.sampling_rate + 1)
-            plt.plot(
-                time[self.desfase : points], amp[self.desfase : points], linewidth=0.6
-            )
-            plt.ylim(
-                bottom=min(amp[self.desfase : points]) * 1.6,
-                top=max(amp[self.desfase : points]) * 1.6,
-            )
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
-        plt.grid(linewidth=0.3, color=".25")
-        if title is None:
-            plt.title(f"Transient Wave Plot: {name_figure} - Transient: {trai}")
-        else:
-            plt.title(title)
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Transient_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-    def plot_segmentation(self, trai, name_figure, figure_path, guardar=False):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title.
-
-            e.g. Segmentation: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
-
-            e.g. Segmentation_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the segmentation and FFT in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Read amplitude and time
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        # Fourier transform calculation
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
-
-        # Create segments
-        seg_total = np.zeros(
-            (self.N_seg, self.N_samp)
-        )  # Array that will store the amplitude values in each segment
-
-        for i in x:
-            seg_total[i] = amp[
-                int(i * self.N_samp / 2) + self.desfase : int((i / 2 + 1) * self.N_samp)
-                + self.desfase
-            ]
-
-        # Apply Hamming windows to each segment
-        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
-
-        # Calculate FFT of the segment matrix
-        amp_fft = fft(
-            seg_t_window
-        )  # Calculate the Fourier transform of the segment matrix
-        amp_fft = np.abs(
-            amp_fft
-        )  # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part)
-
-        # Select the range of interest frequencies
-        amp_fft_rango = amp_fft[
-            :, self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the amplitude values in the established frequency range
-
-        # Multiple plots in one figure
-        fig, axs = plt.subplots(2, self.N_seg, figsize=(15, 7.5))
-        plt.suptitle(f"Segmentation: {name_figure} - Transient: {trai}", fontsize=14)
-        plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
-
-        # Maximum and minimum for axes
-        seg_t_window_max = np.amax(abs(seg_t_window))
-        amp_fft_max = np.amax(amp_fft_rango)
-
-        for j in x:
-            # Time domain
-            axs[0, j].grid(linewidth=0.3, color=".25")
-            axs[0, j].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
-            axs[0, j].plot(
-                time[
-                    int(j * self.N_samp / 2) + self.desfase : int(
-                        (j / 2 + 1) * self.N_samp
-                    )
-                    + self.desfase
-                ],
-                seg_t_window[j],
-            )
-            axs[0, j].set_xlabel("Time [µs]")
-            axs[0, 0].set_ylabel("Amplitude [mV]")
-            axs[0, j].set_title(f"Segment: {j + 1}")
-
-            # FFT
-            axs[1, j].grid(linewidth=0.3, color=".25")
-            axs[1, j].set_ylim(0, amp_fft_max * 1.1)
-            axs[1, j].plot(self.freq_fft_rango, amp_fft_rango[j][: self.N_samp // 2])
-
-            # Vertical line in the peak frequency
-            peak_index = np.argmax(amp_fft_rango[j])
-            peak_freq = self.freq_fft_rango[peak_index]
-            y_max = np.amax(amp_fft_rango[j]) * 2 / (amp_fft_max * 1.1)
-            axs[1, j].axvline(
-                x=peak_freq, ymax=y_max, color="red", linestyle="--", label="f_peak"
-            )
-
-            # Vertical line in the Centroid frequency
-            centroid_freq = np.sum(amp_fft_rango[j] * self.freq_fft_rango) / np.sum(
-                amp_fft_rango[j]
-            )
-            y_max_c = 0.8 * y_max
-            axs[1, j].axvline(
-                x=centroid_freq,
-                ymax=y_max_c,
-                color="green",
-                linestyle=":",
-                label="f_centroid",
-            )
-
-            axs[1, j].set_xlabel("Frequency [kHz]")
-            axs[1, 0].set_ylabel("FFT-Magnitude [mV]")
-            axs[1, j].legend()
-
-        # Add a single border around all subplots
-        fig.patch.set_edgecolor("black")
-        fig.patch.set_linewidth(1)
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-    def plot_segmentation_1(
+    def plot_segmentation(
         self,
-        trai,
-        name_figure,
-        figure_path,
-        title=None,
-        width=90,
-        height=120,
-        guardar=False,
-    ):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title
-
-            e.g. Segmentation: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        title : str, optional
-            Title of the figure, if left as default it will be Segmentation:
-            {name_figure} - Transient: {trai}. The default is None
-        width : int or float, optional
-            Width of the figure in millimeters. The default is 90
-        height : int or float, optional
-            Height of the figure in millimeters. The default is 120
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
-
-            e.g. Segmentation_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the segmentation (with a single segment) and FFT in pdf format.
-
-        """
-        # Open tradb files
-        tradb = vae.io.TraDatabase(self.tradb_path)
-
-        # Read amplitude and time
-        amp, tiempo = tradb.read_wave(trai, time_axis=True)
-        amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        time = (
-            tiempo * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
-
-        # Fourier transform calculation
-        x = np.arange(0, self.N_seg)  # Vector with factors for segmentation
-
-        # Create segments
-        seg_total = np.zeros(
-            (self.N_seg, self.N_samp)
-        )  # Array that will store the amplitude values in each segment
-
-        for i in x:
-            seg_total[i] = amp[
-                int(i * self.N_samp / 2) + self.desfase : int((i / 2 + 1) * self.N_samp)
-                + self.desfase
-            ]
-
-        # Apply Hamming windows to each segment
-        seg_t_window = seg_total * self.window  # Apply the window to the segment matrix
-
-        # Calculate FFT of the segment matrix
-        amp_fft = fft(
-            seg_t_window
-        )  # Calculate the Fourier transform of the segment matrix
-        amp_fft = np.abs(
-            amp_fft
-        )  # Calculate the amplitude modulus to not represent with its phase (Real and imaginary part)
-
-        # Select the range of interest frequencies
-        amp_fft_rango = amp_fft[
-            :, self.lower_freq_index : self.upper_freq_index + 1
-        ]  # Section the amplitude values in the established frequency range
-
-        # Multiple plots in one figure
-        figsize_inches = (width / 25.4, height / 25.4)
-        _, axs = plt.subplots(
-            2, self.N_seg, figsize=figsize_inches, dpi=300, tight_layout=True
-        )
-        if title is None:
-            plt.suptitle(
-                f"Segmentation: {name_figure} - Transient: {trai}", fontsize=10
-            )
-        else:
-            plt.suptitle(title, fontsize=10)
-        plt.subplots_adjust(hspace=0.2, wspace=0.2, top=0.9)
-
-        # Maximum and minimum for axes
-        seg_t_window_max = np.amax(abs(seg_t_window))
-        amp_fft_max = np.amax(amp_fft_rango)
-
-        # Time domain
-        axs[0].grid(linewidth=0.3, color=".25")
-        axs[0].set_ylim(-1.1 * seg_t_window_max, seg_t_window_max * 1.1)
-        axs[0].plot(
-            time[
-                int(0 * self.N_samp / 2) + self.desfase : int((0 / 2 + 1) * self.N_samp)
-                + self.desfase
-            ],
-            seg_t_window[0],
-            linewidth=1,
-        )
-        axs[0].set_xlabel("Time [µs]")
-        axs[0].set_ylabel("Amplitude [mV]")
-        axs[0].set_title(f"Segment: {0 + 1}")
-
-        # FFT
-        axs[1].grid(linewidth=0.3, color=".25")
-        axs[1].set_ylim(0, amp_fft_max * 1.1)
-        axs[1].plot(
-            self.freq_fft_rango, amp_fft_rango[0][: self.N_samp // 2], linewidth=1
+        trai: int,
+        name_figure: str,
+        figure_path: str | Path | None = None,
+        title: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        save: bool = False,
+        show: bool = True,
+    ) -> np.ndarray:
+        """Convenience wrapper to plot segmentation + FFT directly from `self.tradb_path`."""
+        time_us, amp_mv = self.read_transient(trai)
+        plot_title = title or f"Segmentation: {name_figure} - Transient: {trai}"
+        target = resolve_save_target(
+            figure_path, f"Segmentation_{name_figure}_{trai}.pdf"
         )
 
-        # Vertical line in the peak frequency
-        peak_index = np.argmax(amp_fft_rango[0])
-        peak_freq = self.freq_fft_rango[peak_index]
-        y_max = np.amax(amp_fft_rango[0]) * 2 / (amp_fft_max * 1.1)
-        axs[1].axvline(
-            x=peak_freq, ymax=y_max, color="red", linestyle="--", label="f_peak"
+        return plot_segmentation(
+            time_us=time_us,
+            amp_mv=amp_mv,
+            sampling_rate=self.sampling_rate,
+            lower_freq=self.lower_freq,
+            upper_freq=self.upper_freq,
+            n_samp=self.N_samp,
+            n_seg=self.N_seg,
+            signal_offset_us=self.signal_offset_us,
+            figure_path=target,
+            title=plot_title,
+            figsize=figsize,
+            save=save,
+            show=show,
         )
 
-        # Vertical line in the Centroid frequency
-        centroid_freq = np.sum(amp_fft_rango[0] * self.freq_fft_rango) / np.sum(
-            amp_fft_rango[0]
-        )
-        y_max_c = 0.8 * y_max
-        axs[1].axvline(
-            x=centroid_freq,
-            ymax=y_max_c,
-            color="green",
-            linestyle=":",
-            label="f_centroid",
-        )
 
-        axs[1].set_xlabel("Frequency [kHz]")
-        axs[1].set_ylabel("FFT-Magnitude [mV]")
-        axs[1].legend()
-
-        # Save the image in figure_path
-        if guardar:
-            figure_filename = f"Segmentation_{name_figure}_{trai}.pdf"
-            figure_path_name = os.path.join(figure_path, figure_filename)
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-        plt.show()
-
-
-def unir_df(*dataframes):
+def load_transient_wave(
+    tradb_path: str | Path,
+    trai: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Parameters
-    ----------
-    *dataframes : DataFrame
-        DataFrames to concatenate.
+    Read a single transient from a Vallen `.tradb` file.
 
     Returns
     -------
-    concatenated_df : DataFrame
-        Returns a single concatenated DataFrame.
-
+    time_us : np.ndarray
+        Time vector in microseconds [µs].
+    amp_mv : np.ndarray
+        Signal amplitude in millivolts [mV].
     """
-    # Concatenate DataFrames vertically
-    concatenated_df = pd.concat(dataframes, axis=0, ignore_index=True)
-    return concatenated_df
+    tradb = vae.io.TraDatabase(str(tradb_path))
+    amp_v, time_s = tradb.read_wave(trai, time_axis=True)
+    return time_s * 1e6, amp_v * 1e3
+
+
+def load_transient_csv(
+    csv_path: str | Path,
+    time_col: str | int = 0,
+    amp_col: str | int = 1,
+    time_scale: float = 1.0,
+    amp_scale: float = 1.0,
+    sep: str = ",",
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Load a transient waveform from a `.csv` file.
+
+    Parameters
+    ----------
+    csv_path : str or Path
+        Path to the CSV file.
+    time_col, amp_col : str or int, default=(0, 1)
+        Column names or positional indices for time and amplitude.
+    time_scale, amp_scale : float, default=1.0
+        Multiplicative unit conversion factors (e.g., `1e6` for s -> µs, `1e3` for V -> mV).
+    sep : str, default=","
+        CSV delimiter.
+
+    Returns
+    -------
+    time_us : np.ndarray
+    amp_mv : np.ndarray
+    """
+    df = pd.read_csv(csv_path, sep=sep)
+    t = (
+        df[time_col].to_numpy()
+        if isinstance(time_col, str)
+        else df.iloc[:, time_col].to_numpy()
+    )
+    a = (
+        df[amp_col].to_numpy()
+        if isinstance(amp_col, str)
+        else df.iloc[:, amp_col].to_numpy()
+    )
+    return t * time_scale, a * amp_scale
+
+
+def compute_segmented_fft(
+    amp_mv: np.ndarray,
+    sampling_rate: float,
+    n_samp: int = 1024,
+    n_seg: int = 1,
+    lower_freq: float = 100.0,
+    upper_freq: float = 900.0,
+    signal_offset_us: float = 0.0,
+) -> dict[str, np.ndarray]:
+    """
+    Segment a waveform with 50% overlap, apply a Hamming window, and compute FFT spectra.
+
+    Parameters
+    ----------
+    amp_mv : np.ndarray
+        Waveform amplitude in mV.
+    sampling_rate : float
+        Sampling frequency in MHz (samples/µs).
+    n_samp : int
+        Samples per segment (power of 2).
+    n_seg : int
+        Number of 50%-overlapping segments.
+    lower_freq, upper_freq : float
+        Frequency band of interest in kHz.
+    signal_offset_us : float
+        Start offset in µs.
+
+    Returns
+    -------
+    dict with keys:
+        `seg_indices`, `seg_windowed`, `freq_range`, `amp_fft_range`,
+        `peak_freq`, `centroid_freq`.
+    """
+    offset_pts = int(signal_offset_us * sampling_rate)
+    res_freq = sampling_rate * 1000.0 / n_samp  # kHz
+    time_samp = 1.0 / sampling_rate  # µs
+
+    lower_idx = int(lower_freq // res_freq)
+    upper_idx = int(upper_freq // res_freq + 1)
+
+    window = hamming(n_samp)
+    freq_fft = (fftfreq(n_samp, time_samp * 1e-6) / 1000.0)[: n_samp // 2]
+    freq_range = freq_fft[lower_idx : upper_idx + 1]
+
+    seg_total = np.zeros((n_seg, n_samp))
+    seg_indices: list[tuple[int, int]] = []
+
+    for i in range(n_seg):
+        start = int(i * n_samp / 2) + offset_pts
+        end = int((i / 2 + 1) * n_samp) + offset_pts
+        seg_total[i] = amp_mv[start:end]
+        seg_indices.append((start, end))
+
+    seg_windowed = seg_total * window
+    amp_fft = np.abs(fft(seg_windowed))
+    amp_fft_range = amp_fft[:, lower_idx : upper_idx + 1]
+
+    peak_freq = np.zeros(n_seg)
+    centroid_freq = np.zeros(n_seg)
+
+    for i in range(n_seg):
+        peak_idx = int(np.argmax(amp_fft_range[i]))
+        peak_freq[i] = freq_range[peak_idx]
+        centroid_freq[i] = np.sum(amp_fft_range[i] * freq_range) / np.sum(
+            amp_fft_range[i]
+        )
+
+    return {
+        "seg_indices": np.array(seg_indices),
+        "seg_windowed": seg_windowed,
+        "freq_range": freq_range,
+        "amp_fft_range": amp_fft_range,
+        "peak_freq": peak_freq,
+        "centroid_freq": centroid_freq,
+    }
+
+
+# =============================================================================
+# Standalone Plotting Functions (mylib-compatible)
+# =============================================================================
+def plot_signal(
+    time_us: np.ndarray,
+    amp_mv: np.ndarray,
+    figure_path: str | Path | None = None,
+    time_graph: float | None = None,
+    signal_offset_us: float = 0.0,
+    sampling_rate: float | None = None,
+    title: str | None = "Transient Wave Plot",
+    subtitle: str | None = None,
+    x_label: str = "Time [µs]",
+    y_label: str = "Amplitude [mV]",
+    figsize: tuple[float, float] = IMG_SIZE,
+    ax: plt.Axes | None = None,
+    i: int = 1,
+    n_col: int = 1,
+    save: bool = False,
+    show: bool = True,
+) -> plt.Axes:
+    """
+    Plot and optionally save a time-domain transient waveform.
+    `figsize` is specified in millimeters `(width, height)`.
+    """
+    primary_color = get_active_palette(1)[0]
+
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
+        if title is not None:
+            ax.set_title(title)
+        ax.set_xlabel(x_label)
+    else:
+        fig = ax.get_figure()
+        ax.set_xlabel(f"{x_label}\n({string.ascii_lowercase[i - 1]})")
+        if subtitle is not None:
+            ax.set_title(subtitle)
+        elif title is not None:
+            ax.set_title(title)
+
+    if time_graph is None:
+        ax.plot(time_us, amp_mv, color=primary_color, linewidth=0.6)
+    else:
+        if sampling_rate is not None:
+            start_idx = int(signal_offset_us * sampling_rate)
+            end_idx = int(time_graph * sampling_rate + 1)
+            t_slice = time_us[start_idx:end_idx]
+            a_slice = amp_mv[start_idx:end_idx]
+        else:
+            mask = (time_us >= signal_offset_us) & (time_us <= time_graph)
+            t_slice = time_us[mask]
+            a_slice = amp_mv[mask]
+
+        ax.plot(t_slice, a_slice, color=primary_color, linewidth=0.6)
+        if a_slice.size > 0:
+            ax.set_ylim(bottom=a_slice.min() * 1.6, top=a_slice.max() * 1.6)
+
+    if (i - 1) % n_col == 0:
+        ax.set_ylabel(y_label)
+    else:
+        ax.set_ylabel("")
+
+    ax.grid(True, linestyle="-", alpha=0.7)
+    ax.set_axisbelow(True)
+
+    if save:
+        default_name = f"{title or 'Transient'}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
+
+    if show:
+        plt.show()
+    if own_fig:
+        plt.close(fig)
+
+    return ax
+
+
+def plot_segmentation(
+    time_us: np.ndarray,
+    amp_mv: np.ndarray,
+    sampling_rate: float,
+    lower_freq: float = 100.0,
+    upper_freq: float = 900.0,
+    n_samp: int = 1024,
+    n_seg: int = 1,
+    signal_offset_us: float = 0.0,
+    figure_path: str | Path | None = None,
+    title: str | None = "Signal Segmentation & FFT",
+    figsize: tuple[float, float] | None = None,
+    save: bool = False,
+    show: bool = True,
+) -> np.ndarray:
+    """
+    Plot windowed time-domain segments (top row) and their FFT magnitude spectra
+    with `f_peak` and `f_centroid` markers (bottom row).
+
+    Works identically for `n_seg == 1` and `n_seg > 1`.
+    `figsize` is specified in millimeters `(width, height)`.
+    """
+    if figsize is None:
+        figsize = (90 * n_seg, 110)
+
+    dsp = compute_segmented_fft(
+        amp_mv=amp_mv,
+        sampling_rate=sampling_rate,
+        n_samp=n_samp,
+        n_seg=n_seg,
+        lower_freq=lower_freq,
+        upper_freq=upper_freq,
+        signal_offset_us=signal_offset_us,
+    )
+
+    seg_indices = dsp["seg_indices"]
+    seg_windowed = dsp["seg_windowed"]
+    freq_range = dsp["freq_range"]
+    amp_fft_range = dsp["amp_fft_range"]
+    peak_freq = dsp["peak_freq"]
+    centroid_freq = dsp["centroid_freq"]
+
+    palette = get_active_palette(3)
+    sig_color, peak_color, centroid_color = palette[0], palette[1], palette[2]
+
+    fig, axs = plt.subplots(
+        2,
+        n_seg,
+        figsize=img_size_inches(figsize),
+        squeeze=False,
+    )
+    if title is not None:
+        fig.suptitle(title)
+
+    seg_t_window_max = np.amax(np.abs(seg_windowed))
+    amp_fft_max = np.amax(amp_fft_range)
+
+    for j in range(n_seg):
+        start, end = seg_indices[j]
+
+        # Row 0: Windowed time-domain segment
+        ax_time = axs[0, j]
+        ax_time.plot(
+            time_us[start:end], seg_windowed[j], color=sig_color, linewidth=0.8
+        )
+        ax_time.set_ylim(-1.1 * seg_t_window_max, 1.1 * seg_t_window_max)
+        ax_time.set_xlabel("Time [µs]")
+        if j == 0:
+            ax_time.set_ylabel("Amplitude [mV]")
+        ax_time.set_title(f"Segment {j + 1}")
+        ax_time.grid(True, linestyle="-", alpha=0.7)
+        ax_time.set_axisbelow(True)
+
+        # Row 1: FFT spectrum + Peak & Centroid frequencies
+        ax_fft = axs[1, j]
+        ax_fft.plot(freq_range, amp_fft_range[j], color=sig_color, linewidth=0.8)
+        ax_fft.set_ylim(0, amp_fft_max * 1.1)
+
+        y_max = np.amax(amp_fft_range[j]) / (amp_fft_max * 1.1)
+        ax_fft.axvline(
+            x=peak_freq[j],
+            ymax=min(y_max * 1.05, 1.0),
+            color=peak_color,
+            linestyle="--",
+            linewidth=1.0,
+            label=f"$f_{{peak}}$ ({peak_freq[j]:.0f} kHz)",
+        )
+        ax_fft.axvline(
+            x=centroid_freq[j],
+            ymax=min(y_max * 0.85, 1.0),
+            color=centroid_color,
+            linestyle=":",
+            linewidth=1.0,
+            label=f"$f_{{centroid}}$ ({centroid_freq[j]:.0f} kHz)",
+        )
+
+        ax_fft.set_xlabel("Frequency [kHz]")
+        if j == 0:
+            ax_fft.set_ylabel("FFT Magnitude [mV]")
+        ax_fft.legend(loc="upper right")
+        ax_fft.grid(True, linestyle="-", alpha=0.7)
+        ax_fft.set_axisbelow(True)
+
+    if save:
+        default_name = f"{title or 'Segmentation'}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
+
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    return axs
 
 
 def train_test_set(
@@ -5535,214 +6325,116 @@ def forest_clf_hyper(X_train, X_test, y_train, y_test, selected_features=None):
     return y_train_pred, y_test_pred, best_features, best_model
 
 
-def conf_matrix(
-    y, y_pred, name_figure, figure_path, width=90, height=60, guardar=False
-):
-    """
-    Parameters
-    ----------
-    y : series or array
-        True classes of the dataset.
-    y_pred : series or array
-        Predicted classes by the model.
-    name_figure : str
-        Name of the class that appears in the figure title.
-
-        e.g. Confusion matrix - {name_figure}
-    figure_path : str
-        Directory to save the figure.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Confusion matrix {name_figure}.pdf
-    Returns
-    -------
-    Plots and (saves) the confusion matrix in pdf format.
-
-    """
-    # Plot the confusion matrix
-    figsize_inches = (width / 25.4, height / 25.4)
-    _, axs = plt.subplots(
-        nrows=1, ncols=2, figsize=figsize_inches, dpi=300, tight_layout=True
-    )
-    plt.subplots_adjust(wspace=0.4)
-    plt.rc("font", size=10)
-    ConfusionMatrixDisplay.from_predictions(y, y_pred, ax=axs[0])
-    axs[0].set_title("By element")
-    plt.rc("font", size=10)
-    ConfusionMatrixDisplay.from_predictions(
-        y, y_pred, ax=axs[1], normalize="true", values_format=".0%"
-    )
-    axs[1].set_title("Normalized by row")
-    plt.suptitle(f"Confusion matrix - {name_figure}", fontsize=14)
-
-    # Save the image in figure_path
-    if guardar:
-        figure_filename = f"Confusion matrix {name_figure}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
-
-    plt.show()
-
-
 def plot_tsne(
     X,
     y,
-    figure_path,
+    figure_path=None,
     title="t-SNE Scatter Plot",
     x_label="t-SNE Dimension 1",
     y_label="t-SNE Dimension 2",
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     selected_features=None,
-    guardar=False,
+    save: bool = False,
+    show: bool = True,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    figure_path : str
-        Directory to save the figure.
-    title : str, optional
-        Title of the figure. The default is 't-SNE Scatter Plot'.
-    x_label : str, optional
-        Label for the x-axis. The default is 't-SNE Dimension 1'.
-    y_label : str, optional
-        Label for the y-axis. The default is 't-SNE Dimension 2'.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    selected_features : list, optional
-        Names of the features to train the model. The default is None.
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. t-SNE_{name_figure}.pdf
-
-    Returns
-    -------
-    Plots and (saves) the dimensionality reduction with class labels and markers in pdf format.
-
+    Plot and optionally save a 2D t-SNE scatter plot with class labels and markers.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Feature selection (if backward elimination was used)
     if selected_features is not None:
         X = X[selected_features]
 
     tsne = TSNE(n_components=2, init="random", learning_rate="auto", random_state=42)
     X_reduced = tsne.fit_transform(X)
 
-    # Create a DataFrame for easy use with Seaborn
     tsne_df = pd.DataFrame(X_reduced, columns=[f"t-SNE_{i + 1}" for i in range(2)])
+    y_series = pd.Series(y, name="Labels").reset_index(drop=True)
+    tsne_df["Labels"] = y_series
 
-    y = pd.Series(y, name="Labels")
-    y.index = tsne_df.index
-    tsne_df["Labels"] = y
+    label_order = list(pd.unique(tsne_df["Labels"]))
+    n_labels = len(label_order)
+    markers = {
+        label: MARKER_LIST[idx % len(MARKER_LIST)]
+        for idx, label in enumerate(label_order)
+    }
+    palette = get_active_palette(n_labels)
 
-    # Define custom markers for each class
-    markers = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
+    fig, ax = plt.subplots(figsize=img_size_inches(figsize))
 
-    # Create a figure
-    figsize_inches = (width / 25.4, height / 25.4)
-    plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
-
-    # Use Seaborn scatter plot with hue and style parameters
     sns.scatterplot(
         x="t-SNE_1",
         y="t-SNE_2",
         hue="Labels",
         style="Labels",
+        hue_order=label_order,
+        style_order=label_order,
         data=tsne_df,
-        palette=sns.color_palette(),
+        palette=palette,
         markers=markers,
+        ax=ax,
     )
 
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.grid()
-    plt.gca().set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_title(title)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.grid(True)
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
-    if guardar:
-        figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+    if save:
+        save_fig(fig, resolve_save_target(figure_path, f"{title}.pdf"))
 
-    plt.show()
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    return ax
 
 
 def plot_histogram(
-    X, y, figure_path, width=90, height=60, bins=30, feature_to_save="", guardar=False
+    X,
+    y,
+    figure_path=None,
+    figsize: tuple[float, float] = IMG_SIZE,
+    bins: int = 30,
+    feature_to_save: str = "",
+    save: bool = False,
+    show: bool = True,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    figure_path : str
-        Directory to save the figure.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    bins : int, optional
-        Number of bins for the histogram. The default is 30.
-    feature_to_save : str, optional
-        Feature to save its histogram. The default is ''.
-    guardar : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Histogram_{feature_to_save}.pdf
-
-    Returns
-    -------
-    Plots all feature histograms and (saves) only 'feature_to_save' in pdf format.
-
+    Plot feature histograms grouped by class and optionally save `feature_to_save`.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Directory and filename to save the image
-    figure_filename = f"Histogram_{feature_to_save}.pdf"
-    figure_path_name = os.path.join(figure_path, figure_filename)
+    class_labels = list(pd.unique(y))
+    palette = get_active_palette(len(class_labels))
 
-    # Iterate over each column
     for feature in X.columns:
-        # Set up the figure and axis
-        figsize_inches = (width / 25.4, height / 25.4)
-        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
-        # Set the number of bins for the histogram
-        bins = 30
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
 
-        # Plot the histogram for each class
-        class_labels = y.unique()
-        for class_label in class_labels:
+        for class_label, color in zip(class_labels, palette):
             feat_to_plot = X[y == class_label][feature]
             ax.hist(
-                feat_to_plot, bins=bins, alpha=0.6, label=class_label, edgecolor="black"
+                feat_to_plot,
+                bins=bins,
+                alpha=0.6,
+                label=class_label,
+                color=color,
+                edgecolor="black",
             )
 
-        # Add labels and a title
         ax.set_xlabel("Feature Value")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Histogram - {feature}")
-
-        # Add a legend
         ax.legend()
 
-        # Save the image in figure_path
-        if guardar and (feature == feature_to_save):
-            plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        if save and (feature == feature_to_save):
+            save_fig(
+                fig,
+                resolve_save_target(figure_path, f"Histogram_{feature_to_save}.pdf"),
+            )
 
-        # Display the plot
-        plt.show()
+        if show:
+            plt.show()
+        plt.close(fig)
 
 
 def plot_feat_vs_feat(
@@ -5750,68 +6442,23 @@ def plot_feat_vs_feat(
     y,
     feat_x,
     feat_y,
-    figure_path="Feat_vs_Feat.png",
+    fig_path="Feat_vs_Feat.png",
     title=None,
     subtitle=None,
     x_label=None,
     y_label=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
-    n_row=1,
     save=False,
     show=False,
 ):
     """
-    Parameters
-    ----------
-    X : DataFrame, array
-        Feature set.
-    y : Series, array
-        Classes of the dataset.
-    feat_1 : str
-        Name of feature 1 to plot.
-    feat_2 : str
-        Name of feature 2 to plot.
-    figure_path : str
-        Directory to save the figure.
-    title : str or list, optional
-        Title of the figure, if left as default it will be {feat_1} vs {feat_2}.
-        The default is None.
-    subtitle : str or list, optional
-        Subtitle of the figure, if left as default it will be {feat_1} vs {feat_2}.
-        The default is None.
-    x_label : str, optional
-        Label for the x-axis. The default is None.
-    y_label : str, optional
-        Label for the y-axis. The default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60.
-    ax : axes, optional
-        Axes subplot. The default is None.
-    i : int, optional
-        Counter to plot each subplot. The default is 1.
-    n_col : int, optional
-        Number of columns. The default is 1.
-    n_row : int, optional
-        Number of rows. The default is 1.
-    save : boolean, optional
-        "True" to save the image. The default is False.
-    show : boolean, optional
-        "True" to show the image. The default is False.
-        e.g. Feat_vs_Feat_{feat_1}_{feat_2}.pdf
-
-    Returns
-    -------
-    Plots and (saves) a scatter plot of two features with labels and markers in pdf format.
-
+    Plot and optionally save a scatter plot of two features with class labels and markers.
+    `figsize` is specified in millimeters `(width, height)`.
     """
     y = pd.Series(y, name="Labels")
-    # Rename 'Labels' column in y if it already exists in X
     if "Labels" in X.columns:
         X = X.drop(["Labels"], axis=1)
 
@@ -5820,41 +6467,23 @@ def plot_feat_vs_feat(
     label_order = list(pd.unique(data["Labels"]))
     n_labels = len(label_order)
 
-    # Define custom markers for each class
     markers = {
-        label: MARKER_LIST[i % len(MARKER_LIST)] for i, label in enumerate(label_order)
+        label: MARKER_LIST[idx % len(MARKER_LIST)]
+        for idx, label in enumerate(label_order)
     }
-    # Create a scatter plot
-    figsize_inches = (width / 25.4, height / 25.4)
+    palette = get_active_palette(n_labels)
 
-    # If there is just one plot and set the title
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, dpi=300, tight_layout=True)
-        if title is None:
-            ax.set_title(f"{feat_x} vs {feat_y}")
-        else:
-            ax.set_title(title)
-        if x_label is None:
-            ax.set_xlabel(feat_x)
-        else:
-            ax.set_xlabel(x_label)
-
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
+        ax.set_title(f"{feat_x} vs {feat_y}" if title is None else title)
+        ax.set_xlabel(feat_x if x_label is None else x_label)
     else:
-        if x_label is None:
-            ax.set_xlabel(f"{feat_x}\n(" + string.ascii_lowercase[i - 1] + ")")
-        else:
-            ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(f"{feat_x} vs {feat_y}")
-    if n_labels > 10:
-        palette = sns.color_palette("tab20", n_colors=n_labels)
-    else:
-        palette = sns.color_palette("tab10", n_colors=n_labels)
+        fig = ax.get_figure()
+        base_xlabel = feat_x if x_label is None else x_label
+        ax.set_xlabel(f"{base_xlabel}\n({string.ascii_lowercase[i - 1]})")
+        ax.set_title(subtitle if subtitle is not None else f"{feat_x} vs {feat_y}")
 
-    # Create the plot
     sns.scatterplot(
         x=feat_x,
         y=feat_y,
@@ -5869,25 +6498,18 @@ def plot_feat_vs_feat(
         legend=True,
     )
 
-    # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
-        if y_label is None:
-            ax.set_ylabel(feat_y)
-        else:
-            ax.set_ylabel(y_label)
+        ax.set_ylabel(feat_y if y_label is None else y_label)
     else:
         ax.set_ylabel("")
 
-    # Logarithmic scale if you choose energy
     if feat_x == "energy":
         ax.set_xscale("log")
-
     if feat_y == "energy":
         ax.set_yscale("log")
 
-    # Activate the grid
-    ax.grid()
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.grid(True)
+    ax.set_axisbelow(True)
 
     if n_labels > 6:
         ax.legend(
@@ -5895,34 +6517,83 @@ def plot_feat_vs_feat(
             bbox_to_anchor=(1.02, 1),
             loc="upper left",
             borderaxespad=0,
-            fontsize=7,
         )
+        if own_fig:
+            fig.subplots_adjust(right=0.72)
 
-    fig = ax.get_figure()
-    fig.subplots_adjust(right=0.72)
-
-    # Save the image in figure_path
     if save:
-        fig_format = figure_path.name.split(".")[-1]
-        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+        save_fig(fig, fig_path)
     if show:
         plt.show()
-
-    plt.close()
+    if own_fig:
+        plt.close(fig)
 
     return ax
 
 
+def resolve_feature_columns(
+    data: pd.DataFrame,
+    feature_columns: Sequence[str],
+    n_seg: int | None = None,
+) -> list[str]:
+    """
+    Resolve base feature names against `data.columns` for both `N_seg == 1`
+    and segmented (`N_seg > 1`) DataFrames.
+
+    - If a name already exists in `data.columns` (e.g., `"energy"` or `"peak_freq"`
+      when `N_seg == 1`, or an explicit `"peak_freq_2"`), it is kept as-is.
+    - Otherwise, it expands to matching segmented columns (`f"{col}_{seg}"`).
+    """
+    resolved: list[str] = []
+    missing: list[str] = []
+
+    for col in feature_columns:
+        if col in data.columns:
+            resolved.append(col)
+            continue
+
+        if n_seg is not None and n_seg > 1:
+            seg_cols = [
+                f"{col}_{seg}"
+                for seg in range(1, n_seg + 1)
+                if f"{col}_{seg}" in data.columns
+            ]
+        else:
+            pattern = re.compile(rf"^{re.escape(col)}_(\d+)$")
+            matches = [
+                (int(m.group(1)), c) for c in data.columns if (m := pattern.match(c))
+            ]
+            seg_cols = [c for _, c in sorted(matches, key=lambda item: item[0])]
+
+        if seg_cols:
+            resolved.extend(seg_cols)
+        else:
+            missing.append(col)
+
+    if missing:
+        raise KeyError(f"Feature column(s) not found in DataFrame: {missing}")
+
+    # Preserve order while removing any accidental duplicates
+    return list(dict.fromkeys(resolved))
+
+
 def select_significant_indices(
-    data,
-    label_column,
-    feature_columns,
-    max_points=20,
-):
+    data: pd.DataFrame,
+    label_column: str,
+    feature_columns: Sequence[str],
+    max_points: int = 20,
+    n_seg: int | None = None,
+) -> list:
+    """
+    Select the top `max_points` most significant (highest mean |robust z-score|)
+    row indices per class in `label_column`, supporting both `N_seg == 1` and
+    segmented (`N_seg > 1`) feature columns.
+    """
+    resolved_cols = resolve_feature_columns(data, feature_columns, n_seg=n_seg)
     selected_indices = []
 
     for _, group in data.groupby(label_column, sort=False):
-        values = group[feature_columns].apply(pd.to_numeric, errors="coerce")
+        values = group[resolved_cols].apply(pd.to_numeric, errors="coerce")
         values = values.dropna(how="all")
 
         if values.empty:
@@ -5951,113 +6622,105 @@ Created on Tue Jan  9 11:09:45 2024
 @author: bbarmac
 """
 
-# =============================================================================
-# Import necessary libraries
-# =============================================================================
-# Dataframes
+from __future__ import annotations
+
 import csv
 import os
 import string
 from pathlib import Path
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-# Figures
 import seaborn as sns
+from mylib import (  # type: ignore
+    IMG_SIZE,
+    MARKER_LIST,
+    get_active_palette,
+    img_size_inches,
+    resolve_save_target,
+    save_fig,
+)
 
-matplotlib.rcParams["font.family"] = "serif"
-matplotlib.rcParams["font.serif"] = "Times New Roman"
-matplotlib.rcParams["font.size"] = 8
-matplotlib.rcParams["figure.dpi"] = 150
 
-MARKER_LIST = ["o", "s", "^", "v", "D", "p"]  # Customize the markers as desired
-
-
-def force_data(path, section=None, test_id=None):
+def force_data(
+    path: str | Path,
+    section: list[float] | None = None,
+    test_id: str | None = None,
+) -> pd.DataFrame:
     """
     Parameters
     ----------
-    path : str
-        Directory where the force mts csv files are stored.
-    section : list or array
-        Width and thickness measurements of the specimen in mm. The default is [22, 2.4]
+    path : str or Path
+        Directory where the force MTS CSV files are stored.
+    section : list or array, optional
+        Width and thickness measurements of the specimen in mm. Defaults to [22, 2.4].
+    test_id : str, optional
+        Identifier assigned to the loaded test. Defaults to the CSV filename stem.
 
     Returns
     -------
-    force_df : Dataframe
-        Dataframe containing force, displacement, time, and test_id data.
-
+    force_df : DataFrame
+        DataFrame containing force, displacement, time, stress, and test_id data.
     """
     if section is None:
         section = [22, 2.4]
+
     files = os.listdir(path)
-    forces_list = []
+    forces_list: list[pd.DataFrame] = []
 
     for item in files:
-        # Check if the files are .csv
-        if item.endswith(".csv"):
-            # Path of the folder joined with the file
-            force_filename_path = Path(path) / item
+        if not item.endswith(".csv"):
+            continue
 
-            # Load the csv file
-            # force = pd.read_csv(force_filename_path, sep=";")
-            # Find the first row whose first column is numeric
-            with force_filename_path.open(
-                "r", encoding="utf-8-sig", newline=""
-            ) as file:
-                reader = csv.reader(file, delimiter=";")
+        force_filename_path = Path(path) / item
 
-                for row_number, row in enumerate(reader):
-                    if not row:
-                        continue
+        # Find the first row whose first column is numeric
+        with force_filename_path.open("r", encoding="utf-8-sig", newline="") as file:
+            reader = csv.reader(file, delimiter=";")
 
-                    first_value = row[0].strip().replace(",", ".")
+            for row_number, row in enumerate(reader):
+                if not row:
+                    continue
 
-                    try:
-                        float(first_value)
-                        first_data_row = row_number
-                        break
-                    except ValueError:
-                        continue
-                else:
-                    raise ValueError(f"No numeric data found in {force_filename_path}")
+                first_value = row[0].strip().replace(",", ".")
+                try:
+                    float(first_value)
+                    first_data_row = row_number
+                    break
+                except ValueError:
+                    continue
+            else:
+                raise ValueError(f"No numeric data found in {force_filename_path}")
 
-            # Read from the first numeric row
-            force = pd.read_csv(
-                force_filename_path,
-                sep=";",
-                skiprows=first_data_row,
-                header=None,
-                names=["Crosshead [mm]", "Load [kN]", "Time [s]"],
-                decimal=",",
-            )
+        # Read from the first numeric row
+        force = pd.read_csv(
+            force_filename_path,
+            sep=";",
+            skiprows=first_data_row,
+            header=None,
+            names=["Crosshead [mm]", "Load [kN]", "Time [s]"],
+            decimal=",",
+        )
 
-            # # Rename the columns and remove the units row
-            # new_column_names = ["Crosshead [mm]", "Load [kN]", "Time [s]"]
-            # force.columns = new_column_names
-            # force = force.iloc[1:]
+        # Add a row of zeros where the test starts
+        new_row = pd.Series(0, index=force.columns)
+        force = pd.concat([pd.DataFrame([new_row]), force], ignore_index=True)
 
-            # Add a row of 0 where the test starts
-            new_row = pd.Series(0, index=force.columns)
-            force = pd.concat([pd.DataFrame([new_row]), force], ignore_index=True)
+        # Stress
+        area = np.prod(section)
+        force["Stress [MPa]"] = force["Load [kN]"] * 1000 / area
 
-            # Stress
-            area = np.prod(section)
-            force["Stress [MPa]"] = force["Load [kN]"] * 1000 / area
+        # Add the test id column
+        current_test_id = item.split(".")[0] if test_id is None else test_id
+        force["test_id"] = current_test_id
+        forces_list.append(force)
 
-            # Add the test id column
-            if test_id is None:
-                test_id = item.split(".")[0]
-            force["test_id"] = test_id
-            forces_list.append(force)
-        if not forces_list:
-            print(f"[INFO] No .csv files found in {path}. Please check the directory.")
-        else:
-            force_df = pd.concat(forces_list, ignore_index=True)
-    return force_df
+    if not forces_list:
+        print(f"[INFO] No .csv files found in {path}. Please check the directory.")
+        return pd.DataFrame()
+
+    return pd.concat(forces_list, ignore_index=True)
 
 
 def plot_stress_hits_cluster(
@@ -6074,8 +6737,7 @@ def plot_stress_hits_cluster(
     use_log_scale=False,
     subtitle=None,
     limits=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
@@ -6083,105 +6745,37 @@ def plot_stress_hits_cluster(
     show=True,
 ):
     """
-    Parameters
-    ----------
-    data : Dataframe
-        Set containing the data for the plot labeled and with their id.
-    force : Dataframe
-        Set containing load displacement, time data, and their id.
-    test_id : str
-        Id of the test to be plotted.
-    figure_path : str
-        Directory to save the figure.
-    plot_type : str, optional
-        Type of plot to create ('scatter' or 'line'). The default is 'scatter'.
-    title : str, optional
-        Title of the image to display and save. The default is 'Cumulative hits vs Time'.
-    x : str, optional
-        Time characteristic for the x-axis. The default is 'time'.
-
-        Other options: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
-    y : str, optional
-        Time characteristic for the y-axis. The default is 'Cumulative_Label'.
-
-        Other options: 'time', 'Cumulative', 'amplitude', 'energy'
-    x_label : str, optional
-        Label for the x-axis. The default is 'Time [s]'.
-    y_label : str, optional
-        Label for the y-axis. The default is 'Cumulative hits'.
-    y_label_right : str, optional
-        Label for the right y-axis. The default is 'Stress [MPa]'.
-    subtitle : str or list, optional
-        Title for each subplot, if left as default the test_id is plotted. The default is None.
-    limits : list, optional
-        Upper limits for the axes [time_limit, hits_limit, stress_limit]. The default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60
-    ax : matplotlib axis object, optional
-        Axis to plot on. If not provided, a new axis will be created.
-    i : int, optional
-        Index for subplot. Default is 1.
-    n_col : int, optional
-        Number of columns. The default is 1.
-    n_row : int, optional
-        Number of rows. The default is 1.
-    save : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Cluster vs Time {test_id}.pdf
-
-    Returns
-    -------
-    ax : matplotlib axis object
-        Axis containing the plot.
-        Plots and (saves) a diagram of cumulative hits and stress in pdf format.
+    Plot and optionally save cumulative hits per cluster and stress vs time.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Extract the limits
     if limits is None:
         time_limit, hits_limit, stress_limit = [None, None, None]
     else:
         time_limit, hits_limit, stress_limit = limits
 
-    # Condition to filter rows based on the string column
     condition = data["test_id"] == test_id
     condition_force = force["test_id"] == test_id
 
-    # Filtered DataFrame
     filtered_hits = data.loc[condition].copy()
     filtered_hits["Cumulative_Label"] = filtered_hits.groupby("label")[
         "Count"
     ].cumsum()
-
-    # Force data
     filtered_force = force[condition_force]
 
-    # Count the number of unique labels in the DataFrame
     num_labels = filtered_hits["label"].nunique()
-    first_label = np.sort(filtered_hits["label"].unique())[0]
+    markers = [MARKER_LIST[idx % len(MARKER_LIST)] for idx in range(num_labels)]
+    palette = get_active_palette(num_labels)
 
-    # Define custom markers for each class
-    markers = MARKER_LIST[first_label:first_label + num_labels]
-    palette = sns.color_palette()
-    palette = palette[first_label:first_label + num_labels]
-
-    # Create the plot
-    figsize_inches = (width / 25.4, height / 25.4)
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
         ax.set_title(f"Stress and Cumulative hits vs Time - {test_id}")
         ax.set_xlabel(x_label)
-
     else:
+        fig = ax.get_figure()
         ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(test_id)
+        ax.set_title(subtitle if subtitle is not None else test_id)
 
-    # Create the scatter plot
     if plot_type == "scatter":
         sns.scatterplot(
             x=x,
@@ -6197,7 +6791,6 @@ def plot_stress_hits_cluster(
         )
         if use_log_scale:
             ax.set_yscale("log")
-
     elif plot_type == "line":
         sns.lineplot(
             x=x,
@@ -6210,26 +6803,20 @@ def plot_stress_hits_cluster(
             ax=ax,
         )
 
-    # Set the x-axis limit
     if time_limit is not None:
         ax.set_xlim(left=0, right=time_limit * 1.05)
 
-    # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
         ax.set_ylabel(y_label)
     else:
         ax.set_ylabel("")
 
-    # Set the y-axis limit
     if hits_limit is None:
         ax.set_ylim(bottom=0, top=max(filtered_hits[y]) * 1.1)
     else:
         ax.set_ylim(bottom=0, top=hits_limit * 1.1)
 
-    # Create a twin Axes sharing the x-axis
     ax2 = ax.twinx()
-
-    # Create the second scatter plot on the twin Axes
     sns.lineplot(
         x="Time [s]",
         y="Stress [MPa]",
@@ -6240,48 +6827,42 @@ def plot_stress_hits_cluster(
         label="Stress",
     )
 
-    # Set the y-axis limit for the second plot
     if stress_limit is None:
         ax2.set_ylim(bottom=0, top=max(filtered_force["Stress [MPa]"]) * 1.1)
     else:
         ax2.set_ylim(bottom=0, top=stress_limit * 1.1)
 
-    # Set y-axis label only for the last plot of each row
     if i % n_col == 0:
         ax2.set_ylabel(y_label_right)
     else:
         ax2.set_ylabel("")
 
-    # Combine legends
     handles, legends = [], []
     for ax_temp in [ax, ax2]:
         for handle, label in zip(*ax_temp.get_legend_handles_labels()):
             handles.append(handle)
             legends.append(label)
 
-    # Legend in the first plot
     if i == 1:
-        # Create a new legend with combined handles and legends
         ax2.legend(handles, legends, loc="upper left")
-
-        # Remove the separate legend from ax if it exists
-        ax.get_legend().remove()
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
     else:
-        ax.get_legend().remove()
-        ax2.get_legend().remove()
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+        if ax2.get_legend() is not None:
+            ax2.get_legend().remove()
 
-    # Plot the grid
     ax.grid(True, linestyle="-", alpha=0.7)
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
     if save:
-        fig_format = figure_path.name.split(".")[-1]
-        plt.savefig(figure_path, format=fig_format, bbox_inches="tight")
+        save_fig(fig, figure_path)
 
     if show:
         plt.show()
-    plt.close()  # Close the plot to free up memory
+    if own_fig:
+        plt.close(fig)
 
     return ax
 
@@ -6290,7 +6871,7 @@ def plot_stress_hits(
     hits,
     force,
     test_id,
-    figure_path,
+    figure_path=None,
     plot_type="scatter",
     title="Stress and Cumulative hits vs Time",
     x="time",
@@ -6300,8 +6881,7 @@ def plot_stress_hits(
     y_label_right="Stress [MPa]",
     subtitle=None,
     limits=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
@@ -6309,121 +6889,69 @@ def plot_stress_hits(
     save=False,
 ):
     """
-    Parameters
-    ----------
-    hits : Dataframe
-        Set containing the characteristics over time of the hits and their id.
-    force : Dataframe
-        Set containing load displacement, time data, and their id.
-    test_id : str
-        Id of the test to be plotted.
-    figure_path : str
-        Directory to save the figure.
-    plot_type : str, optional
-        Type of plot to create ('scatter' or 'line'). The default is 'scatter'.
-    title : str, optional
-        Title of the image to display and save. The default is 'Stress and Cumulative hits vs Time'.
-    x : str, optional
-        Time characteristic for the x-axis. The default is 'time'.
-
-        Other options: 'Cumulative_Label', 'Cumulative', 'amplitude', 'energy'
-    y : str, optional
-        Time characteristic for the y-axis. The default is 'Cumulative_Label'.
-
-        Other options: 'time', 'Cumulative', 'amplitude', 'energy'
-    x_label : str, optional
-        Label for the x-axis. The default is 'Time [s]'.
-    y_label : str, optional
-        Label for the y-axis. The default is 'Cumulative hits'.
-    y_label_right : str, optional
-        Label for the right y-axis. The default is 'Stress [MPa]'.
-    subtitle : str or list, optional
-        Title for each subplot, if left as default the test_id is plotted. The default is None.
-    limits : list, optional
-        Upper limits for the axes [time_limit, hits_limit, stress_limit]. The default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. The default is 90
-    height : int or float, optional
-        Height of the figure in millimeters. The default is 60
-    ax : matplotlib axis object, optional
-        Axis to plot on. If not provided, a new axis will be created.
-    i : int, optional
-        Index for subplot. Default is 1.
-    n_col : int, optional
-        Number of columns. The default is 1.
-    n_row : int, optional
-        Number of rows. The default is 1.
-    save : boolean, optional
-        "True" to save the image. The default is False.
-
-        e.g. Cluster vs Time {test_id}.pdf
-
-    Returns
-    -------
-    ax : matplotlib axis object
-        Axis containing the plot.
-        Plots and (saves) a diagram of cumulative hits and stress in pdf format.
+    Plot and optionally save cumulative hits and stress vs time.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-    # Extract the limits
     if limits is None:
         time_limit, hits_limit, stress_limit = [None, None, None]
     else:
         time_limit, hits_limit, stress_limit = limits
 
-    # Condition to filter rows based on the string column
     condition = hits["test_id"] == test_id
     condition_force = force["test_id"] == test_id
 
-    # Filtered DataFrame
     filtered_hits = hits.loc[condition].copy()
     filtered_hits["Cumulative_Label"] = filtered_hits["Count"].cumsum()
-
-    # Force data
     filtered_force = force[condition_force]
 
-    # Create the plot
-    figsize_inches = (width / 25.4, height / 25.4)
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+    primary_color = get_active_palette(1)[0]
+
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
         ax.set_title(f"Stress and Cumulative hits vs Time - {test_id}")
         ax.set_xlabel(x_label)
-
     else:
+        fig = ax.get_figure()
         ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(test_id)
+        ax.set_title(subtitle if subtitle is not None else test_id)
 
-    # Create the scatter plot
     if plot_type == "scatter":
         sns.scatterplot(
-            x=x, y=y, data=filtered_hits, label="hits", linewidth=0.2, s=20, ax=ax
+            x=x,
+            y=y,
+            data=filtered_hits,
+            color=primary_color,
+            label="hits",
+            linewidth=0.2,
+            s=20,
+            ax=ax,
         )
     elif plot_type == "line":
-        sns.lineplot(x=x, y=y, label="hits", data=filtered_hits, linewidth=2, ax=ax)
+        sns.lineplot(
+            x=x,
+            y=y,
+            label="hits",
+            data=filtered_hits,
+            color=primary_color,
+            linewidth=2,
+            ax=ax,
+        )
 
-    # Set the x-axis limit
     if time_limit is not None:
         ax.set_xlim(left=0, right=time_limit * 1.05)
 
-    # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
         ax.set_ylabel(y_label)
     else:
         ax.set_ylabel("")
 
-    # Set the y-axis limit
     if hits_limit is None:
         ax.set_ylim(bottom=0, top=max(filtered_hits[y]) * 1.1)
     else:
         ax.set_ylim(bottom=0, top=hits_limit * 1.1)
 
-    # Create a twin Axes sharing the x-axis
     ax2 = ax.twinx()
-
-    # Create the second scatter plot on the twin Axes
     sns.lineplot(
         x="Time [s]",
         y="Stress [MPa]",
@@ -6434,126 +6962,73 @@ def plot_stress_hits(
         label="Stress",
     )
 
-    # Set the y-axis limit for the second plot
     if stress_limit is None:
         ax2.set_ylim(bottom=0, top=max(filtered_force["Stress [MPa]"]) * 1.1)
     else:
         ax2.set_ylim(bottom=0, top=stress_limit * 1.1)
 
-    # Set y-axis label only for the last plot of each row
     if i % n_col == 0:
         ax2.set_ylabel(y_label_right)
     else:
         ax2.set_ylabel("")
 
-    # Combine legends
     handles, legends = [], []
     for ax_temp in [ax, ax2]:
         for handle, label in zip(*ax_temp.get_legend_handles_labels()):
             handles.append(handle)
             legends.append(label)
 
-    # Legend in the first plot
     if i == 1:
-        # Create a new legend with combined handles and legends
         ax2.legend(handles, legends, loc="upper left")
-
-        # Remove the separate legend from ax if it exists
-        ax.get_legend().remove()
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
     else:
-        ax.get_legend().remove()
-        ax2.get_legend().remove()
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+        if ax2.get_legend() is not None:
+            ax2.get_legend().remove()
 
-    # Plot the grid
     ax.grid(True, linestyle="-", alpha=0.7)
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
     if save:
-        if ax is None:
-            figure_filename = f"{title} - {test_id}.pdf"
-        else:
-            figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        default_name = f"{title} - {test_id}.pdf" if own_fig else f"{title}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 
 
 def plot_feature_time_histogram(
     data,
-    figure_path,
+    figure_path=None,
     title="Feature distribution vs Normalized time",
     x="time_norm",
     y="peak_freq",
     x_label="Normalized time",
     y_label="Peak frequency [kHz]",
     subtitle=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
     save=False,
 ):
     """
-    Parameters
-    ----------
-    data : DataFrame
-        Data containing the features to plot, must include columns for x and y.
-    figure_path : str
-        Directory to save the figure.
-    title : str, optional
-        Title of the image to display and save. Default is 'Feature distribution vs Normalized time'.
-    x : str, optional
-        Column name for the x-axis. Default is 'time_norm'.
-    y : str, optional
-        Column name for the y-axis. Default is 'peak_freq'.
-    x_label : str, optional
-        Label for the x-axis. Default is 'Normalized time'.
-    y_label : str, optional
-        Label for the y-axis. Default is 'Peak frequency [kHz]'.
-    subtitle : str or list, optional
-        Title for each subplot, if left as default the y variable is plotted. Default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. Default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. Default is 60.
-    ax : matplotlib axis object, optional
-        Axis to plot on. If not provided, a new axis will be created.
-    i : int, optional
-        Index for subplot. Default is 1.
-    n_col : int, optional
-        Number of columns. Default is 1.
-    save : boolean, optional
-        If True, saves the image. Default is False.
-
-    Returns
-    -------
-    ax : matplotlib axis object
-        Axis containing the plot.
-        Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
+    Plot and optionally save a 2D histogram of feature distribution vs normalized time.
+    `figsize` is specified in millimeters `(width, height)`.
     """
-
-    # Create the plot
-    # Exclude the data in the fracture moment
     data = data[data["time_norm"] < 0.99]
 
-    figsize_inches = (width / 25.4, height / 25.4)
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
         ax.set_title(f"{y} vs Normalized time")
         ax.set_xlabel(x_label)
-
     else:
+        fig = ax.get_figure()
         ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(y)
+        ax.set_title(subtitle if subtitle is not None else y)
 
-    # Create the plot
     sns.histplot(
         data=data,
         x=x,
@@ -6566,151 +7041,78 @@ def plot_feature_time_histogram(
     )
 
     ax.set_ylabel(y_label)
-
-    # Plot the grid
     ax.grid(True, linestyle="-", alpha=0.7)
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
     if save:
-        if ax is None:
-            figure_filename = f"{title} - {y}.pdf"
-        else:
-            figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        default_name = f"{title} - {y}.pdf" if own_fig else f"{title}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 
 
 def plot_feature_histogram(
     data,
-    figure_path,
+    figure_path=None,
     title="Feature distribution vs Normalized time",
     x="peak_freq",
     x_label="Peak frequency [kHz]",
     subtitle=None,
-    width=90,
-    height=60,
+    figsize: tuple[float, float] = IMG_SIZE,
     ax=None,
     i=1,
     n_col=1,
     save=False,
 ):
     """
-    Parameters
-    ----------
-    data : DataFrame
-        Data containing the features to plot, must include columns for x and y.
-    figure_path : str
-        Directory to save the figure.
-    title : str, optional
-        Title of the image to display and save. Default is 'Feature distribution vs Normalized time'.
-    x : str, optional
-        Column name for the x-axis. Default is 'time_norm'.
-    y : str, optional
-        Column name for the y-axis. Default is 'peak_freq'.
-    x_label : str, optional
-        Label for the x-axis. Default is 'Normalized time'.
-    y_label : str, optional
-        Label for the y-axis. Default is 'Peak frequency [kHz]'.
-    subtitle : str or list, optional
-        Title for each subplot, if left as default the y variable is plotted. Default is None.
-    width : int or float, optional
-        Width of the figure in millimeters. Default is 90.
-    height : int or float, optional
-        Height of the figure in millimeters. Default is 60.
-    ax : matplotlib axis object, optional
-        Axis to plot on. If not provided, a new axis will be created.
-    i : int, optional
-        Index for subplot. Default is 1.
-    n_col : int, optional
-        Number of columns. Default is 1.
-    save : boolean, optional
-        If True, saves the image. Default is False.
-
-    Returns
-    -------
-    ax : matplotlib axis object
-        Axis containing the plot.
-        Plots and (optionally saves) a 2D histogram of the feature distribution vs normalized time.
+    Plot and optionally save a 1D histogram of a feature distribution.
+    `figsize` is specified in millimeters `(width, height)`.
     """
+    primary_color = get_active_palette(1)[0]
 
-    # Create the plot
-    # Exclude the data in the fracture moment
-
-    figsize_inches = (width / 25.4, height / 25.4)
-    if ax is None:
-        _, ax = plt.subplots(figsize=figsize_inches, tight_layout=True)
+    own_fig = ax is None
+    if own_fig:
+        fig, ax = plt.subplots(figsize=img_size_inches(figsize))
         ax.set_title(f"{x} Histogram")
         ax.set_xlabel(x_label)
-
     else:
+        fig = ax.get_figure()
         ax.set_xlabel(x_label + "\n(" + string.ascii_lowercase[i - 1] + ")")
-        # Title for each test id
-        if subtitle is not None:
-            ax.set_title(subtitle)
-        else:
-            ax.set_title(x)
+        ax.set_title(subtitle if subtitle is not None else x)
 
-    # Create the plot
     sns.histplot(
         data=data,
         x=x,
         bins=40,
         pmax=0.95,
+        color=primary_color,
         ax=ax,
     )
 
-    # Set y-axis label only for the first plot of each row
     if (i - 1) % n_col == 0:
         ax.set_ylabel("Event count")
     else:
         ax.set_ylabel("")
 
-    # Plot the grid
     ax.grid(True, linestyle="-", alpha=0.7)
-    ax.set_axisbelow(True)  # Set grid lines behind the data points
+    ax.set_axisbelow(True)
 
-    # Save the image in figure_path
     if save:
-        if ax is None:
-            figure_filename = f"{title} - {x}.pdf"
-        else:
-            figure_filename = f"{title}.pdf"
-        figure_path_name = os.path.join(figure_path, figure_filename)
-        plt.savefig(figure_path_name, format="pdf", bbox_inches="tight")
+        default_name = f"{title} - {x}.pdf" if own_fig else f"{title}.pdf"
+        save_fig(fig, resolve_save_target(figure_path, default_name))
 
     return ax
 
 
 def limit_finder(data, force, test_ids=None):
     """
-    Parameters
-    ----------
-    data : Dataframe
-        Dataframe containing the labeled data and test ids.
-    force : Dataframe
-        Dataframe containing load displacement, time data, and their id.
-    test_ids : list
-        Ids of the tests considered for the calculation.
-
-    Returns
-    -------
-    max_value_hits : float
-        Maximum value for hits.
-    max_value_stress : float
-        Maximum value for stress.
-
+    Compute upper axis limits [time_limit, hits_limit, stress_limit] across labeled tests.
     """
-
-    # Condition to filter rows based on the string column
     if test_ids is None:
         test_ids = data["test_id"].unique()
     condition = data["test_id"].isin(test_ids)
     condition_force = force["test_id"].isin(test_ids)
 
-    # Filtered DataFrame
     filtered_hits = data.loc[condition].copy()
     filtered_hits["Cumulative_Label"] = None
 
@@ -6720,10 +7122,8 @@ def limit_finder(data, force, test_ids=None):
             filtered_hits[single_condition].groupby("label")["Count"].cumsum()
         )
 
-    # Force data
     filtered_force = force[condition_force]
 
-    # Maximum values of the df
     max_value_time = filtered_hits["time"].max()
     max_value_hits = filtered_hits["Cumulative_Label"].max()
     max_value_stress = filtered_force["Stress [MPa]"].max()
@@ -6733,28 +7133,11 @@ def limit_finder(data, force, test_ids=None):
 
 def limit_finder_no_label(hits, force, test_ids):
     """
-    Parameters
-    ----------
-    hits : Dataframe
-        Dataframe containing the characteristics over time of the hits and their id.
-    force : Dataframe
-        Dataframe containing load displacement, time data, and their id.
-    test_ids : list
-        Ids of the tests considered for the calculation.
-
-    Returns
-    -------
-    max_value_hits : float
-        Maximum value for hits.
-    max_value_stress : float
-        Maximum value for stress.
-
+    Compute upper axis limits [time_limit, hits_limit, stress_limit] across unlabeled tests.
     """
-    # Condition to filter rows based on the string column
     condition = hits["test_id"].isin(test_ids)
     condition_force = force["test_id"].isin(test_ids)
 
-    # Filtered DataFrame
     filtered_hits = hits.loc[condition].copy()
     filtered_hits["Cumulative_Label"] = None
 
@@ -6764,10 +7147,8 @@ def limit_finder_no_label(hits, force, test_ids):
             single_condition
         ]["Count"].cumsum()
 
-    # Force data
     filtered_force = force[condition_force]
 
-    # Maximum values of the df
     max_value_time = filtered_hits["time"].max()
     max_value_hits = filtered_hits["Cumulative_Label"].max()
     max_value_stress = filtered_force["Stress [MPa]"].max()
@@ -6777,77 +7158,120 @@ def limit_finder_no_label(hits, force, test_ids):
 
 def reorder_hits(hits, y, y_pred):
     """
-    Parameters
-    ----------
-    hits : Dataframe
-        Dataframe for plotting cumulative hits.
-    y : series or array
-        Classes.
-    y_pred : series or array
-        Predictions.
-
-    Returns
-    -------
-    hits_ordered : Dataframe
-        Hits ordered by ascending time.
-    y_pred_ordered : series
-        Predictions ordered by ascending time.
-
+    Order hits and predicted class labels by ascending time.
     """
-    # Create a DataFrame with the predictions
     y_pred_df = pd.Series(y_pred, name="Class")
 
-    # Select only the hits from the training or test set
-    hits = hits.loc[y.index]
-    hits = hits.reset_index(drop=True)
-
-    # Remove the class column
+    hits = hits.loc[y.index].reset_index(drop=True)
     hits = hits.drop("Class", axis=1)
 
-    # Concatenate hits and predictions dataframes
     hits_and_pred = pd.concat([hits, y_pred_df], axis=1)
-
-    # Sort dataframe based on the time column
     hits_and_pred = hits_and_pred.sort_values(by="time", ascending=True)
 
-    # Separate hits and predictions
     hits_ordered = hits_and_pred.drop("Class", axis=1)
     y_pred_ordered = hits_and_pred["Class"].copy()
 
     return hits_ordered, y_pred_ordered
+```
+
+## File: `utils\paths.py`
+```python
+from mylib.utils.io import ProjectLayout  #type: ignore
+
+PROJECT_DIRS = ['src', 'parameters', 'results', 'utils', 'datasets', 'figures']
+
+# Resolve root and directory paths without recreating folders on import
+layout = ProjectLayout(PROJECT_DIRS, create=False)
+
+PROJECT_ROOT = layout.root
+SRC_DIR = layout["src"]
+PARAMETERS_DIR = layout["parameters"]
+RESULTS_DIR = layout["results"]
+UTILS_DIR = layout["utils"]
+DATASETS_DIR = layout["datasets"]
+FIGURES_DIR = layout["figures"]
+EXAMPLE_DATA_DIR = DATASETS_DIR / "example_data" / "data" / "FV_mod1_1"
+EXAMPLE_TRADB = EXAMPLE_DATA_DIR / "FV_mod1_1.tradb"
 
 ```
 
-## File: `utils\preprocess.py`
+## File: `utils\segmentation.py`
 ```python
-from pathlib import Path
+from __future__ import annotations
 
+import itertools
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 import vallenae as vae
-from matplotlib import pyplot as plt
+from mylib import Profiler, img_size_inches, resolve_path, save_fig  # type: ignore
+from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks, hilbert
+
+from utils.paths import FIGURES_DIR, RESULTS_DIR
+
+PARAM_COLUMNS = [
+    "sampling_rate",
+    "threshold_dbae",
+    "pre_trigger_us",
+    "smoothing_us",
+    "min_separation_us",
+    "min_prominence_ratio",
+    "valley_decay_ratio",
+    "min_secondary_ratio",
+]
+
+
+@dataclass(frozen=True)
+class SubHitSegment:
+    """Boundaries and landmark indices for an isolated sub-hit within a transient."""
+
+    sub_trai: int
+    start_idx: int
+    end_idx: int
+    onset_idx: int
+    peak_idx: int
+
+
+def dbae_to_mV(dbae: float) -> float:
+    """Convert acoustic emission amplitude from dBAE (ref. 1 uV) to mV."""
+    return float(10.0 ** ((dbae / 20.0) - 3.0))
+
+
+def compute_smoothed_envelope(
+    waveform: npt.NDArray[np.floating],
+    sampling_rate: float = 5.0,
+    smoothing_us: float = 80.0,
+) -> npt.NDArray[np.float64]:
+    """
+    Compute the zero-phase smoothed Hilbert envelope [mV] of a transient signal.
+    Parameters:
+    - waveform: 1D array of transient signal amplitudes [mV].
+    - sampling_rate: Sampling frequency [MHz].
+    - smoothing_us: Smoothing window width [µs] for the uniform filter.
+
+    Returns:
+    - smooth_env: 1D array of the smoothed Hilbert envelope [mV].
+    """
+
+    dt_us = 1 / sampling_rate
+    smooth_samples = max(1, round(smoothing_us / dt_us))
+    analytic_env = np.abs(hilbert(waveform))
+    return uniform_filter1d(
+        analytic_env.astype(np.float64), size=smooth_samples, mode="nearest"
+    )
 
 
 def _find_preceding_valley(
     smooth_env: npt.NDArray[np.float64],
     peak_idx: int,
-):
-    """
-    Walk backward from a peak index to locate the nearest local minimum (valley).
-
-    Parameters
-    ----------
-    smooth_env : npt.NDArray[np.float64]
-        1D smoothed Hilbert envelope array [mV].
-    peak_idx : int
-        Sample index of the detected burst maximum.
-
-    Returns
-    -------
-    int
-        Sample index of the closest local minimum preceding `peak_idx`.
-    """
+) -> int:
+    """Walk backward from `peak_idx` to locate the nearest local minimum."""
     idx = peak_idx
     while idx > 0 and smooth_env[idx - 1] <= smooth_env[idx]:
         idx -= 1
@@ -6859,29 +7283,9 @@ def _refine_arrival_onset(
     smooth_env: npt.NDArray[np.float64],
     valley_idx: int,
     peak_idx: int,
-    rise_fraction: float,
-):
-    """
-    Pinpoint the sharp arrival onset (t0) of a burst between a valley and its peak.
-
-    Parameters
-    ----------
-    waveform : npt.NDArray[np.floating]
-        1D raw transient voltage signal [mV].
-    smooth_env : npt.NDArray[np.float64]
-        1D smoothed Hilbert envelope array [mV].
-    valley_idx : int
-        Sample index of the valley preceding the burst.
-    peak_idx : int
-        Sample index of the burst maximum.
-    rise_fraction : float
-        Fraction (0 to 1) of the peak-above-valley jump used to define t0.
-
-    Returns
-    -------
-    int
-        Refined arrival sample index (t0) for the isolated burst.
-    """
+    rise_fraction: float = 0.10,
+) -> int:
+    """Pinpoint the arrival onset (t0) between a preceding valley and burst peak."""
     search_slice = np.abs(waveform[valley_idx : peak_idx + 1])
     if search_slice.size == 0:
         return valley_idx
@@ -6897,263 +7301,637 @@ def _refine_arrival_onset(
 
 def segment_merged_hits(
     waveform: npt.NDArray[np.floating],
-    time: npt.NDArray[np.floating],
-    fs: float = 5e6,
-    threshold_mv: float = 0.178,
-    pre_trigger_us: float = 50.0,
-    min_separation_us: float = 150.0,
+    sampling_rate: float = 5.0,
+    threshold_dbae: float = 30.0,
+    pre_trigger_us: float = 40.0,
     smoothing_us: float = 100.0,
+    min_separation_us: float = 300.0,
+    min_prominence_ratio: float = 0.25,
     valley_decay_ratio: float = 0.35,
+    min_secondary_ratio: float = 0.10,
     onset_rise_fraction: float = 0.10,
-):
+) -> list[SubHitSegment]:
     """
-    Segment a transient acoustic emission (AE) waveform into individual sub-hits
-    when two or more events merge within a single acquisition window.
-
-    Handles arbitrary relative amplitudes (weak-to-strong, strong-to-weak,
-    equal-amplitude bursts, and cascades of three or more events) while
-    suppressing false splits caused by internal modal reflections.
-
-    Parameters
-    ----------
-    waveform : npt.NDArray[np.floating]
-        1D array containing the digitized transient voltage signal [mV].
-    fs : float, default=5e6
-        Sampling frequency of the transient recorder [Hz] (e.g., 5 MHz).
-    threshold_mv : float, default=0.178
-        Minimum envelope peak amplitude [mV] required for a burst to be treated
-        as a valid event (0.178 mV corresponds to 45 dBAE ref. 1 uV).
-    pre_trigger_us : float, default=50.0
-        Configured hardware pre-trigger duration [us] used to identify delayed
-        first arrivals caused by sub-threshold precursors.
-    min_separation_us : float, default=150.0
-        Minimum temporal separation [us] between consecutive burst maxima to
-        prevent over-segmenting internal wave reflections.
-    smoothing_us : float, default=25.0
-        Moving-average window length [us] applied to the Hilbert envelope to
-        remove carrier oscillations while preserving burst boundaries.
-    valley_decay_ratio : float, default=0.35
-        Maximum allowed ratio between the intermediate valley amplitude and the
-        smaller adjacent peak: `valley <= valley_decay_ratio * min(P_i, P_{i+1})`.
-    onset_rise_fraction : float, default=0.10
-        Fraction of the local peak-above-valley amplitude used to locate the
-        sharp arrival index (t0) of each separated burst.
-
-    Returns
-    -------
-    list[tuple[int, int]]
-        Ordered list of `(start_idx, end_idx)` sample index pairs defining each
-        separated sub-hit segment within `waveform`.
+    Split a transient `waveform` [mV] into individual `SubHitSegment` objects when
+    multiple AE bursts overlap within the same acquisition window.
     """
     n_samples = waveform.size
     if n_samples == 0:
         return []
 
-    dt_us = 1e6 / fs
-    min_dist_samples = max(1, round(min_separation_us / dt_us))
-    smooth_samples = max(1, round(smoothing_us / dt_us))
+    # 1. Compute zero-phase smoothed Hilbert envelope [mV]
+    dt_us = 1 / sampling_rate
+    threshold_mV = dbae_to_mV(threshold_dbae)
+    smooth_env = compute_smoothed_envelope(
+        waveform, sampling_rate=sampling_rate, smoothing_us=smoothing_us
+    )
 
-    
-    # 1. Compute analytic envelope via Hilbert transform and smooth carrier cycles
-    analytic_env = np.abs(hilbert(waveform))
-    kernel = np.ones(smooth_samples, dtype=np.float64) / smooth_samples
-    smooth_env = np.convolve(analytic_env, kernel, mode="same")
-    # plot_signal(smooth_env, time)
-    # 2. Detect all candidate burst maxima exceeding the digital threshold
+    # 2. Detect candidate peaks using both height and prominence to reject coda ripples
+    min_dist_samples = max(1, round(min_separation_us / dt_us))
+    pre_trigger_samples = max(0, round(pre_trigger_us / dt_us))
+    min_prominence = max(threshold_mV * 0.5, min_prominence_ratio * threshold_mV)
+
     candidate_peaks, _ = find_peaks(
         smooth_env,
-        height=threshold_mv,
+        height=threshold_mV,
         distance=min_dist_samples,
+        prominence=min_prominence,
     )
 
     if candidate_peaks.size == 0:
-        return [(0, n_samples)]
+        peak_idx = int(np.argmax(smooth_env))
+        return [
+            SubHitSegment(
+                sub_trai=1,
+                start_idx=0,
+                end_idx=n_samples,
+                onset_idx=min(pre_trigger_samples, peak_idx),
+                peak_idx=peak_idx,
+            )
+        ]
 
-    # 3. Validate true multi-hit boundaries via intermediate valley decay
+    # 3. Validate true multi-hit boundaries via valley decay and relative amplitude
     valid_peaks = [int(candidate_peaks[0])]
-    split_valleys = []
+    split_valleys: list[int] = []
 
     for raw_peak in candidate_peaks[1:]:
         curr_peak = int(raw_peak)
         prev_peak = valid_peaks[-1]
 
-        # Locate the deepest envelope minimum between consecutive peaks
         valley_rel_idx = int(np.argmin(smooth_env[prev_peak:curr_peak]))
         valley_idx = prev_peak + valley_rel_idx
         valley_amp = float(smooth_env[valley_idx])
-        smaller_peak_amp = float(min(smooth_env[prev_peak], smooth_env[curr_peak]))
+        prev_amp = float(smooth_env[prev_peak])
+        curr_amp = float(smooth_env[curr_peak])
+        smaller_peak_amp = min(prev_amp, curr_amp)
 
-        # Split only if the preceding burst decayed sufficiently below the smaller peak
-        if valley_amp <= valley_decay_ratio * smaller_peak_amp:
+        has_deep_valley = valley_amp <= valley_decay_ratio * smaller_peak_amp
+        is_significant_burst = curr_amp >= min_secondary_ratio * prev_amp
+
+        if has_deep_valley and is_significant_burst:
             valid_peaks.append(curr_peak)
             split_valleys.append(valley_idx)
-        else:
-            # Keep the dominant peak when an internal reflection is rejected
-            if smooth_env[curr_peak] > smooth_env[prev_peak]:
-                valid_peaks[-1] = curr_peak
+        elif curr_amp > prev_amp:
+            # Replace dominant peak if an early precursor preceded the main burst
+            valid_peaks[-1] = curr_peak
 
-    # 4. Determine start index of the first valid burst
-    # Re-align t0 if a sub-threshold noise spike opened the window early
+    # 4. Locate physical arrival onsets (t0) and apply pre-trigger buffer
+    onsets: list[int] = []
+    starts: list[int] = []
+
+    # First burst: realign t0 if a sub-threshold precursor triggered early
     first_peak = valid_peaks[0]
     if first_peak * dt_us > (pre_trigger_us + min_separation_us):
         initial_valley = _find_preceding_valley(smooth_env, first_peak)
-        current_start = _refine_arrival_onset(
+        first_onset = _refine_arrival_onset(
             waveform, smooth_env, initial_valley, first_peak, onset_rise_fraction
         )
     else:
-        current_start = 0
+        first_onset = min(pre_trigger_samples, first_peak)
 
-    if not split_valleys:
-        return [(current_start, n_samples)]
+    onsets.append(first_onset)
+    starts.append(max(0, first_onset - pre_trigger_samples))
 
-    # 5. Construct (start_idx, end_idx) intervals for all N separated sub-hits
-    segments = []
+    # Subsequent bursts: clamp pre-trigger at the preceding valley to avoid tail leakage
     for idx, valley_idx in enumerate(split_valleys):
-        # End current sub-hit at the intermediate valley
-        segments.append((current_start, valley_idx))
-
-        # Re-align arrival onset (t0) for the next burst after the valley
         next_peak = valid_peaks[idx + 1]
-        current_start = _refine_arrival_onset(
+        next_onset = _refine_arrival_onset(
             waveform, smooth_env, valley_idx, next_peak, onset_rise_fraction
         )
+        onsets.append(next_onset)
+        starts.append(max(valley_idx, next_onset - pre_trigger_samples))
 
-    # Append final sub-hit through the end of the digitized record
-    segments.append((current_start, n_samples))
+    # 5. Build SubHitSegment objects
+    segments: list[SubHitSegment] = []
+    n_bursts = len(valid_peaks)
 
-    # Plot each separated sub-hit
-    # for segment_idx, (start_idx, end_idx) in enumerate(segments, start=1):
-    #     plot_signal(
-    #         waveform[start_idx:end_idx],
-    #         time[start_idx:end_idx],
-    #         y_label=f"Segment {segment_idx} [mV]",
-    #     )
+    for i in range(n_bursts):
+        if i == n_bursts - 1:
+            end_idx = n_samples
+        else:
+            end_idx = starts[i + 1]
 
-    # Plot all separated sub-hits together for direct comparison
-    plt.figure(figsize=(90 / 25.4, 60 / 25.4), dpi=300, tight_layout=True)
-
-    for segment_idx, (start_idx, end_idx) in enumerate(segments, start=1):
-        segment_time = np.copy(time[start_idx:end_idx]) * 1e6
-        segment_amp = np.copy(waveform[start_idx:end_idx]) * 1e3
-        plt.plot(
-            segment_time,
-            segment_amp,
-            linewidth=0.6,
-            label=f"Segment {segment_idx}",
+        segments.append(
+            SubHitSegment(
+                sub_trai=i + 1,
+                start_idx=starts[i],
+                end_idx=end_idx,
+                onset_idx=onsets[i],
+                peak_idx=valid_peaks[i],
+            )
         )
-
-    plt.xlabel("Time [µs]")
-    plt.ylabel("Amplitude [mV]")
-    plt.grid(linewidth=0.3, color=".25")
-    plt.title("Separated Sub-hits")
-    plt.legend()
-    plt.show()
 
     return segments
 
-def plot_signal(
-        amp: npt.NDArray[np.floating],
-        time: npt.NDArray[np.floating],
-        time_graph=None,
-        x_label="Time [µs]",
-        y_label="Amplitude [mV]",
-        width=90,
-        height=60,
-    ):
-        """
-        Parameters
-        ----------
-        trai : int
-            Transient number to plot.
-        name_figure : str
-            Name of the class that appears in the figure title.
 
-            e.g. Transient Wave Plot: {name_figure} - Transient: {trai}
-        figure_path : str
-            Directory to save the figure.
-        time_graph : int or float, optional
-            Time in µs up to which the graph is desired.
-        title : str, optional
-            Title of the figure. The default is None.
-        x_label : str, optional
-            Label for the x-axis. The default is 'Time [µs]'.
-        y_label : str, optional
-            Label for the y-axis. The default is 'Amplitude [mV]'.
-        width : int or float, optional
-            Width of the figure in millimeters. The default is 90.
-        height : int or float, optional
-            Height of the figure in millimeters. The default is 60.
-        guardar : boolean, optional
-            "True" to save the image. The default is False.
+def _format_segmentation_report(
+    waveform: npt.NDArray[np.floating],
+    time: npt.NDArray[np.floating],
+    segments: list[SubHitSegment],
+    params: dict[str, Any],
+    trai: int | None = None,
+    test_id: str | None = None,
+) -> str:
+    """Format a plain-text report summarizing parameters and extracted sub-hits."""
+    sampling_rate = float(params.get("sampling_rate", 5.0))
+    dt_us = 1 / sampling_rate
+    lines = [
+        "=" * 72,
+        "SUB-HIT SEGMENTATION REPORT",
+        "=" * 72,
+        f"Test ID          : {test_id or 'N/A'}",
+        f"TRAI             : {trai if trai is not None else 'N/A'}",
+        f"Total Samples    : {len(waveform)} ({len(waveform) * dt_us:.2f} us)",
+        f"Segments Found   : {len(segments)}",
+        "-" * 72,
+        "PARAMETERS:",
+    ]
+    for key, val in params.items():
+        lines.append(f"  {key:<22}: {val}")
 
-            e.g. Transient_{name_figure}_{trai}.pdf
-        Returns
-        -------
-        Plots and (saves) the transient signal in pdf format.
+    lines.extend(["-" * 72, "SEGMENTS:"])
+    for seg in segments:
+        t_start = time[seg.start_idx] * 1e6
+        t_onset = time[seg.onset_idx] * 1e6
+        t_peak = time[seg.peak_idx] * 1e6
+        t_end = time[seg.end_idx - 1] * 1e6
+        dur_us = (seg.end_idx - seg.start_idx) * dt_us
+        pre_trig_us = (seg.onset_idx - seg.start_idx) * dt_us
+        peak_mv = float(np.max(np.abs(waveform[seg.start_idx : seg.end_idx])))
+        lines.append(
+            f"  Sub-hit {seg.sub_trai}: [{seg.start_idx}:{seg.end_idx}] | "
+            f"Start={t_start:.2f} us | Onset={t_onset:.2f} us (PreTrig={pre_trig_us:.2f} us) | "
+            f"Peak={t_peak:.2f} us ({peak_mv:.2f} mV) | End={t_end:.2f} us | Dur={dur_us:.2f} us"
+        )
+    lines.append("=" * 72)
+    return "\n".join(lines) + "\n"
 
-        """
 
-        # Plot the transient
-        copy_amp = np.copy(amp)
-        copy_time = np.copy(time)
-        copy_amp *= 1e3  # in mV   # The operator *= is updating the amplitude value -- amp = amp * 1e3
-        # The signal was in volts and is represented in mV
-        # This is the amplitude
-        copy_time = (
-            copy_time * 1e6
-        )  # for µs  # Similarly, the signal is stored in seconds and represented in µs
-        # This is the time
+def plot_subhit_segmentation(
+    waveform: npt.NDArray[np.floating],
+    time: npt.NDArray[np.floating],
+    segments: list[SubHitSegment],
+    params: dict[str, Any],
+    figure_path: Path | str = "subhit_segmentation.png",
+    smooth_env: npt.NDArray[np.float64] | None = None,
+    trai: int | None = None,
+    test_id: str | None = None,
+    title: str | None = None,
+    show_title: bool = True,
+    show_subplot_titles: bool = True,
+    legend_loc: str = "lower right",
+    figsize: tuple[float, float] = (140, 90),
+    save: bool = True,
+    show: bool = True,
+    save_txt: bool = True,
+) -> np.ndarray:
+    """Plot transient envelope boundaries and extracted sub-hits using mylib.
+    Parameters:
+    - waveform: 1D array of transient signal amplitudes [mV].
+    - time: 1D array of time values [s] corresponding to `waveform`.
+    - segments: List of `SubHitSegment` objects defining extracted sub-hits.
+    - params: Dictionary of segmentation parameters used for this analysis.
+    - figure_path: Path to save the generated figure.
+    - smooth_env: Optional pre-computed smoothed Hilbert envelope [mV].
+    - trai: Optional transient ID for labeling.
+    - test_id: Optional test identifier for labeling.
+    - title: Optional custom title for the figure.
+    - figsize: Tuple specifying figure size in inches (width, height).
+    - save: Whether to save the figure to `figure_path`.
+    - show: Whether to display the figure interactively.
+    - save_txt: Whether to save a plain-text segmentation report alongside the figure.
+    Returns:
+    - axs: The matplotlib Axes array containing the generated subplots.
+    """
 
-        figsize_inches = (width / 25.4, height / 25.4)
-        plt.figure(figsize=figsize_inches, dpi=300, tight_layout=True)
+    fig_path = Path(figure_path)
+    time_us = time * 1e6
+    sampling_rate = float(params.get("sampling_rate", 5.0))
+    smoothing_us = float(params.get("smoothing_us", 80.0))
+    threshold_dbae = float(params.get("threshold_dbae", 45.0))
+    threshold_mV = dbae_to_mV(threshold_dbae)
 
-        if time_graph is None:
-            plt.plot(copy_time, copy_amp, linewidth=0.6)
-        else:
-            # points = int(time_graph * self.sampling_rate + 1)
-            # plt.plot(
-            #     time[self.desfase : points], amp[self.desfase : points], linewidth=0.6
-            # )
-            # plt.ylim(
-            #     bottom=min(amp[self.desfase : points]) * 1.6,
-            #     top=max(amp[self.desfase : points]) * 1.6,
-            # )
-            pass
+    if smooth_env is None:
+        smooth_env = compute_smoothed_envelope(
+            waveform, sampling_rate=sampling_rate, smoothing_us=smoothing_us
+        )
 
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
-        plt.grid(linewidth=0.3, color=".25")
-        plt.title("Transient Wave Plot") 
-        plt.show()
-
-# Example usage inside your waveform processing loop:
-if __name__ == "__main__":
-    # Example waveform
-    tradb_path = Path("D:\\ByronGerman\\profile\\Documents\\Datasets\\Arcan\\FV_mod1_1\\FV_mod1_1.tradb")
-    tradb = vae.io.TraDatabase(tradb_path)
-    # trai = 6740
-    trai = 6848
-    trai = 7006
-    amp, time = tradb.read_wave(trai, time_axis=True)
-    # plot_signal(amp, time)
-    
-    sub_hit_bounds = segment_merged_hits(
-        waveform=amp,
-        time=time,
-        fs=5e6,
-        smoothing_us=50.0,
-        threshold_mv=0.000178,       # 45 dBAE threshold
-        pre_trigger_us=50.0,      # Matches LinWave pre-trigger setting
-        min_separation_us=250.0,  # Minimum gap between distinct damage bursts
-        valley_decay_ratio=0.3,  # Requires >= 80% envelope decay relative to smaller peak
+    fig, axs = plt.subplots(
+        2, 1, figsize=img_size_inches(figsize), sharex=True, tight_layout=True
     )
-    
-    
-    print("Final sub-hit boundaries:")
 
-# for start_idx, end_idx in sub_hit_bounds:
-#     sub_waveform: npt.NDArray[np.floating] = raw_waveform[start_idx:end_idx]
-#     # Apply your Counts > 5, peak < 94 dBAE, and Hamming window feature extraction here
+    if show_title:
+        if title is None:
+            id_prefix = f"{test_id} - " if test_id else ""
+            trai_label = f"TRAI {trai}" if trai is not None else "Transient"
+            fig.suptitle(
+                f"Sub-hit Segmentation: {id_prefix}{trai_label} ({len(segments)} segments)",
+            )
+        else:
+            fig.suptitle(title)
+
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+    axs[0].plot(time_us, waveform, color="0.65", linewidth=0.5, label="Raw waveform")
+    axs[0].plot(
+        time_us, smooth_env, color="darkorange", linewidth=0.9, label="Hilbert envelope"
+    )
+    axs[0].axhline(
+        threshold_mV,
+        color="crimson",
+        linestyle=":",
+        linewidth=0.7,
+        label=f"Threshold ({threshold_dbae:.1f} dBAE)",
+    )
+    axs[0].axhline(
+        -threshold_mV,
+        color="crimson",
+        linestyle=":",
+        linewidth=0.7,
+    )
+
+    for idx, seg in enumerate(segments):
+        color = colors[idx % len(colors)]
+        axs[0].axvspan(
+            time_us[seg.start_idx], time_us[seg.end_idx - 1], color=color, alpha=0.12
+        )
+        axs[0].axvline(
+            time_us[seg.onset_idx],
+            color=color,
+            linestyle="--",
+            linewidth=0.7,
+            label="Onset ($t_0$)" if idx == 0 else None,
+        )
+        axs[0].plot(
+            time_us[seg.peak_idx],
+            smooth_env[seg.peak_idx],
+            marker="v",
+            markersize=4,
+            color=color,
+            linestyle="None",
+            label="Detected peak" if idx == 0 else None,
+        )
+
+    axs[0].set_ylabel("Amplitude [mV]")
+    if show_subplot_titles:
+        axs[0].set_title("Envelope Detection & Event Landmarks", fontsize=8)
+    axs[0].grid(True, linestyle="-", linewidth=0.3, alpha=0.7)
+    axs[0].set_axisbelow(True)
+    axs[0].legend(loc=legend_loc, fontsize=6.5, ncol=2)
+
+    for idx, seg in enumerate(segments):
+        color = colors[idx % len(colors)]
+        axs[1].plot(
+            time_us[seg.start_idx : seg.end_idx],
+            waveform[seg.start_idx : seg.end_idx],
+            color=color,
+            linewidth=0.65,
+            label=f"Sub-hit {seg.sub_trai}",
+        )
+        axs[1].axvline(
+            time_us[seg.onset_idx], color=color, linestyle="--", linewidth=0.6
+        )
+
+    axs[1].set_xlabel("Time [us]")
+    axs[1].set_ylabel("Amplitude [mV]")
+    if show_subplot_titles:
+        axs[1].set_title("Extracted Sub-hit Waveforms", fontsize=8)
+    axs[1].grid(True, linestyle="-", linewidth=0.3, alpha=0.7)
+    axs[1].set_axisbelow(True)
+    axs[1].legend(loc=legend_loc, fontsize=6.5)
+
+    if save:
+        save_fig(fig, fig_path)
+
+    if save_txt:
+        txt_path = fig_path.with_suffix(".txt")
+        txt_path.parent.mkdir(parents=True, exist_ok=True)
+        txt_path.write_text(
+            _format_segmentation_report(
+                waveform=waveform,
+                time=time,
+                segments=segments,
+                params=params,
+                trai=trai,
+                test_id=test_id,
+            ),
+            encoding="utf-8",
+        )
+
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    return axs
+
+
+def _write_valid_combos_report(
+    summary_df: pd.DataFrame,
+    expected_map: dict[int, int],
+    report_path: Path,
+    param_keys: list[str],
+    test_id: str = "",
+) -> list[str]:
+    """Identify combinations matching `expected_map` across all signals and write a report."""
+    trai_order = list(expected_map.keys())
+    valid_combos: list[str] = []
+    combo_scores: list[tuple[int, int, str]] = []
+
+    for combo_id, group in summary_df.groupby("combo_id", sort=False):
+        by_trai = dict(zip(group["trai"], group["n_segments"]))
+        matches = sum(1 for t, exp in expected_map.items() if by_trai.get(t) == exp)
+        abs_error = sum(
+            abs(int(by_trai.get(t, 0)) - exp) for t, exp in expected_map.items()
+        )
+        combo_scores.append((matches, -abs_error, str(combo_id)))
+
+        if matches == len(expected_map) and len(by_trai) == len(expected_map):
+            valid_combos.append(combo_id)
+
+    total_combos = summary_df["combo_id"].nunique()
+    lines = [
+        "=" * 76,
+        "GRID SEARCH VALIDATION REPORT",
+        "=" * 76,
+        f"Test ID            : {test_id or 'N/A'}",
+        f"TRAI List          : {trai_order}",
+        f"Expected Segments  : {[expected_map[t] for t in trai_order]}",
+        f"Combos Evaluated   : {total_combos}",
+        f"Valid Combos Found : {len(valid_combos)}",
+        "=" * 76,
+        "",
+    ]
+
+    if valid_combos:
+        for combo_id in valid_combos:
+            sub = summary_df[summary_df["combo_id"] == combo_id].set_index("trai")
+            first_row = sub.iloc[0]
+            param_dict = {
+                k: (
+                    first_row[k].item()
+                    if hasattr(first_row[k], "item")
+                    else first_row[k]
+                )
+                for k in param_keys
+                if k in first_row
+            }
+            lines.append(f"[{combo_id}]  ->  {param_dict}")
+            for t in trai_order:
+                row = sub.loc[t]
+                lines.append(
+                    f"    TRAI {t:<6} | detected={int(row['n_segments'])} "
+                    f"(expected={expected_map[t]}) | "
+                    f"durations_us={row['durations_us']} | "
+                    f"file={row['figure_file'] or 'not_saved'}"
+                )
+            lines.append("-" * 76)
+    else:
+        lines.append("No parameter combination matched all expected segment counts.")
+        lines.append(
+            "Top 5 closest combinations (ranked by matched signals & lowest error):"
+        )
+        lines.append("-" * 76)
+        combo_scores.sort(reverse=True)
+        for matches, neg_err, combo_id in combo_scores[:5]:
+            sub = summary_df[summary_df["combo_id"] == combo_id].set_index("trai")
+            first_row = sub.iloc[0]
+            param_dict = {
+                k: (
+                    first_row[k].item()
+                    if hasattr(first_row[k], "item")
+                    else first_row[k]
+                )
+                for k in param_keys
+                if k in first_row
+            }
+            detected_str = ", ".join(
+                f"{t}:{int(sub.loc[t, 'n_segments'])}/{expected_map[t]}"
+                for t in trai_order
+                if t in sub.index
+            )
+            lines.append(
+                f"[{combo_id}] matched {matches}/{len(expected_map)} "
+                f"(total_err={-neg_err}) | {detected_str}"
+            )
+            lines.append(f"    params = {param_dict}")
+
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return valid_combos
+
+
+def run_segmentation_grid_search(
+    tradb_path: Path | str,
+    trai_list: list[int],
+    param_grid: dict[str, list[Any]],
+    fig_dir: Path | str = FIGURES_DIR,
+    results_dir: Path | str = RESULTS_DIR,
+    expected_segments: list[int] | None = None,
+    save_valid_only: bool = False,
+    test_id: str = "",
+    sampling_rate: float = 5.0,
+    img_format: str = "png",
+    show_title: bool = True,
+    show_subplot_titles: bool = True,
+    legend_loc: str = "lower right",
+    figsize: tuple[float, float] = (140, 90),
+    save: bool = True,
+    show: bool = False,
+    save_txt: bool = True,
+) -> pd.DataFrame:
+    """Run a parametric grid search for `segment_merged_hits` across selected transients."""
+    expected_map: dict[int, int] | None = None
+    if expected_segments is not None:
+        if len(expected_segments) != len(trai_list):
+            raise ValueError(
+                f"expected_segments length ({len(expected_segments)}) must match "
+                f"trai_list length ({len(trai_list)})."
+            )
+        expected_map = dict(zip(trai_list, expected_segments))
+    elif save_valid_only:
+        raise ValueError(
+            "expected_segments must be provided when save_valid_only=True."
+        )
+
+    profiler = Profiler()
+    with profiler.section("Load .tradb waveforms"):
+        tradb = vae.io.TraDatabase(Path(tradb_path))
+        waveforms: dict[
+            int, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
+        ] = {}
+        for trai in trai_list:
+            amp_v, time = tradb.read_wave(trai, time_axis=True)
+            waveforms[trai] = (amp_v * 1e3, time)
+
+    keys = list(param_grid.keys())
+    combinations = list(itertools.product(*(param_grid[k] for k in keys)))
+    summary_rows: list[dict[str, Any]] = []
+    dt_us = 1 / sampling_rate
+
+    t_seg_total = 0.0
+    t_plot_total = 0.0
+
+    for combo_idx, values in enumerate(combinations, start=1):
+        params = {"sampling_rate": sampling_rate, **dict(zip(keys, values))}
+
+        combo_evals: list[tuple[int, list[SubHitSegment], list[float]]] = []
+        with profiler.section("Envelope & segmentation"):
+            for trai in trai_list:
+                waveform, _ = waveforms[trai]
+                segments = segment_merged_hits(waveform=waveform, **params)
+                durations_us = [
+                    round((s.end_idx - s.start_idx) * dt_us, 2) for s in segments
+                ]
+                combo_evals.append((trai, segments, durations_us))
+        t_seg_total += profiler._times["Envelope & segmentation"]
+
+        if expected_map is not None:
+            combo_is_valid = all(
+                len(segs) == expected_map[t] for t, segs, _ in combo_evals
+            )
+        else:
+            combo_is_valid = True
+
+        should_export = (not save_valid_only) or combo_is_valid
+
+        for trai, segments, durations_us in combo_evals:
+            waveform, time = waveforms[trai]
+            prefix = f"{test_id}_" if test_id else ""
+            stem = f"{prefix}trai_{trai}_{combo_idx}"
+            fig_name = f"{stem}.{img_format}"
+            fig_path = fig_dir / fig_name
+
+            if should_export and (save or save_txt or show):
+                with profiler.section("Plot & export reports"):
+                    smooth_env = compute_smoothed_envelope(
+                        waveform,
+                        sampling_rate=sampling_rate,
+                        smoothing_us=float(params.get("smoothing_us", 80.0)),
+                    )
+                    plot_subhit_segmentation(
+                        waveform=waveform,
+                        time=time,
+                        segments=segments,
+                        params=params,
+                        figure_path=fig_path,
+                        smooth_env=smooth_env,
+                        trai=trai,
+                        test_id=test_id,
+                        show_title=show_title,
+                        show_subplot_titles=show_subplot_titles,
+                        legend_loc=legend_loc,
+                        figsize=figsize,
+                        save=save,
+                        show=show,
+                        save_txt=save_txt,
+                    )
+                t_plot_total += profiler._times["Plot & export reports"]
+
+            row: dict[str, Any] = {
+                "combo_id": combo_idx,
+                "test_id": test_id,
+                "trai": trai,
+                "n_segments": len(segments),
+            }
+            if expected_map is not None:
+                row["expected_segments"] = expected_map[trai]
+                row["valid_signal"] = len(segments) == expected_map[trai]
+                row["valid_combo"] = combo_is_valid
+
+            row.update(
+                {
+                    "durations_us": str(durations_us),
+                    "figure_file": fig_name if (should_export and save) else "",
+                    **params,
+                }
+            )
+            summary_rows.append(row)
+
+    profiler._times["Envelope & segmentation"] = t_seg_total
+    profiler._times["Plot & export reports"] = t_plot_total
+    profiler.report()
+
+    summary_df = pd.DataFrame(summary_rows)
+    summary_df.to_csv(results_dir / "grid_search_summary.csv", index=False)
+
+    if expected_map is not None:
+        valid_report_path = results_dir / "valid_combinations.txt"
+        valid_ids = _write_valid_combos_report(
+            summary_df=summary_df,
+            expected_map=expected_map,
+            report_path=valid_report_path,
+            param_keys=["sampling_rate", *keys],
+            test_id=test_id,
+        )
+        print(
+            f"[INFO] {len(valid_ids)}/{len(combinations)} combinations matched all "
+            f"expected segments. Report saved at: {valid_report_path}"
+        )
+
+    return summary_df
+
+
+def load_segmentation_params(
+    seg_cfg: dict[str, Any],
+    dataset_name: str,
+    default_test_id: str | None = None,
+) -> dict[str, Any] | None:
+    """
+    Resolve `segment_merged_hits()` keyword arguments from the `"segmentation"`
+    config block, reading `grid_search_summary.csv` when needed.
+    """
+    if not seg_cfg.get("enabled", False):
+        return None
+
+    # 1. Direct parameter dictionary override
+    if seg_cfg.get("parameters"):
+        return dict(seg_cfg["parameters"])
+
+    # 2. Locate grid_search_summary.csv
+    if seg_cfg.get("summary_csv"):
+        summary_path = resolve_path(seg_cfg["summary_csv"])
+    else:
+        source_test_id = seg_cfg.get("source_test_id") or default_test_id
+        if not source_test_id:
+            raise ValueError(
+                "Specify 'source_test_id' or 'summary_csv' under extraction.segmentation."
+            )
+        summary_path = (
+            RESULTS_DIR
+            / dataset_name
+            / "segmentation"
+            / source_test_id
+            / "grid_search_summary.csv"
+        )
+
+    if not summary_path.exists():
+        raise FileNotFoundError(f"Grid search summary not found: {summary_path}")
+
+    df = pd.read_csv(summary_path)
+    combo_id = seg_cfg.get("combo_id")
+
+    if combo_id and str(combo_id).lower() != "best":
+        matches = df[df["combo_id"] == combo_id]
+        if matches.empty:
+            raise ValueError(f"Combo '{combo_id}' not found in {summary_path}.")
+    else:
+        if "valid_combo" in df.columns and df["valid_combo"].any():
+            matches = df[df["valid_combo"]]
+        else:
+            raise ValueError(
+                f"No valid combos found in {summary_path}. Specify an explicit 'combo_id'."
+            )
+
+    row = matches.iloc[0]
+    params: dict[str, Any] = {}
+    for col in PARAM_COLUMNS:
+        if col in row and pd.notna(row[col]):
+            val = row[col]
+            params[col] = val.item() if hasattr(val, "item") else val
+
+    return params
+
 ```
 
 ## File: `utils\unsupervised_functions.py`
