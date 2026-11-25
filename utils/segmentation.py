@@ -10,11 +10,22 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import vallenae as vae
-from mylib import Profiler, img_size_inches, save_fig  # type: ignore
+from mylib import Profiler, img_size_inches, resolve_path, save_fig  # type: ignore
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks, hilbert
 
 from utils.paths import FIGURES_DIR, RESULTS_DIR
+
+PARAM_COLUMNS = [
+    "sampling_rate",
+    "threshold_dbae",
+    "pre_trigger_us",
+    "smoothing_us",
+    "min_separation_us",
+    "min_prominence_ratio",
+    "valley_decay_ratio",
+    "min_secondary_ratio",
+]
 
 
 @dataclass(frozen=True)
@@ -660,3 +671,64 @@ def run_segmentation_grid_search(
         )
 
     return summary_df
+
+
+def load_segmentation_params(
+    seg_cfg: dict[str, Any],
+    dataset_name: str,
+    default_test_id: str | None = None,
+) -> dict[str, Any] | None:
+    """
+    Resolve `segment_merged_hits()` keyword arguments from the `"segmentation"`
+    config block, reading `grid_search_summary.csv` when needed.
+    """
+    if not seg_cfg.get("enabled", False):
+        return None
+
+    # 1. Direct parameter dictionary override
+    if seg_cfg.get("parameters"):
+        return dict(seg_cfg["parameters"])
+
+    # 2. Locate grid_search_summary.csv
+    if seg_cfg.get("summary_csv"):
+        summary_path = resolve_path(seg_cfg["summary_csv"])
+    else:
+        source_test_id = seg_cfg.get("source_test_id") or default_test_id
+        if not source_test_id:
+            raise ValueError(
+                "Specify 'source_test_id' or 'summary_csv' under extraction.segmentation."
+            )
+        summary_path = (
+            RESULTS_DIR
+            / dataset_name
+            / "segmentation"
+            / source_test_id
+            / "grid_search_summary.csv"
+        )
+
+    if not summary_path.exists():
+        raise FileNotFoundError(f"Grid search summary not found: {summary_path}")
+
+    df = pd.read_csv(summary_path)
+    combo_id = seg_cfg.get("combo_id")
+
+    if combo_id and str(combo_id).lower() != "best":
+        matches = df[df["combo_id"] == combo_id]
+        if matches.empty:
+            raise ValueError(f"Combo '{combo_id}' not found in {summary_path}.")
+    else:
+        if "valid_combo" in df.columns and df["valid_combo"].any():
+            matches = df[df["valid_combo"]]
+        else:
+            raise ValueError(
+                f"No valid combos found in {summary_path}. Specify an explicit 'combo_id'."
+            )
+
+    row = matches.iloc[0]
+    params: dict[str, Any] = {}
+    for col in PARAM_COLUMNS:
+        if col in row and pd.notna(row[col]):
+            val = row[col]
+            params[col] = val.item() if hasattr(val, "item") else val
+
+    return params

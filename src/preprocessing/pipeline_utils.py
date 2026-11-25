@@ -22,18 +22,6 @@ DEFAULT_CONFIG_NAME = "segmentation.json"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_SUBDIR / DEFAULT_CONFIG_NAME
 
 
-PARAM_COLUMNS = [
-    "sampling_rate",
-    "threshold_dbae",
-    "pre_trigger_us",
-    "smoothing_us",
-    "min_separation_us",
-    "min_prominence_ratio",
-    "valley_decay_ratio",
-    "min_secondary_ratio",
-]
-
-
 __all__ = [
     "DEFAULT_CONFIG_PATH",
     "get_segmentation_paths",
