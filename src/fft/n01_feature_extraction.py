@@ -68,7 +68,6 @@ def extract_campaign_features(
             N_samp=parameters.get("N_samp", 1024),
             N_seg=parameters.get("N_seg", 1),
             signal_offset=parameters.get("signal_offset", 200),
-            load_offset=parameters.get("load_offset", 0),
             force=data_force_i if force_cfg.get("force_data", False) else None,
             segmentation_params=segmentation_params,
             sub_signal_offset_us=sub_signal_offset_us,
@@ -128,13 +127,13 @@ def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
     )
 
     data.to_csv(paths["features_path"], index=False)
-    print("[INFO] Feature extraction completed. Data saved to CSV.")
+    print("[DONE] Feature extraction completed. Data saved to CSV.")
 
     if data_force is not None:
         data_force.to_csv(paths["force_data_path"], index=False)
 
     # Visualization block (runs fresh every time without re-extracting features)
-    plot_cfg = config["feature_visualization"]
+    plot_cfg = extraction_cfg["extraction_feat_plots"]
     if plot_cfg.get("enabled", False):
         features_to_plot = plot_cfg.get("features_to_plot", [])
         print("[INFO] Saving Feature vs Feature images...")
@@ -171,7 +170,7 @@ def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
                 save=True,
             )
 
-        print("[INFO] Feature vs Feature images saved.")
+        print("[DONE] Feature vs Feature images saved.")
 
 
 if __name__ == "__main__":
