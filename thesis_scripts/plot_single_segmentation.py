@@ -21,7 +21,7 @@ configure_plots(font="IBM Plex Sans")
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "single_segmentation.json"
 
 
-def load_combo_params(csv_path: str, test_id: str, combo_id: str) -> dict[str, Any]:
+def load_combo_params(csv_path: str, combo_id: str) -> dict[str, Any]:
     """Read a specific `combo_id` parameter row from `grid_search_summary.csv`."""
     df = pd.read_csv(csv_path)
     match = df[df["combo_id"] == combo_id]
@@ -61,7 +61,7 @@ def main(
     # 2. Establish the parameters
     csv_path = paths["results_dir"] / "grid_search_summary.csv"
     params = (
-        load_combo_params(csv_path=csv_path, test_id=test_id, combo_id=combo_id)
+        load_combo_params(csv_path=csv_path, combo_id=combo_id)
         if combo_id is not None
         else manual_params
     )
