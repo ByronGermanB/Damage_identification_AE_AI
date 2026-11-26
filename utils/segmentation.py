@@ -445,7 +445,7 @@ def _write_valid_combos_report(
         abs_error = sum(
             abs(int(by_trai.get(t, 0)) - exp) for t, exp in expected_map.items()
         )
-        combo_scores.append((matches, -abs_error, str(combo_id)))
+        combo_scores.append((matches, -abs_error, combo_id))
 
         if matches == len(expected_map) and len(by_trai) == len(expected_map):
             valid_combos.append(combo_id)
