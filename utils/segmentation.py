@@ -84,7 +84,7 @@ def _refine_arrival_onset(
     smooth_env: npt.NDArray[np.float64],
     valley_idx: int,
     peak_idx: int,
-    rise_fraction: float = 0.15,
+    onset_rise_fraction: float = 0.15,
 ) -> int:
     """Pinpoint the arrival onset (t0) between a preceding valley and burst peak."""
     search_slice = np.abs(waveform[valley_idx : peak_idx + 1])
@@ -93,7 +93,7 @@ def _refine_arrival_onset(
 
     baseline_amp = float(smooth_env[valley_idx])
     peak_raw_amp = float(np.max(search_slice))
-    onset_level = baseline_amp + rise_fraction * (peak_raw_amp - baseline_amp)
+    onset_level = baseline_amp + onset_rise_fraction * (peak_raw_amp - baseline_amp)
 
     above_onset = np.flatnonzero(search_slice >= onset_level)
     onset_offset = int(above_onset[0]) if above_onset.size > 0 else 0
