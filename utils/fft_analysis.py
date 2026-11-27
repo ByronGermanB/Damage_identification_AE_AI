@@ -1244,33 +1244,37 @@ def plot_histogram(
 
 
 def plot_feat_vs_feat(
-    X,
-    y,
-    feat_x,
-    feat_y,
-    fig_path="Feat_vs_Feat.png",
-    title=None,
-    subtitle=None,
-    x_label=None,
-    y_label=None,
+    X: pd.DataFrame,
+    y: Any,
+    feat_x: str,
+    feat_y: str,
+    fig_path: str | Path = "Feat_vs_Feat.png",
+    title: str | None = None,
+    subtitle: str | None = None,
+    x_label: str | None = None,
+    y_label: str | None = None,
     figsize: tuple[float, float] = IMG_SIZE,
-    ax=None,
-    i=1,
-    n_col=1,
-    save=False,
-    show=False,
-):
+    show_title: bool = True,
+    ax: plt.Axes | None = None,
+    i: int = 1,
+    n_col: int = 1,
+    save: bool = False,
+    show: bool = False,
+) -> plt.Axes:
     """
     Plot and optionally save a scatter plot of two features with class labels and markers.
     `figsize` is specified in millimeters `(width, height)`.
     """
-    y = pd.Series(y, name="Labels")
-    if "Labels" in X.columns:
-        X = X.drop(["Labels"], axis=1)
+    cols_needed = [c for c in (feat_x, feat_y) if c in X.columns and c != "Labels"]
+    plot_df = X[cols_needed].copy()
 
-    y.index = X.index
-    data = pd.concat([X, y], axis=1)
-    label_order = list(pd.unique(data["Labels"]))
+    y_series = pd.Series(y, index=X.index, name="Labels")
+    plot_df["Labels"] = y_series
+
+    # Drop rows missing coordinates or labels so scatter & scale checks stay clean
+    plot_df = plot_df.dropna(subset=[feat_x, feat_y, "Labels"])
+
+    label_order = list(pd.unique(plot_df["Labels"]))
     n_labels = len(label_order)
 
     markers = {
@@ -1280,38 +1284,47 @@ def plot_feat_vs_feat(
     palette = get_active_palette(n_labels)
 
     own_fig = ax is None
+    default_title = f"{feat_x} vs {feat_y}"
+
     if own_fig:
         fig, ax = plt.subplots(figsize=img_size_inches(figsize))
-        ax.set_title(f"{feat_x} vs {feat_y}" if title is None else title)
+        if show_title:
+            ax.set_title(default_title if title is None else title)
         ax.set_xlabel(feat_x if x_label is None else x_label)
     else:
         fig = ax.get_figure()
         base_xlabel = feat_x if x_label is None else x_label
-        ax.set_xlabel(f"{base_xlabel}\n({string.ascii_lowercase[i - 1]})")
-        ax.set_title(subtitle if subtitle is not None else f"{feat_x} vs {feat_y}")
+        if 1 <= i <= len(string.ascii_lowercase):
+            ax.set_xlabel(f"{base_xlabel}\n({string.ascii_lowercase[i - 1]})")
+        else:
+            ax.set_xlabel(base_xlabel)
+        if show_title:
+            ax.set_title(default_title if subtitle is None else subtitle)
 
-    sns.scatterplot(
-        x=feat_x,
-        y=feat_y,
-        hue="Labels",
-        style="Labels",
-        hue_order=label_order,
-        style_order=label_order,
-        data=data,
-        markers=markers,
-        palette=palette,
-        ax=ax,
-        legend=True,
-    )
+    if not plot_df.empty:
+        sns.scatterplot(
+            data=plot_df,
+            x=feat_x,
+            y=feat_y,
+            hue="Labels",
+            style="Labels",
+            hue_order=label_order,
+            style_order=label_order,
+            markers=markers,
+            palette=palette,
+            ax=ax,
+            legend=True,
+        )
 
     if (i - 1) % n_col == 0:
         ax.set_ylabel(feat_y if y_label is None else y_label)
     else:
         ax.set_ylabel("")
 
-    if feat_x == "energy":
+    # Apply log scale only when strictly positive values exist to avoid log-zero warnings
+    if feat_x == "energy" and (plot_df[feat_x] > 0).all() and not plot_df.empty:
         ax.set_xscale("log")
-    if feat_y == "energy":
+    if feat_y == "energy" and (plot_df[feat_y] > 0).all() and not plot_df.empty:
         ax.set_yscale("log")
 
     ax.grid(True)

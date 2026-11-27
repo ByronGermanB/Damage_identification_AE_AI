@@ -43,6 +43,8 @@ def get_fft_paths(
     features_path = dataset_dir / "features.csv"
     force_data_path = dataset_dir / "force_data.csv"
     preprocessed_data_path = dataset_dir / "preprocessed_data.joblib"
+    feature_selection_results_dir = RESULTS_DIR / dataset_name / "feature_selection"
+    feature_selection_figures_dir = FIGURES_DIR / dataset_name / "feature_selection"
 
     if create:
         for directory in (dataset_dir, trial_results_dir, trial_figures_dir):
@@ -55,6 +57,8 @@ def get_fft_paths(
         "features_path": features_path,
         "force_data_path": force_data_path,
         "preprocessed_data_path": preprocessed_data_path,
+        "feature_selection_results_dir" : feature_selection_results_dir,
+        "feature_selection_figures_dir" : feature_selection_figures_dir,
     }
 
 

@@ -133,7 +133,7 @@ def main(config_arg: str | Path | None = DEFAULT_CONFIG_PATH) -> None:
         data_force.to_csv(paths["force_data_path"], index=False)
 
     # Visualization block (runs fresh every time without re-extracting features)
-    plot_cfg = extraction_cfg["extraction_feat_plots"]
+    plot_cfg = extraction_cfg["plots"]
     if plot_cfg.get("enabled", False):
         features_to_plot = plot_cfg.get("features_to_plot", [])
         print("[INFO] Saving Feature vs Feature images...")
